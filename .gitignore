@@ -1,2 +1,9 @@
 bin/
 obj/
+.vscode/
+
+abc.history
+gmon.out
+unknown.ps
+*.ps
+tmp
