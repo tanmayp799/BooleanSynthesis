@@ -1,6 +1,7 @@
 CPP_FLAGS += -DLIN64
 
 MAIN 	= main
+RCNF	= readCnf
 
 ABC_PATH = ./dependencies/abc
 
@@ -13,6 +14,7 @@ OBJDIR   = obj
 BINDIR   = bin
 
 TARGET_MAIN  = $(BINDIR)/$(MAIN)
+TARGET_RCNF  = $(BINDIR)/$(RCNF)
 
 ABC_INCLUDES = -I $(ABC_PATH) -I $(ABC_PATH)/src
 LIB_DIRS = -L $(ABC_PATH)/
@@ -26,9 +28,10 @@ LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_COMMON)
 
 CPP_FLAGS += -O3 -g -pg
 
-COMMON_SOURCES  = $(SRCDIR)/helper.cpp
+COMMON_SOURCES  = $(SRCDIR)/helper.cpp $(SRCDIR)/nnf.cpp
 
 MAIN_SOURCES  = $(SRCDIR)/main.cpp $(COMMON_SOURCES)
+RCNF_SOURCES  = $(SRCDIR)/readCnf.cpp
 MAIN_OBJECTS  = $(MAIN_SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
 ALL_OBJECTS   = $(sort $(MAIN_OBJECTS))
@@ -36,6 +39,7 @@ ALL_OBJECTS   = $(sort $(MAIN_OBJECTS))
 .PHONY: all
 all: main
 main: directories $(TARGET_MAIN)
+readCnf: directories $(TARGET_RCNF)
 
 
 directories:
@@ -46,6 +50,11 @@ $(TARGET_MAIN): $(MAIN_OBJECTS)
 	$(CXX) $(CPP_FLAGS) -o $@ $^ $(LFLAGS)
 	@echo "Built Target! - main"
 
+$(TARGET_RCNF): $(RCNF_SOURCES)
+	$(CXX) $(CPP_FLAGS) $^ -o $@
+	@echo "Compiled "$^" successfully!"
+	@echo "Built Target! - readCnf"
+
 $(ALL_OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	$(CXX) $(CPP_FLAGS) -c $^ -o $@  $(LFLAGS)
 	@echo "Compiled "$<" successfully!"	
@@ -55,5 +64,5 @@ clean:
 	@echo "Cleanup complete!"
 
 remove: clean
-	@$(RM) $(TARGET_MAIN) $(TARGET_POSTP)
+	@$(RM) $(TARGET_MAIN) $(TARGET_POSTP) $(TARGET_RCNF)
 	@echo "Executable removed!"
