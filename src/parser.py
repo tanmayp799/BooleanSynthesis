@@ -2,6 +2,7 @@ import numpy as np
 import os
 import sys
 import json
+import shutil
 
 def read_lines(f):
     lines=[]
@@ -66,6 +67,15 @@ if __name__ == "__main__":
     os.makedirs(output_dir,exist_ok=True)
     print(f"Created directory: {output_dir}")
 
+    for item in os.listdir(output_dir):
+        item_path = os.path.join(output_dir,item)
+        try:
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.remove(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        except Exception as e:
+            print(f"Failed to delete {item_path}: {e}")
     phi_dimacs = os.path.join(output_dir,f"{dimacs_file_main}.dimacs")
 
     write_dimacs(numInputs,main_clauses,phi_dimacs)
@@ -90,6 +100,7 @@ if __name__ == "__main__":
             q.append(list({key, -key}))
         phi_dict[key]=q
     
+    print(phi_dict[3])
 
     for key in existential:
         this_phi = phi_dict[key]
@@ -102,11 +113,14 @@ if __name__ == "__main__":
                 new_clause.remove(-int(key))
             
             if len(new_clause)==0:
+                q.clear()
                 q.append(list({key}))
                 q.append(list({-key}))
                 break
             q.append(new_clause)
-        
+        if len(q)==0:
+            q.append(list({key, -key}))
+        print(q)
         output_dir = os.path.join(os.getcwd(),f"data/{dimacs_file_main}/phi_1")
         os.makedirs(output_dir,exist_ok=True)
         phi_1_file = os.path.join(output_dir,f"phi{key}.dimacs")
@@ -122,9 +136,14 @@ if __name__ == "__main__":
                 new_clause.remove(int(key))
             
             if len(new_clause)==0:
+                q2.clear()
                 q2.append(list({key}))
                 q2.append(list({-key}))
+                break
             q2.append(new_clause)
+        if len(q2)==0:
+            q2.append(list({key, -key}))
+        print(q2)
         output_dir = os.path.join(os.getcwd(),f"data/{dimacs_file_main}/phi_0")
         os.makedirs(output_dir,exist_ok=True)
         phi_0_file = os.path.join(output_dir,f"phi{key}.dimacs")
@@ -147,4 +166,3 @@ if __name__ == "__main__":
     
     print(f"JSON Config file created: '{output_file}'")
 
-    
