@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
     Abc_Start();
 
     // Creating phi_Ntk and phi_Man.
-    Abc_Ntk_t *phi_Ntk;
-    Aig_Man_t *phi_Man;
+    Abc_Ntk_t *phi_Ntk; //aig network for phi
+    Aig_Man_t *phi_Man; //aig manager for phi
 
     string inpPath;
     // cout << "Enter path for PHI.dimacs: ";
@@ -53,12 +53,13 @@ int main(int argc, char *argv[])
 
     FS::path phiPath(inpPath);
 
-    string phi_0Dir;
+    string phi_0Dir; 
     string phi_1Dir;
 
     // string jsonPath;
     string phiFileName = phiPath.stem().string();
 
+    //open and read phi from phi.dimacs, setup directories for phi_0 and phi_1
     if (FS::exists(phiPath))
     {
         char *phiPath_cstr = new char[phiPath.string().size() + 1];
@@ -98,6 +99,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    //setup essential maps and variables
     nlohmann::json json_data;
     json_file>>json_data;
 
@@ -139,6 +141,7 @@ int main(int argc, char *argv[])
     vector<Aig_Man_t *> A_Man;
     vector<Aig_Man_t *> B_Man;
 
+    //generate basis functions
     generateBasis(phi_0Dir, phi_1Dir, A_Ntk, B_Ntk, A_Man, B_Man);
     cout << "Basis Created\n";
     // vector<Aig_Obj_t*> H;
@@ -148,6 +151,8 @@ int main(int argc, char *argv[])
     assert(B_Man.size() == numY);
 
     cout << A_Ntk.size() << endl;
+
+    //Append all the basis into a single network, including neg_Phi
     for (int i = 0; i < numY; i++)
     {
         Abc_Ntk_t *currA = A_Ntk[i];
@@ -173,6 +178,7 @@ int main(int argc, char *argv[])
     // Aig_ManShow(tmpMan,0,NULL);
     // cin>>mySIG;
 
+    //Compose the outputs of basis functions to generate definitions, get formula (DELTA AND !PHI)
     for (int i = 0; i < numY; i++)
     {
         Aig_Obj_t *outA = Aig_ManCo(tmpMan, 2 * i + 1)->pFanin0;
@@ -278,7 +284,9 @@ int main(int argc, char *argv[])
     {
         iter++;
         Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(Formula);
-
+        Aig_ManShow(Formula,0,NULL);
+        cout<<"Enter 1 ";
+        cin>>mySIG;
         int status = Abc_NtkMiterSat(FNtk, 100000, 0, 1, NULL, NULL);
         if (status == -1)
         {
