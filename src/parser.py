@@ -52,11 +52,15 @@ if __name__ == "__main__":
 
         elif line_parse[0]=='e':
             pass
-        elif line_parse[0]!='p' and line_parse[0]!='c':
+        elif line_parse[0]=='p':
+            numInputs = int(line_parse[2])
+        elif line_parse[0]!='c':
             clause = [int(x) for x in line_parse[:-1]]
             main_clauses.append(clause)
     
-    numInputs = len(quantifiers) +len(dependencies)
+    # numInputs = len(quantifiers) +len(dependencies)
+
+    # for i in range(len)
 
 
     dimacs_file_main = os.path.splitext(os.path.basename(file_path))[0]
@@ -100,7 +104,7 @@ if __name__ == "__main__":
             q.append(list({key, -key}))
         phi_dict[key]=q
     
-    print(phi_dict[3])
+    # print(phi_dict[3])
 
     for key in existential:
         this_phi = phi_dict[key]
@@ -120,7 +124,7 @@ if __name__ == "__main__":
             q.append(new_clause)
         if len(q)==0:
             q.append(list({key, -key}))
-        print(q)
+        # print(q)
         output_dir = os.path.join(os.getcwd(),f"data/{dimacs_file_main}/phi_1")
         os.makedirs(output_dir,exist_ok=True)
         phi_1_file = os.path.join(output_dir,f"phi{key}.dimacs")
@@ -143,7 +147,7 @@ if __name__ == "__main__":
             q2.append(new_clause)
         if len(q2)==0:
             q2.append(list({key, -key}))
-        print(q2)
+        # print(q2)
         output_dir = os.path.join(os.getcwd(),f"data/{dimacs_file_main}/phi_0")
         os.makedirs(output_dir,exist_ok=True)
         phi_0_file = os.path.join(output_dir,f"phi{key}.dimacs")
@@ -152,7 +156,7 @@ if __name__ == "__main__":
     
     # Write the config file
     data = {
-        "numX": len(quantifiers),
+        "numX": numInputs - len(existential),
         "numY": len(existential),
         "dependencies": dependencies
     }
