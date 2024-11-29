@@ -151,9 +151,11 @@ void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk
 			Aig_ObjCreateCo(tmp, newNode);
 
 			Aig_Man_t *Man_A = Aig_ManDupOneOutput(tmp, 0, 0);
+			// Aig_ManStop(tmp);
 			Abc_Ntk_t *Ntk_A = Abc_NtkFromAigPhase(Man_A);
 			A_Man.push_back(Man_A);
 			A_Ntk.push_back(Ntk_A);
+			// Aig_AndAigs
 
 			// Generating B[i]
 			tmp = Abc_NtkToDar(phi_0_Ntk, 0, 0);
@@ -173,9 +175,12 @@ void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk
 			Aig_ObjCreateCo(tmp, finalNewNode);
 
 			Aig_Man_t *Man_B = Aig_ManDupOneOutput(tmp, 0, 0);
+			// Aig_ManStop(tmp);
 			Abc_Ntk_t *Ntk_B = Abc_NtkFromAigPhase(Man_B);
 			B_Man.push_back(Man_B);
 			B_Ntk.push_back(Ntk_B);
+
+			Aig_ManStop(tmp);
 		}
 	}
 
@@ -2482,6 +2487,8 @@ Aig_Man_t* compressAigByNtkMultiple(Aig_Man_t* SAig, int times) {
 	for (int i = 0; i < times; ++i)	{
 		cout << "cycle " << i << ": " << command;
 		TIME_MEASURE_START
+
+		
 		if (Cmd_CommandExecute(pAbc, (char*)command.c_str())) {
 			cout << "Cannot preprocess SNtk, took " << TIME_MEASURE_ELAPSED << endl;
 			return NULL;

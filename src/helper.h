@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <filesystem>
 #include "cxxopts.hpp"
+#include "json.hpp"
 
 #ifndef NO_UNIGEN
 // #include "cusp.h"
@@ -282,5 +283,7 @@ void print(vector<T> v, string delim) {
 Abc_Ntk_t * getNtkFromCNF(char* filename);
 void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
 					vector<Aig_Man_t*> &A_Man, vector<Aig_Man_t*> &B_Man);
+
+
 
 #endif
