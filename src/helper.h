@@ -278,7 +278,15 @@ void print(vector<T> v, string delim) {
 
 
 //////////////////////////////////// TANMAY's AND ANANYA's HELPERS ////////////////////////////////////////////////////////
+class CNF{
+	vector<int> universal;
+	vector<int> existential;
+	map<int, vector<int>> dependency;
+	int numInputs;
 
+	vector<vector<int>> clauses;
+
+};
 
 Abc_Ntk_t * getNtkFromCNF(char* filename);
 void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
