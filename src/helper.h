@@ -278,14 +278,30 @@ void print(vector<T> v, string delim) {
 
 
 //////////////////////////////////// TANMAY's AND ANANYA's HELPERS ////////////////////////////////////////////////////////
-class CNF{
-	vector<int> universal;
-	vector<int> existential;
-	map<int, vector<int>> dependency;
+class DQCNF{
+	set<int> universal;
+	set<int> existential;
+	map<int, set<int>> dependency;
 	int numInputs;
+	int numClauses;
 
-	vector<vector<int>> clauses;
+	vector<set<int>> clauses;
+	Aig_Man_t* man;
+	public:
+		DQCNF(string filename);
+		Aig_Man_t* genAIGMan();
+		set<int> get_existentials(){return this->existential;}
+		set<int> get_universals(){return this->universal;}
+		set<int> get_dependencySet(int id);
+		Aig_Man_t* getMan(){return this->man;}
+		vector<set<int>> getClauses(){return this->clauses;}
+		int getNumInputs(){return this->numInputs;}
+		int getNumClauses(){return this->numClauses;}
 
+		DQCNF(set<int> universal, set<int> existential,
+		 int numInputs, int numClauses, vector<set<int>> clauses);
+		
+		DQCNF* getProjection(int id);
 };
 
 Abc_Ntk_t * getNtkFromCNF(char* filename);
