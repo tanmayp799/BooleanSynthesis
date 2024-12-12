@@ -185,7 +185,118 @@ void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk
 	}
 
 
+DQCNF::DQCNF(string filename){
+	ifstream file(filename);
+	if(!file){
+		cerr<<"Error: File could not be opened.\n";
+		exit(1);
+	}
 
+	string line;
+	while(getline(file, line)){
+		if(line.empty() || line[0]=='c'){
+			continue;
+		}
+		istringstream iss(line);
+		char type;
+		iss>>type;
+		if(type=='p'){
+			string format;
+			iss>>format>>this->numInputs>>this->numClauses;
+		}
+		else if(type=='d'){
+			int var;
+			iss>>var;
+			int dep;
+			this->existential.insert(var);
+			while(iss>>dep && dep!=0){
+				this->dependency[var].insert(dep);
+			}
+		}
+		else if (type=='a'){
+			int var;
+			while(iss>>var && var!=0){
+				this->universal.insert(var);
+			}
+		}
+		else if(type=='e'){
+			int var;
+			while(iss>>var && var!=0){
+				this->existential.insert(var);
+			}
+		}
+		else{
+			set<int> clause;
+			int lit;
+			while(iss>>lit && lit!=0){
+				clause.insert(lit);
+			}
+			this->clauses.push_back(clause);
+		}
+	}
+	file.close();
+}
+
+Aig_Man_t* DQCNF::genAIGMan(){
+	Aig_Man_t* tMan = Aig_ManStart(0);
+
+	for(int i=0;i<this->numInputs;i++){
+		Aig_ObjCreateCi(tMan);
+	}
+
+	Aig_Obj_t* finalConjunction = Aig_ManConst1(tMan);
+
+	for(auto clause:this->clauses){
+		Aig_Obj_t* tObj = Aig_ManConst0(tMan);
+
+		for(auto lit: clause){
+			if(lit>0){
+				tObj = Aig_Or(tMan, tObj, Aig_ManCi(tMan,lit));
+			}
+			else{
+				tObj = Aig_Or(tMan, tObj, Aig_Not(Aig_ManCi(tMan,lit)));
+			}
+		}
+		finalConjunction=Aig_And(tMan, finalConjunction, tObj);
+	}
+	Aig_ObjCreateCo(tMan, finalConjunction);
+	this->man = tMan;
+	return tMan;
+}
+
+set<int> DQCNF::get_dependencySet(int id){
+	if(this->dependency.find(id)==this->dependency.end()){
+		return universal;
+	}
+	return dependency[id];
+}
+
+DQCNF::DQCNF(set<int> universal, set<int> existential,
+		int numInputs, int numClauses, vector<set<int>> clauses){
+			this->universal=universal;
+			this->existential=existential;
+			this->numClauses=numClauses;
+			this->numInputs=numInputs;
+			this->clauses=clauses;
+		}
+DQCNF* DQCNF::getProjection(int id){
+	vector<set<int>> projectedClauses;
+	set<int> dep = this->dependency[id];
+	for(auto e:dep){
+		dep.insert(-e);
+	}
+	dep.insert(id);
+	dep.insert(-id);
+	for(auto clause: this->clauses){
+		set<int> newClause;
+		set_intersection(clause.begin(),clause.end(),dep.begin(),dep.end(),back_inserter(newClause));
+		if(newClause.size()==0) continue;
+		projectedClauses.push_back(newClause);
+	}
+	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->numInputs,
+								projectedClauses.size(),projectedClauses);
+	return projectedDQCNF;
+}
 
 
 ///////////////////////////////////////////////////////////
