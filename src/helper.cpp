@@ -198,13 +198,13 @@ DQCNF::DQCNF(string filename){
 			continue;
 		}
 		istringstream iss(line);
-		char type;
+		string type;
 		iss>>type;
-		if(type=='p'){
+		if(type=="p"){
 			string format;
 			iss>>format>>this->numInputs>>this->numClauses;
 		}
-		else if(type=='d'){
+		else if(type=="d"){
 			int var;
 			iss>>var;
 			int dep;
@@ -213,13 +213,13 @@ DQCNF::DQCNF(string filename){
 				this->dependency[var].insert(dep);
 			}
 		}
-		else if (type=='a'){
+		else if (type=="a"){
 			int var;
 			while(iss>>var && var!=0){
 				this->universal.insert(var);
 			}
 		}
-		else if(type=='e'){
+		else if(type=="e"){
 			int var;
 			while(iss>>var && var!=0){
 				this->existential.insert(var);
@@ -227,6 +227,7 @@ DQCNF::DQCNF(string filename){
 		}
 		else{
 			set<int> clause;
+			clause.insert(stoi(type));
 			int lit;
 			while(iss>>lit && lit!=0){
 				clause.insert(lit);
@@ -247,14 +248,20 @@ Aig_Man_t* DQCNF::genAIGMan(){
 	Aig_Obj_t* finalConjunction = Aig_ManConst1(tMan);
 
 	for(auto clause:this->clauses){
+		// cout<<"CLAUSE : ";
+		// for(auto lit:clause){
+		// 	cout<<lit<<" ";
+		// }
+		// cout<<endl;
+		if(clause.empty()) continue;
 		Aig_Obj_t* tObj = Aig_ManConst0(tMan);
 
 		for(auto lit: clause){
 			if(lit>0){
-				tObj = Aig_Or(tMan, tObj, Aig_ManCi(tMan,lit));
+				tObj = Aig_Or(tMan, tObj, Aig_ManCi(tMan,lit-1));
 			}
 			else{
-				tObj = Aig_Or(tMan, tObj, Aig_Not(Aig_ManCi(tMan,lit)));
+				tObj = Aig_Or(tMan, tObj, Aig_Not(Aig_ManCi(tMan,-lit-1)));
 			}
 		}
 		finalConjunction=Aig_And(tMan, finalConjunction, tObj);
@@ -288,10 +295,10 @@ DQCNF* DQCNF::getProjection(int id){
 	dep.insert(id);
 	dep.insert(-id);
 	for(auto clause: this->clauses){
-		set<int> newClause;
+		vector<int> newClause;
 		set_intersection(clause.begin(),clause.end(),dep.begin(),dep.end(),back_inserter(newClause));
 		if(newClause.size()==0) continue;
-		projectedClauses.push_back(newClause);
+		projectedClauses.push_back(set(newClause.begin(), newClause.end()));
 	}
 	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->numInputs,
 								projectedClauses.size(),projectedClauses);
