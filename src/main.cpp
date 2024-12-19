@@ -38,389 +38,654 @@ int main(int argc, char *argv[])
     int mySIG;
     Abc_Start();
 
-    // Creating phi_Ntk and phi_Man.
-    Abc_Ntk_t *phi_Ntk; // aig network for phi
-    Aig_Man_t *phi_Man; // aig manager for phi
 
-    string inpPath;
-    // cout << "Enter path for PHI.dimacs: ";
-    // getline(cin, inpPath);
-    if (argc != 2)
-    {
-        cerr << "Usage ./bin/main <path to PHI.dimacs file>\n";
+    //ensure phi.dqdimacs is taken as input
+
+    if(argc!=2){
+        cerr << "Usage ./bin/main <path to PHI.dqdimacs file>\n";
         return 1;
     }
-    inpPath = argv[1];
 
+    string inpPath = argv[1];
     FS::path phiPath(inpPath);
+    DQCNF* phiCNF = new DQCNF(phiPath.string());
+    cout<<"Read the file\n";
+    Aig_Man_t* phi_Man = phiCNF->genAIGMan();
+    
+    cout<<"Generated Managerfor PHI\n";
+    Abc_Ntk_t* phi_Ntk = Abc_NtkFromAigPhase(phi_Man);
 
-    string phi_0Dir;
-    string phi_1Dir;
+    auto exs = phiCNF->get_existentials();
 
-    // string jsonPath;
-    string phiFileName = phiPath.stem().string();
-
-    // open and read phi from phi.dimacs, setup directories for phi_0 and phi_1
-    if (FS::exists(phiPath))
-    {
-        char *phiPath_cstr = new char[phiPath.string().size() + 1];
-
-        strcpy(phiPath_cstr, phiPath.c_str());
-
-        phi_Ntk = getNtkFromCNF(phiPath_cstr);
-
-        assert(phi_Ntk != NULL);
-
-        FS::path phi_0DirPath = FS::path("./data/") / phiPath.stem().string() / "phi_0";
-        assert(FS::exists(phi_0DirPath));
-        phi_0Dir = phi_0DirPath.string();
-
-        FS::path phi_1DirPath = FS::path("./data/") / phiPath.stem().string() / "phi_1";
-        assert(FS::exists(phi_1DirPath));
-        phi_1Dir = phi_1DirPath.string();
-    }
-    else
-    {
-        cerr << "File " << inpPath << " does not exist!" << endl;
-        exit(1);
-    }
-    // return 0;
-    phi_Man = Abc_NtkToDar(phi_Ntk, 0, 0);
-
-    // Build Neg_Phi
-    Aig_Man_t *negPhi_Man = Aig_ManDupOrdered(phi_Man);
-    Aig_ManCo(negPhi_Man, 0)->pFanin0 = Aig_Not(Aig_ManCo(negPhi_Man, 0)->pFanin0);
-    Abc_Ntk_t *negPhi_Ntk = Abc_NtkFromAigPhase(negPhi_Man);
-
-    FS::path jsonPath = FS::path("./data/") / phiFileName / (phiFileName + ".json");
-
-    ifstream json_file(jsonPath.string());
-    if (!json_file.is_open())
-    {
-        cerr << "Error opening file: " << jsonPath.string() << endl;
-        return 1;
+    map<int, DQCNF*> projectedPhis;
+    map<int, Aig_Man_t*> projectedMans;
+    for(auto id:exs){
+        DQCNF* tCNF = phiCNF->getProjection(id);
+        projectedPhis[id]=tCNF;
+        Aig_Man_t* tMan = tCNF->genAIGMan();
+        projectedMans[id]=tMan;
+    cout<<"Generated DQCNF and Aig_Man_t Objects for Projected PHI_"<<id<<endl;
     }
 
-    // setup essential maps and variables
-    nlohmann::json json_data;
-    json_file >> json_data;
 
-    numOrigInputs = Aig_ManCiNum(negPhi_Man);
-    numX = json_data["numX"], numY = json_data["numY"];
+    cout<<"Generating PHI_i(0) and PHI_i(1)...\n";
+    map<int, Aig_Man_t*> phi_1_Man;
+    map<int, Aig_Man_t*> phi_0_Man;
+    for(auto p:projectedMans){
+        Aig_Man_t* tMan = Aig_ManDupOrdered(p.second);
+        cout<<"Generating Phi(1) and Phi(0) for EX_VAR: "<<p.first<<endl;
 
-    // dependencies = json_data["dependencies"].get<std::map<int, std::vector<int>>>();
-    for (auto &[key, value] : json_data["dependencies"].items())
-    {
-        int int_key = std::stoi(key); // JSON keys are strings; convert to int
-        dependencies[int_key] = value.get<std::vector<int>>();
-    }
-    // return 0;
+        //get the new output driver
+        Aig_Obj_t* newOut = Aig_SubstituteConst(tMan, Aig_ManCo(tMan,0),p.first,1);
+        //create new output
+        Aig_ObjCreateCo(tMan,newOut);
 
-    assert(numX + numY == numOrigInputs);
-
-    std::cout << "numX: " << numX << std::endl;
-    std::cout << "numY: " << numY << std::endl;
-    std::cout << "Dependencies:" << std::endl;
-    for (const auto &[key, value] : dependencies)
-    {
-        std::cout << "  " << key << ": [";
-        for (size_t i = 0; i < value.size(); ++i)
-        {
-            std::cout << value[i] << (i < value.size() - 1 ? ", " : "");
-        }
-        std::cout << "]" << std::endl;
-    }
-
-    // return 0;
-
-    cout << "NegPHI created\n";
-    // Aig_ManShow(negPhi_Man,0,NULL);
-    // cin>>mySIG;
-
-    // Generating A_Ntk, B_Ntk, A_Man, B_Man, Formula
-    vector<Abc_Ntk_t *> A_Ntk;
-    vector<Abc_Ntk_t *> B_Ntk;
-
-    vector<Aig_Man_t *> A_Man;
-    vector<Aig_Man_t *> B_Man;
-
-    // generate basis functions
-    generateBasis(phi_0Dir, phi_1Dir, A_Ntk, B_Ntk, A_Man, B_Man);
-    cout << "Basis Created\n";
-    // vector<Aig_Obj_t*> H;
-    assert(A_Ntk.size() == numY);
-    assert(B_Ntk.size() == numY);
-    assert(A_Man.size() == numY);
-    assert(B_Man.size() == numY);
-
-    cout << A_Ntk.size() << endl;
-
-    // Append all the basis into a single network, including neg_Phi
-    for (int i = 0; i < numY; i++)
-    {
-        Abc_Ntk_t *currA = A_Ntk[i];
-        // cout << "here\n";
-        Abc_Ntk_t *currB = B_Ntk[i];
-        if (!Abc_NtkAppend(negPhi_Ntk, currA, 1))
-        {
-            cerr << "Failed appending A[" << i << "] into Neg_PHI network";
-            exit(1);
+        //remove old output and cleanup the network to remove dangling nodes
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,0));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,0),Aig_ManConst0(tMan),NULL);
+        Aig_ManCoCleanup(tMan);
+        Aig_ManCleanup(tMan);
+        
+        if(Aig_ManCoNum(tMan)==0){
+            Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
         }
 
-        if (!Abc_NtkAppend(negPhi_Ntk, currB, 1))
-        {
-            cerr << "Failed appending B[" << i << "] into Neg_PHI network";
-            exit(1);
+
+        phi_1_Man[p.first]=tMan;
+
+        // Aig_ManShow(tMan,0,NULL);
+        // cin>>mySIG;
+
+        tMan = Aig_ManDupOrdered(p.second);
+        //get the new output driver
+        newOut = Aig_SubstituteConst(tMan, Aig_ManCo(tMan,0),p.first,0);
+        //create new output
+        Aig_ObjCreateCo(tMan,newOut);
+
+        //remove old output and cleanup the network to remove dangling nodes
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,0));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,0),Aig_ManConst0(tMan),NULL);
+        Aig_ManCoCleanup(tMan);
+        Aig_ManCleanup(tMan);
+
+        if(Aig_ManCoNum(tMan)==0){
+            Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
         }
-        // cout<<"Appended basis for "<<i<<" var\n";
+
+        phi_0_Man[p.first]=tMan;
+
+    }  
+
+    cout<<"****   DONE!   *****\n";
+
+
+    cout<<"Generating Basis Functions...\n";
+    
+    map<int,Aig_Man_t*> A_Man;
+    map<int,Aig_Man_t*> B_Man;
+    map<int,Abc_Ntk_t*> A_Ntk;
+    map<int,Abc_Ntk_t*> B_Ntk;
+    
+    for(auto id:exs){
+
+        cout<<"Generating Basis for EX_VAR: "<<id<<endl;
+
+        Aig_Man_t* phi_1 = phi_1_Man[id];
+        Aig_Man_t* phi_0 = phi_0_Man[id];
+
+        //get the networks
+        Abc_Ntk_t* phi_1_Ntk = Abc_NtkFromAigPhase(phi_1);
+        Abc_Ntk_t* phi_0_Ntk = Abc_NtkFromAigPhase(phi_0);
+
+        //append networks
+        Abc_NtkAppend(phi_0_Ntk, phi_1_Ntk,1);
+
+        //get the manager for A
+        Aig_Man_t* tMan = Abc_NtkToDar(phi_0_Ntk,0,0);
+
+         
+
+        //create output driver for A
+        Aig_Obj_t* newNode = Aig_And(tMan,Aig_ManCo(tMan,1)->pFanin0, Aig_Not(Aig_ManCo(tMan,0)->pFanin0));
+        
+        //Create new Output
+        Aig_ObjCreateCo(tMan,newNode);
+
+        //remove old outputs and cleanup the network
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,0));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,0),Aig_ManConst0(tMan),NULL);
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,1));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,1),Aig_ManConst0(tMan),NULL);
+        Aig_ManCoCleanup(tMan);
+        Aig_ManCleanup(tMan);
+
+        if(Aig_ManCoNum(tMan)==0){
+            Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
+        }
+        
+
+        A_Man[id] = tMan;
+        A_Ntk[id] = Abc_NtkFromAigPhase(tMan);
+
+        //get the manager for A
+        tMan = Abc_NtkToDar(phi_0_Ntk,0,0);
+
+        // phi1 OR !phi_0
+        Aig_Obj_t *newNode1 = Aig_Or(tMan, Aig_ManCo(tMan, 1)->pFanin0, Aig_Not(Aig_ManCo(tMan, 0)->pFanin0));
+
+        // !phi OR phi0
+        Aig_Obj_t *newNode2 = Aig_Or(tMan, Aig_ManCo(tMan, 0)->pFanin0, Aig_Not(Aig_ManCo(tMan, 1)->pFanin0));
+
+        // newNode1 AND newNode2
+        Aig_Obj_t *finalNewNode = Aig_And(tMan, newNode1, newNode2);
+        
+        //Create new Output
+        Aig_ObjCreateCo(tMan,finalNewNode);
+
+        //remove old outputs and cleanup the network
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,0));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,0),Aig_ManConst0(tMan),NULL);
+        Aig_ObjDisconnect(tMan,Aig_ManCo(tMan,1));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,1),Aig_ManConst0(tMan),NULL);
+        Aig_ManCoCleanup(tMan);
+        Aig_ManCleanup(tMan);
+
+        if(Aig_ManCoNum(tMan)==0){
+            Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
+        }
+
+        
+
+        B_Man[id]=tMan;
+        B_Ntk[id] = Abc_NtkFromAigPhase(tMan);
     }
 
-    Aig_Man_t *tmpMan = Abc_NtkToDar(negPhi_Ntk, 0, 0);
-    Aig_Obj_t *delta = nullptr;
+    cout<<"****   DONE!   *****\n";
 
-    // Aig_ManShow(tmpMan,0,NULL);
-    // cin>>mySIG;
+    cout<<"Generating AIG Manager for negPHI...\n";
+    Aig_Man_t* negPhi_Man = Aig_ManDupOrdered(phi_Man);
+    Aig_ManCo(negPhi_Man,0)->pFanin0 = Aig_Not(Aig_ManCo(negPhi_Man,0)->pFanin0);
 
-    // Compose the outputs of basis functions to generate definitions, get formula (DELTA AND !PHI)
-    for (int i = 0; i < numY; i++)
-    {
-        Aig_Obj_t *outA = Aig_ManCo(tmpMan, 2 * i + 1)->pFanin0;
-        Aig_Obj_t *outB = Aig_ManCo(tmpMan, 2 * i + 2)->pFanin0;
+    cout<<"Creating the formula DELTA (AND) !PHI\n";
 
-        Aig_Obj_t *currH = Aig_ObjCreateCi(tmpMan);
-        // H.push_back(currH);
+    Aig_Man_t* defsMan = Aig_ManStart(0);
 
-        Aig_Obj_t *H_And_B = Aig_And(tmpMan, currH, outB);
+    //Append all basis into negPHI
+    Abc_Ntk_t* negPHI_Ntk = Abc_NtkFromAigPhase(negPhi_Man);
 
-        Aig_Obj_t *defin = Aig_Or(tmpMan, outA, H_And_B);
-        Aig_Obj_t *y_imp_defin = Aig_Or(tmpMan, Aig_Not(Aig_ManCi(tmpMan, numX + i)), defin);
-        Aig_Obj_t *defin_imp_y = Aig_Or(tmpMan, Aig_Not(defin), Aig_ManCi(tmpMan, numX + i));
 
-        Aig_Obj_t *currDelta = Aig_And(tmpMan, y_imp_defin, defin_imp_y);
+    map<int,pair<int,int>> exToOutMapping;
+    for(auto id:exs){
+        Abc_Ntk_t* ANtk = Abc_NtkFromAigPhase(A_Man[id]);
+        Abc_Ntk_t* BNtk = Abc_NtkFromAigPhase(B_Man[id]);
 
-        if (delta == nullptr)
-        {
-            delta = currDelta;
-        }
-        else
-        {
-            delta = Aig_And(tmpMan, delta, currDelta);
-        }
+        Abc_NtkAppend(negPHI_Ntk,ANtk,1);
+        Abc_NtkAppend(negPHI_Ntk,BNtk,1);
+
+        cout<<"Appended Basis for EX_VAR: "<<id<<endl;
+        
+        exToOutMapping[id] = {Abc_NtkCoNum(negPHI_Ntk)-2,Abc_NtkCoNum(negPHI_Ntk)-1};
     }
-    Aig_Obj_t *newOut = Aig_And(tmpMan, Aig_ManCo(tmpMan, 0)->pFanin0, delta);
-    Aig_Obj_t *reqdOutNode = Aig_ObjCreateCo(tmpMan, newOut);
-    Aig_Man_t *origFormula = Aig_ManDupOneOutput(tmpMan, Aig_ManCoNum(tmpMan) - 1, 0);
 
-    // Aig_Man_t* Formula = Aig_ManDupOrdered(origFormula);
+    Aig_Man_t* tMan = Abc_NtkToDar(negPHI_Ntk,0,0);
 
-    Aig_ManStop(tmpMan);
+    //compose the outputs and create the final output for delta ^ !phi
+    map<int, Aig_Obj_t*> exToHMapping;
+    Aig_Obj_t* delta = Aig_ManConst1(tMan);
+    for(auto id:exs){
+        Aig_Obj_t* outA = Aig_ManCo(tMan,exToOutMapping[id].first)->pFanin0;
+        Aig_Obj_t* outB = Aig_ManCo(tMan,exToOutMapping[id].second)->pFanin0;
+
+        Aig_Obj_t* currH = Aig_ObjCreateCi(tMan);
+
+        exToHMapping[id]=currH;
+        Aig_Obj_t* HAndB = Aig_And(tMan, currH, outB);
+        Aig_Obj_t* defin = Aig_Or(tMan, outA, HAndB);
+        Aig_Obj_t* yImpDefin = Aig_Or(tMan, Aig_Not(Aig_ManCi(tMan,id-1)), defin);
+        Aig_Obj_t* definImpY = Aig_Or(tMan, Aig_Not(defin), Aig_ManCi(tMan,id-1));
+
+        Aig_Obj_t* currDelta = Aig_And(tMan, yImpDefin, definImpY);
+
+        delta = Aig_And(tMan, delta, currDelta);
+    }
+    Aig_Obj_t* outputDriver = Aig_And(tMan, delta, Aig_ManCo(tMan,0)->pFanin0);
+    Aig_Obj_t* newOut = Aig_ObjCreateCo(tMan,outputDriver);
+
+    int numOuts = Aig_ManCoNum(tMan);
+    for(int i=0;i<numOuts-1;i++){
+        Aig_ObjDisconnect(tMan, Aig_ManCo(tMan,i));
+        Aig_ObjConnect(tMan,Aig_ManCo(tMan,i),Aig_ManConst0(tMan),NULL);
+    }
+    // Abc_Ntk_t* tntk = Abc_NtkFromAigPhase(origFormula);
+    // exit(1);
+    // Aig_Man_t* origFormula = Aig_ManDupOneOutput(tMan,Aig_ManCoNum(tMan)-1,0);
+    Aig_ManCoCleanup(tMan);
+    Aig_ManCleanup(tMan);
+
+    if(Aig_ManCoNum(tMan)==0){
+        Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
+    }
+
+    Aig_Man_t* origFormula = tMan;
+
+    Aig_Obj_t* deltaAndNegPhi = Aig_ManCo(origFormula,0)->pFanin0;
+
+    
+
+    map<int, Aig_Obj_t*> exToCases; // cases when h=0;
+
+    for(auto id:exs){
+        exToCases[id] = Aig_ManConst0(origFormula);
+    }
+
+    //build mu and default case;
+    Aig_Obj_t* mu = Aig_ManConst1(origFormula);
+    Aig_Obj_t* defaultCase = Aig_ManConst1(origFormula);
+    
+
+    for(auto id:exs){
+        Aig_Obj_t* currCase = exToCases[id];
+        
+        //case imp ~h = ~case v ~h
+        Aig_Obj_t* tmp = Aig_Or(origFormula, Aig_Not(currCase), Aig_Not(exToHMapping[id]));
+        mu = Aig_And(origFormula,mu,tmp);
+
+        // ~case => h<=>1 = case v h
+        tmp = Aig_Or(origFormula, currCase, exToHMapping[id]);
+        defaultCase = Aig_And(origFormula,defaultCase, tmp);
+    }
+    
+
+    Aig_Obj_t* constraint = Aig_ManConst1(origFormula);
+
+    //compose the nodes to create final output
+    newOut = Aig_ManConst1(origFormula);
+    newOut = Aig_And(origFormula,newOut, deltaAndNegPhi); //this stays constant
+    newOut = Aig_And(origFormula,newOut,mu); // this changes by mu -> mu AND tmpMu
+    newOut = Aig_And(origFormula,newOut,defaultCase); // we build this from exToCases
+    newOut = Aig_And(origFormula,newOut,constraint); // this updates by constraint -> constraint AND newConstraint.
+
+    Aig_ObjCreateCo(origFormula,newOut);
+    
+    Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula,0));
+    Aig_ObjConnect(origFormula,Aig_ManCo(origFormula,0),Aig_ManConst0(origFormula),NULL);
+
+    Aig_ManCoCleanup(origFormula);
+    Aig_ManCleanup(origFormula);
+
+    if(Aig_ManCoNum(origFormula)==0){
+        Aig_ObjCreateCo(origFormula,Aig_ManConst0(origFormula));
+    }
+
+   
+    //A manager for constraints to check for sat
+    Aig_Man_t* constraintMan = Aig_ManDupOrdered(origFormula);
+    Aig_ObjDisconnect(constraintMan,Aig_ManCo(constraintMan,0));
+    Aig_ObjConnect(constraintMan,Aig_ManCo(constraintMan,0),Aig_ManConst1(constraintMan),NULL);
+    Aig_ManCoCleanup(constraintMan);
+    Aig_ManCleanup(constraintMan);
+
+    if(Aig_ManCoNum(constraintMan)==0){
+        Aig_ObjCreateCo(constraintMan,Aig_ManConst0(constraintMan));
+    }
+
+
+    // Aig_Obj_t* constraint = Aig_ManConst1(origFormula);
+
+    // //compose the nodes to create final output
+    // newOut = Aig_ManConst1(origFormula);
+    // newOut = Aig_And(origFormula,newOut, deltaAndNegPhi); //this stays constant
+    // newOut = Aig_And(origFormula,newOut,mu); // this changes by mu -> mu AND tmpMu
+    // newOut = Aig_And(origFormula,newOut,defaultCase); // we build this from exToCases
+    // newOut = Aig_And(origFormula,newOut,constraint); // this updates by constraint -> constraint AND newConstraint.
+
+    // Aig_ObjCreateCo(origFormula,newOut);
+    
+    // Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula,0));
+    // Aig_ObjConnect(origFormula,Aig_ManCo(origFormula,0),Aig_ManConst0(origFormula),NULL);
+
+    // Aig_ManCoCleanup(origFormula);
+    // Aig_ManCleanup(origFormula);
 
     // Aig_ManShow(origFormula,0,NULL);
     // cin>>mySIG;
 
-    vector<set<vector<int>>> defaultCase(numY); // dc[i]-> a list of lists.-> 1 entry is a list of lits which form a formula like !(and of list1) AND !(and of list 2) AND ...
-    // vector<vector<vector<int>>> mu(numY); //mu[i]->list of list. It forms the formula (and of list1) OR (and of list 2) OR ....
-    // The lists(for dc and mu) [i]  are actually the same!!!
+    // start the main loop
+                                                                                // origFormu  , constrMan //
+    map<pair<int,set<int>>,pair<Aig_Obj_t*,Aig_Obj_t*>> ex_caseToAuxMapping; // {ex_id,[depVal] }-><Aig_Obj_t*, Aig_Obj_t*> 
 
-    Aig_Man_t *Formula = Aig_ManDupOrdered(origFormula);
+    map<set<int>,Aig_Obj_t*> caseToNodeMapping;
 
-    // Creating mu[i] and dc[i] followed by cumulatives to create final output node.
-    Aig_Obj_t *dcCum = Aig_ManConst1(Formula);
-    Aig_Obj_t *muCum = Aig_ManConst1(Formula);
-    // auto garbge = defaultCase[numX];
-    for (int i = 0; i < numY; i++)
-    {
-        set<vector<int>> list = defaultCase[i];
-        // cout<<"Creating default case and mu for y_"<<i<<endl;
-
-        Aig_Obj_t *dc_i = Aig_ManConst1(Formula);
-        Aig_Obj_t *mu_i = Aig_ManConst0(Formula);
-        if (list.empty())
-        {
-            // dc_i=Aig_ManConst1(Formula);
-            // cout<<"empty\n";
-        }
-        else
-        {
-            for (auto c : list)
-            {
-                Aig_Obj_t *tmp = Aig_ManConst1(Formula);
-                for (auto lit : c)
-                {
-                    if (lit > 0)
-                    {
-                        tmp = Aig_And(Formula, tmp, Aig_ManCi(Formula, lit - 1));
-                    }
-                    else
-                    {
-                        tmp = Aig_And(Formula, tmp, Aig_Not(Aig_ManCi(Formula, -lit - 1)));
-                    }
-                }
-                dc_i = Aig_And(Formula, dc_i, Aig_Not(tmp));
-                mu_i = Aig_Or(Formula, mu_i, tmp);
-            }
-        }
-
-        Aig_Obj_t *dc_i_imp_H = Aig_Or(Formula, Aig_Not(dc_i), Aig_ManCi(Formula, numOrigInputs + i));
-        dcCum = Aig_And(Formula, dcCum, dc_i_imp_H);
-
-        Aig_Obj_t *mu_i_imp_notH = Aig_Or(Formula, Aig_Not(mu_i), Aig_Not(Aig_ManCi(Formula, numOrigInputs + i)));
-        muCum = Aig_And(Formula, muCum, mu_i_imp_notH);
-    }
-
-    Aig_Obj_t *outAndDefault = Aig_And(Formula, Aig_ManCo(Formula, 0)->pFanin0, dcCum);
-    Aig_Obj_t *finalOut = Aig_And(Formula, outAndDefault, muCum);
-
-    Aig_ObjCreateCo(Formula, finalOut);
-
-    // Aig_ManShow(Formula,0,NULL);
-    // cin>>mySIG;
-    // removing previous out
-    Aig_ObjDisconnect(Formula, Aig_ManCo(Formula, 0));
-    Aig_ObjConnect(Formula, Aig_ManCo(Formula, 0), Aig_ManConst0(Formula), NULL);
-
-    Aig_ManCoCleanup(Formula);
-
-    // Aig_ManShow(Formula,0,NULL);
-    // cin>>mySIG;
-
-    int totalInputs = Aig_ManCiNum(Formula);
-    int iter = 0;
-    while (true)
-    {
+    int iter=0;
+    while(true){
+        int totalInputs = Aig_ManCiNum(origFormula);
         iter++;
-        Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(Formula);
-        // Aig_ManShow(Formula,0,NULL);
-        // cout<<"Enter 1 ";
-        // cin>>mySIG;
-        int status = Abc_NtkMiterSat(FNtk, 100000, 0, 1, NULL, NULL);
-        if (status == -1)
-        {
-            cerr << "Timeout Occured\n";
+        cout << "************     ITER: " << iter<<"    **************"<<endl;
+        // cout<<Vec_PtrSize(origFormula.)
+        Abc_Ntk_t* FNtk = Abc_NtkFromAigPhase(origFormula);
+        int status = Abc_NtkMiterSat(FNtk,100000,0,1,NULL,NULL);
+        if(status == -1){
+            cerr<<"Timeout Occured.\n";
             exit(1);
         }
 
-        if (status == 1)
-        {
-            cout << "UNSat!!\n";
-
+        if(status==1){
+            cout<<"UNSAT!!!!\n";
             return 0;
         }
 
-        cout << "Formula is SAT. Working on the counter-example...\n";
+        cout<<"Formula is SAT. Working on the counter-example...\n";
 
-        int *cex = FNtk->pModel;
-        cout << "ITER: " << iter << " | CEX : ";
+        int* cex = FNtk->pModel;
+        cout<< "CEX : ";
+        
+        Abc_Ntk_t* constraintNtk = Abc_NtkFromAigPhase(constraintMan);
+
         for (int i = 0; i < totalInputs; i++)
         {
             cout << cex[i] << " ";
         }
         cout << endl;
-        bool changeFlag = false;
-        for (int i = 0; i < numY; i++)
-        {
 
-            int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[i], cex)[0];
-            int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[i], cex)[0];
+        int constraintSAT = Abc_NtkVerifySimulatePattern(constraintNtk,cex)[0];
 
-            printf("A[%d]: %d | B[%d]: %d\n", i, a_i, i, b_i);
+        if(constraintSAT==0){
+            cout<<"Failed to satisfy auxilary variable constraints. Terminating...\n";
+            return 0;
+        }
+
+        Aig_Obj_t* newConstr1 = Aig_ManConst0(origFormula);
+        Aig_Obj_t* newConstr2 = Aig_ManConst0(constraintMan);
+
+        bool changeFlag=false;
+        Aig_Obj_t* tmpMu = Aig_ManConst1(origFormula);
+
+        for(auto id:exs){
+
+
+
+            int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id],cex)[0];
+            int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[id],cex)[0];
+
+            // printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
             if (!(a_i == 0 && b_i == 1))
             {
                 continue;
             }
 
-            // get the dependency clause to insert in defccase
-            vector<int> newClause;
-            for (auto dep : dependencies[numX + i + 1])
-            {
-                if (cex[dep - 1] == 0)
-                {
-                    newClause.push_back(-dep);
+            //get the set cex|dep
+            set<int> depVal;
+            set<int> depSet = phiCNF->get_dependencySet(id);
+
+            for(auto dep:depSet){
+                if(cex[dep-1]==0){
+                    depVal.insert(-dep);
                 }
-                else
-                {
-                    newClause.push_back(dep);
+                else{
+                    depVal.insert(dep);
                 }
+                // depVal.insert(cex[dep-1]);
             }
-            sort(newClause.begin(), newClause.end());
-            int oldSize = defaultCase[i].size();
-            defaultCase[i].insert(newClause);
-            if (defaultCase[i].size() != oldSize)
-            {
-                changeFlag = true;
-            }
-        }
 
-        if (!changeFlag)
-        {
-            cout << "No change occured.. :( Ending loop.\n";
-            cout << "Skolem Function do not exist.\n";
-            break;
-        }
+            // Aig_Obj_t* newCase = Aig_ManConst1(origFormula);
+            if(ex_caseToAuxMapping.find({id,depVal})==ex_caseToAuxMapping.end()){
+                cout<<"Created new auxiliary variable for id: "<<id<<endl;
+                changeFlag=true;
+                //generate new aux var and update mu
+                Aig_Obj_t* newAux = Aig_ObjCreateCi(origFormula);
+                Aig_Obj_t* newAuxConstraint = Aig_ObjCreateCi(constraintMan);
 
-        Aig_ManStop(Formula);
-
-        Formula = Aig_ManDupOrdered(origFormula);
-
-        Aig_Obj_t *dcCum = Aig_ManConst1(Formula);
-        Aig_Obj_t *muCum = Aig_ManConst1(Formula);
-
-        for (int i = 0; i < numY; i++)
-        {
-            set<vector<int>> list = defaultCase[i];
-            // cout<<"Creating default case and mu for y_"<<i<<endl;
-
-            Aig_Obj_t *dc_i = Aig_ManConst1(Formula);
-            Aig_Obj_t *mu_i = Aig_ManConst0(Formula);
-            if (list.empty())
-            {
-                // dc_i=Aig_ManConst1(Formula);
-                // cout<<"empty\n";
-            }
-            else
-            {
-                for (auto c : list)
-                {
-                    Aig_Obj_t *tmp = Aig_ManConst1(Formula);
-                    for (auto lit : c)
-                    {
-                        if (lit > 0)
-                        {
-                            tmp = Aig_And(Formula, tmp, Aig_ManCi(Formula, lit - 1));
+                // mu =  mu AND case-> h<->newAux
+                Aig_Obj_t* newCase = Aig_ManConst1(origFormula);
+                if(caseToNodeMapping.find(depVal)==caseToNodeMapping.end()){
+                    // create the node for case
+                    for(auto dep:depVal){
+                        if(dep>0){
+                            newCase = Aig_And(origFormula,newCase,Aig_ManCi(origFormula,dep-1));
                         }
-                        else
-                        {
-                            tmp = Aig_And(Formula, tmp, Aig_Not(Aig_ManCi(Formula, -lit - 1)));
+                        else{
+                            newCase = Aig_And(origFormula,newCase,Aig_Not(Aig_ManCi(origFormula,-dep-1)));
                         }
                     }
-                    dc_i = Aig_And(Formula, dc_i, Aig_Not(tmp));
-                    mu_i = Aig_Or(Formula, mu_i, tmp);
+                    caseToNodeMapping[depVal] = newCase;
                 }
+                else{
+                    newCase = caseToNodeMapping[depVal];
+                }
+                
+                Aig_Obj_t* hImpAux = Aig_Or(origFormula, Aig_Not(exToHMapping[id]),newAux);
+                Aig_Obj_t* auxImpH = Aig_Or(origFormula, Aig_Not(newAux),exToHMapping[id]);
+                Aig_Obj_t* hIFFaux = Aig_And(origFormula, hImpAux,auxImpH);
+                
+                Aig_Obj_t* caseImpAsg = Aig_Or(origFormula, Aig_Not(newCase),hIFFaux);
+                //update tmpMu -> tmpMu AND caseImpAsg
+                tmpMu = Aig_And(origFormula,tmpMu,caseImpAsg);
+
+                exToCases[id] = Aig_Or(origFormula, exToCases[id],newCase); //for defaultCase node.
+
+                //uodate the newConstr nodes.
+                newConstr1 = Aig_Or(origFormula,newConstr1, Aig_Not(newAux));
+                newConstr2 = Aig_Or(constraintMan,newConstr2, Aig_Not(newAuxConstraint));
+
+
+                ex_caseToAuxMapping[{id,depVal}] = {newAux,newAuxConstraint};
             }
-
-            Aig_Obj_t *dc_i_imp_H = Aig_Or(Formula, Aig_Not(dc_i), Aig_ManCi(Formula, numOrigInputs + i));
-            dcCum = Aig_And(Formula, dcCum, dc_i_imp_H);
-
-            Aig_Obj_t *mu_i_imp_notH = Aig_Or(Formula, Aig_Not(mu_i), Aig_Not(Aig_ManCi(Formula, numOrigInputs + i)));
-            muCum = Aig_And(Formula, muCum, mu_i_imp_notH);
+            else{
+                //the aux variable already exists, which implies that we only need to update the constraints.
+                auto p = ex_caseToAuxMapping[{id,depVal}];
+                newConstr1 = Aig_Or(origFormula,newConstr1, Aig_Not(p.first));
+                newConstr2 = Aig_Or(constraintMan,newConstr2, Aig_Not(p.second));
+            }
         }
 
-        Aig_Obj_t *outAndDefault = Aig_And(Formula, Aig_ManCo(Formula, 0)->pFanin0, dcCum);
-        Aig_Obj_t *finalOut = Aig_And(Formula, outAndDefault, muCum);
+        if(changeFlag==false){
+            cerr<<"No new variables created... exiting :(\n";
+            exit(1);
+        }
 
-        Aig_ObjCreateCo(Formula, finalOut);
+        //update origFormula
+        Aig_Obj_t* newOut_tmp = Aig_ManConst1(origFormula);
 
-        // Aig_ManShow(Formula,0,NULL);
-        // cin>>mySIG;
-        // removing previous out
-        Aig_ObjDisconnect(Formula, Aig_ManCo(Formula, 0));
-        Aig_ObjConnect(Formula, Aig_ManCo(Formula, 0), Aig_ManConst0(Formula), NULL);
+            //update mu
+        mu = Aig_And(origFormula,mu,tmpMu);
 
-        Aig_ManCoCleanup(Formula);
+            //update constraint
+        constraint = Aig_And(origFormula,constraint,newConstr1);
 
-        // Aig_ManShow(Formula,0,NULL);
-        // cin>>mySIG;
+            //build defaultCase
+        defaultCase = Aig_ManConst1(origFormula);
+        for(auto id:exs){
+            Aig_Obj_t* currCase = exToCases[id];
+
+            // ~case => h<=>1 = case v h
+            Aig_Obj_t* tmp = Aig_Or(origFormula, currCase, exToHMapping[id]);
+            defaultCase = Aig_And(origFormula,defaultCase, tmp);
+        }
+
+        newOut_tmp = Aig_And(origFormula,newOut_tmp,deltaAndNegPhi);
+        newOut_tmp = Aig_And(origFormula,newOut_tmp,mu);
+        newOut_tmp = Aig_And(origFormula,newOut_tmp,defaultCase); 
+        newOut_tmp = Aig_And(origFormula,newOut_tmp,constraint);
+
+        Aig_ObjCreateCo(origFormula,newOut_tmp);
+    
+        Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula,0));
+        Aig_ObjConnect(origFormula,Aig_ManCo(origFormula,0),Aig_ManConst0(origFormula),NULL);
+
+        Aig_ManCoCleanup(origFormula);
+        Aig_ManCleanup(origFormula);
+
+        if(Aig_ManCoNum(origFormula)==0){
+            Aig_ObjCreateCo(origFormula,Aig_ManConst0(origFormula));
+        }
+
+        //update constraintMan
+        // output = output AND newConstr2
+
+        Aig_Obj_t* constrNewOut = Aig_ManCo(constraintMan,0)->pFanin0;
+        constrNewOut = Aig_And(constraintMan, constrNewOut, newConstr2);
+
+        Aig_ObjCreateCo(constraintMan,constrNewOut);
+
+        Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan,0));
+        Aig_ObjConnect(constraintMan,Aig_ManCo(constraintMan,0),Aig_ManConst0(constraintMan),NULL);
+
+        Aig_ManCoCleanup(constraintMan);
+        Aig_ManCleanup(constraintMan);
+
+        if(Aig_ManCoNum(constraintMan)==0){
+        Aig_ObjCreateCo(constraintMan,Aig_ManConst0(constraintMan));
     }
+    }
+
+
+
+
+
+
+
+
+
+
+
+    return 0;
+
+
+    // while (true)
+    // {
+    //     iter++;
+    //     Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(Formula);
+    //     // Aig_ManShow(Formula,0,NULL);
+    //     // cout<<"Enter 1 ";
+    //     // cin>>mySIG;
+    //     int status = Abc_NtkMiterSat(FNtk, 100000, 0, 1, NULL, NULL);
+    //     if (status == -1)
+    //     {
+    //         cerr << "Timeout Occured\n";
+    //         exit(1);
+    //     }
+
+    //     if (status == 1)
+    //     {
+    //         cout << "UNSat!!\n";
+
+    //         return 0;
+    //     }
+
+    //     cout << "Formula is SAT. Working on the counter-example...\n";
+
+    //     int *cex = FNtk->pModel;
+    //     cout << "ITER: " << iter << " | CEX : ";
+    //     for (int i = 0; i < totalInputs; i++)
+    //     {
+    //         cout << cex[i] << " ";
+    //     }
+    //     cout << endl;
+    //     bool changeFlag = false;
+    //     for (int i = 0; i < numY; i++)
+    //     {
+
+    //         int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[i], cex)[0];
+    //         int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[i], cex)[0];
+
+    //         printf("A[%d]: %d | B[%d]: %d\n", i, a_i, i, b_i);
+    //         if (!(a_i == 0 && b_i == 1))
+    //         {
+    //             continue;
+    //         }
+
+    //         // get the dependency clause to insert in defccase
+    //         vector<int> newClause;
+    //         for (auto dep : dependencies[numX + i + 1])
+    //         {
+    //             if (cex[dep - 1] == 0)
+    //             {
+    //                 newClause.push_back(-dep);
+    //             }
+    //             else
+    //             {
+    //                 newClause.push_back(dep);
+    //             }
+    //         }
+    //         sort(newClause.begin(), newClause.end());
+    //         int oldSize = defaultCase[i].size();
+    //         defaultCase[i].insert(newClause);
+    //         if (defaultCase[i].size() != oldSize)
+    //         {
+    //             changeFlag = true;
+    //         }
+    //     }
+
+    //     if (!changeFlag)
+    //     {
+    //         cout << "No change occured.. :( Ending loop.\n";
+    //         cout << "Skolem Function do not exist.\n";
+    //         break;
+    //     }
+
+    //     Aig_ManStop(Formula);
+
+    //     Formula = Aig_ManDupOrdered(origFormula);
+
+    //     Aig_Obj_t *dcCum = Aig_ManConst1(Formula);
+    //     Aig_Obj_t *muCum = Aig_ManConst1(Formula);
+
+    //     for (int i = 0; i < numY; i++)
+    //     {
+    //         set<vector<int>> list = defaultCase[i];
+    //         // cout<<"Creating default case and mu for y_"<<i<<endl;
+
+    //         Aig_Obj_t *dc_i = Aig_ManConst1(Formula);
+    //         Aig_Obj_t *mu_i = Aig_ManConst0(Formula);
+    //         if (list.empty())
+    //         {
+    //             // dc_i=Aig_ManConst1(Formula);
+    //             // cout<<"empty\n";
+    //         }
+    //         else
+    //         {
+    //             for (auto c : list)
+    //             {
+    //                 Aig_Obj_t *tmp = Aig_ManConst1(Formula);
+    //                 for (auto lit : c)
+    //                 {
+    //                     if (lit > 0)
+    //                     {
+    //                         tmp = Aig_And(Formula, tmp, Aig_ManCi(Formula, lit - 1));
+    //                     }
+    //                     else
+    //                     {
+    //                         tmp = Aig_And(Formula, tmp, Aig_Not(Aig_ManCi(Formula, -lit - 1)));
+    //                     }
+    //                 }
+    //                 dc_i = Aig_And(Formula, dc_i, Aig_Not(tmp));
+    //                 mu_i = Aig_Or(Formula, mu_i, tmp);
+    //             }
+    //         }
+
+    //         Aig_Obj_t *dc_i_imp_H = Aig_Or(Formula, Aig_Not(dc_i), Aig_ManCi(Formula, numOrigInputs + i));
+    //         dcCum = Aig_And(Formula, dcCum, dc_i_imp_H);
+
+    //         Aig_Obj_t *mu_i_imp_notH = Aig_Or(Formula, Aig_Not(mu_i), Aig_Not(Aig_ManCi(Formula, numOrigInputs + i)));
+    //         muCum = Aig_And(Formula, muCum, mu_i_imp_notH);
+    //     }
+
+    //     Aig_Obj_t *outAndDefault = Aig_And(Formula, Aig_ManCo(Formula, 0)->pFanin0, dcCum);
+    //     Aig_Obj_t *finalOut = Aig_And(Formula, outAndDefault, muCum);
+
+    //     Aig_ObjCreateCo(Formula, finalOut);
+
+    //     // Aig_ManShow(Formula,0,NULL);
+    //     // cin>>mySIG;
+    //     // removing previous out
+    //     Aig_ObjDisconnect(Formula, Aig_ManCo(Formula, 0));
+    //     Aig_ObjConnect(Formula, Aig_ManCo(Formula, 0), Aig_ManConst0(Formula), NULL);
+
+    //     Aig_ManCoCleanup(Formula);
+
+    //     // Aig_ManShow(Formula,0,NULL);
+    //     // cin>>mySIG;
+    // }
 
     Abc_Stop();
 
