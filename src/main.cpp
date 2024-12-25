@@ -370,6 +370,14 @@ int main(int argc, char *argv[])
         }
 
         if(status==1){
+            Abc_Ntk_t* constraintNtk = Abc_NtkFromAigPhase(constraintMan);
+
+            int constrStatus = Abc_NtkMiterSat(constraintNtk, 100000,0,1,NULL,NULL);
+            if(status==1){
+                cout<<"Failed to satisfy auxilary variable constraints. Terminating...\n";
+                return 0;
+
+            }
             cout<<"UNSAT!!!!\n";
             return 0;
         }
@@ -379,7 +387,6 @@ int main(int argc, char *argv[])
         int* cex = FNtk->pModel;
         cout<< "CEX : ";
         
-        Abc_Ntk_t* constraintNtk = Abc_NtkFromAigPhase(constraintMan);
 
         for (int i = 0; i < totalInputs; i++)
         {
@@ -387,12 +394,6 @@ int main(int argc, char *argv[])
         }
         cout << endl;
 
-        int constraintSAT = Abc_NtkVerifySimulatePattern(constraintNtk,cex)[0];
-
-        if(constraintSAT==0){
-            cout<<"Failed to satisfy auxilary variable constraints. Terminating...\n";
-            return 0;
-        }
 
         Aig_Obj_t* newConstr1 = Aig_ManConst0(origFormula);
         Aig_Obj_t* newConstr2 = Aig_ManConst0(constraintMan);
