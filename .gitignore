@@ -2,6 +2,7 @@ bin/
 obj/
 .vscode/
 data/
+benchmarks/
 
 abc.history
 gmon.out
