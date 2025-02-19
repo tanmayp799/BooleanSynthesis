@@ -259,20 +259,70 @@ Aig_Man_t* DQCNF::genAIGMan(){
 		for(auto lit: clause){
 			if(lit>0){
 				tObj = Aig_Or(tMan, tObj, Aig_ManCi(tMan,lit-1));
+				// if(tObj == Aig_Not(Aig_ManCi(tMan,lit-1))) cout<<"Here2\n";
 			}
 			else{
 				tObj = Aig_Or(tMan, tObj, Aig_Not(Aig_ManCi(tMan,-lit-1)));
+				// if(tObj == Aig_Not(Aig_ManCi(tMan,-lit-1))) cout<<"Here\n";
 			}
 		}
 		finalConjunction=Aig_And(tMan, finalConjunction, tObj);
+		// if(clause.size()==1){
+		// 	if(finalConjunction == Aig_Not(Aig_ManCi(tMan,0))) cout<<"Here3\n";
+		// 	if(finalConjunction == (Aig_ManCi(tMan,0))) cout<<"Here4\n";
+		// 	if(finalConjunction == Aig_ManConst0(tMan)) cout<<"Here5\n";
+		// 	if(finalConjunction == Aig_ManConst1(tMan)) cout<<"Here6\n";
+		// 	Aig_ManShow(tMan,0,NULL);
+		// 	int q;
+		// 	cin>>q;
+		// }
+		
 	}
-	Aig_ObjCreateCo(tMan, finalConjunction);
+	// if(finalConjunction == Aig_ManConst0(tMan)) cout<<"Here5\n";
+	// if(finalConjunction == Aig_ManConst1(tMan)) cout<<"Here6\n";
+	// if(finalConjunction == Aig_ManConst0(tMan)) 
+	// {
+	// 	cout<<"TESTTTTTT: ";
+	// 	int x;
+	// 	cin>>x;
+	// 	Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
+	// 	Aig_ManShow(tMan,0,NULL);
+	// 		int q;
+	// 		cin>>q;
+	// 	Aig_Man_t* mm = Aig_ManStart(0);
+	// 	Aig_ObjCreateCo(mm,Aig_ManConst0(mm));
+	// 	Aig_ManShow(mm,0,NULL);
+	// 		// int q;
+	// 		cin>>q;
+
+	// 	Abc_Ntk_t* tmpntk= Abc_NtkFromAigPhase(tMan);
+	// 	int st = Abc_NtkMiterSat(tmpntk,100000,10000,1,NULL,NULL);
+	// 	if(st==1){
+	// 		cout<<"HMMMMMM INTERESTING\n";
+	// 	}
+	// 	Abc_Ntk_t* nn = Abc_NtkFromAigPhase(mm);
+	// 	int st2 = Abc_NtkMiterSat(nn,100000,100000,1,NULL,NULL);
+	// 	if(st2==1){
+	// 		cout<<"AS EXPECTED\n";
+	// 	}
+		
+	// 	// Aig_ObjCreateCo(tMan,Aig_ManConst0(tMan));
+	// }
+	Aig_ObjCreateCo(tMan, (finalConjunction));
+
+
+
+	// tMan = compressAig(tMan);
+	// tMan = compressAig(tMan);
+	// tMan = compressAig(tMan);
 	this->man = tMan;
 	return tMan;
 }
 
 set<int> DQCNF::get_dependencySet(int id){
+	// cout<<id<<endl;
 	if(this->dependency.find(id)==this->dependency.end()){
+		// cout<<"EXIS FOUND\n";
 		return universal;
 	}
 	return dependency[id];
@@ -288,7 +338,7 @@ DQCNF::DQCNF(set<int> universal, set<int> existential,
 		}
 DQCNF* DQCNF::getProjection(int id){
 	vector<set<int>> projectedClauses;
-	set<int> dep = this->dependency[id];
+	set<int> dep = this->get_dependencySet(id);
 	for(auto e:dep){
 		dep.insert(-e);
 	}
@@ -300,6 +350,14 @@ DQCNF* DQCNF::getProjection(int id){
 		if(newClause.size()==0) continue;
 		projectedClauses.push_back(set(newClause.begin(), newClause.end()));
 	}
+	// for(auto c:projectedClauses){
+	// 	cout<<"[";
+	// 	for(auto e:c){
+	// 		cout<<e<<", ";
+	// 	}
+	// 	cout<<"]\n";
+	// }
+	// exit(1);
 	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->numInputs,
 								projectedClauses.size(),projectedClauses);
 	return projectedDQCNF;
@@ -2525,6 +2583,8 @@ Aig_Man_t* compressAig(Aig_Man_t* SAig) {
 	//                  int fUpdateLevel, int fFanout,
 	//                  int fPower, int fVerbose )
 	OUT("Running Dar_ManCompress2...");
+	
+	// cout<<"HERE\n";
 	SAig =  Dar_ManCompress2(SAig, 1, 1, 26, 1, 0);
 	OUT("Stopping Old Aig Manager...");
 	Aig_ManStop( temp );
