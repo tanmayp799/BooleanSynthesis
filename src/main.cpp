@@ -46,6 +46,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Aig_Man_t* mm = Aig_ManStart(0);
+    // Aig_ObjCreateCo(mm,Aig_ManConst0(mm));
+    // Aig_ManShow(mm,0,NULL);
+    // exit(1);
+
     main_time_start = TIME_NOW;
 
     string inpPath = argv[1];
@@ -71,6 +76,7 @@ int main(int argc, char *argv[])
         Aig_Man_t *tMan = tCNF->genAIGMan();
         projectedMans[id] = tMan;
         cout << "Generated DQCNF and Aig_Man_t Objects for Projected PHI_" << id << endl;
+        // exit(1);
         // Aig_ManShow(tMan,0,NULL);
         // int q;
         // cin>>q;
@@ -105,6 +111,9 @@ int main(int argc, char *argv[])
         // Aig_ManShow(tMan,0,NULL);
         // int q;
         // cin>>q;
+        // tMan = compressAig(tMan);
+        // tMan = compressAig(tMan);
+
         phi_1_Man[p.first] = tMan;
 
         // Aig_ManShow(tMan,0,NULL);
@@ -129,6 +138,9 @@ int main(int argc, char *argv[])
         // Aig_ManShow(tMan,0,NULL);
         // // int q;
         // cin>>q;
+        // tMan = compressAig(tMan);
+        // tMan = compressAig(tMan);
+
         phi_0_Man[p.first] = tMan;
     }
     cout<<"DONE. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
@@ -179,6 +191,8 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
         }
+        // tMan = Aig(tMan);
+        // tMan = comcompresspressAig(tMan);
 
         A_Man[id] = tMan;
         A_Ntk[id] = Abc_NtkFromAigPhase(tMan);
@@ -212,6 +226,8 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
         }
+        // tMan = compressAig(tMan);
+        // tMan = compressAig(tMan);
 
         B_Man[id] = tMan;
         B_Ntk[id] = Abc_NtkFromAigPhase(tMan);
@@ -289,6 +305,10 @@ int main(int argc, char *argv[])
         Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
     }
 
+    // tMan = compressAig(tMan);
+    // tMan = compressAig(tMan);
+    Aig_ManCleanup(tMan);
+
     Aig_Man_t *origFormula = tMan;
 
     Aig_Obj_t *deltaAndNegPhi = Aig_ManCo(origFormula, 0)->pFanin0;
@@ -348,9 +368,12 @@ int main(int argc, char *argv[])
 
     if (Aig_ManCoNum(constraintMan) == 0)
     {
-        Aig_ObjCreateCo(constraintMan, Aig_ManConst0(constraintMan));
+        Aig_ObjCreateCo(constraintMan, Aig_ManConst1(constraintMan));
     }
 
+    // Aig_ManShow(constraintMan,0,NULL);
+    // int aa;
+    // cin>>aa;
 
     // start the main loop
     // origFormu  , constrMan //
@@ -359,7 +382,7 @@ int main(int argc, char *argv[])
     map<set<int>, Aig_Obj_t *> caseToNodeMapping;
     map<Aig_Obj_t*, int> auxToIdMapping;
     int iter = 0;
-    set<set<int>> constraintSet;
+    // set<set<int>> constraintSet;
     cout<<"****************      Starting Main Loop     *******************"<<endl;
 
     
@@ -368,8 +391,23 @@ int main(int argc, char *argv[])
     {
         int totalInputs = Aig_ManCiNum(origFormula);
         iter++;
-        cout << "************     ITER: " << iter << "    **************" << endl;
-    
+        bool verbose=false;
+        if(iter%500==0){
+            verbose=true;
+        }
+        if(verbose) cout << "************     ITER: " << iter << "    **************" << endl;
+
+        if(verbose){
+            cout<<"************          INFOO TIMEEEEEE      ****************\n";
+            cout<<"NUM INPUTS: "<<Aig_ManCiNum(origFormula)<<endl;;
+            cout<<"NETWORK SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
+            cout<<"Num Aux Created: "<<auxToIdMapping.size()<<endl;
+        }
+
+        // Aig_ManShow(origFormula,0,NULL);
+        
+        int aa;
+        // cin>>aa;
         Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(origFormula);
         int status = Abc_NtkMiterSat(FNtk, 100000, 0, 0, NULL, NULL);
         if (status == -1)
@@ -381,14 +419,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         // Aig_ManShow(origFormula,0,NULL);
-        int ex[7];
-        ex[0]=1;
-        ex[1]=1;
-        ex[2]=1;
-        ex[3]=1;
-        ex[4]=1;
-        ex[5]=1;
-        ex[6]=1;
+        
         // int res = Abc_NtkVerifySimulatePattern(FNtk,ex)[0];
         // cout<<res<<endl;
         // exit(1);
@@ -397,8 +428,9 @@ int main(int argc, char *argv[])
             Abc_Ntk_t *constraintNtk = Abc_NtkFromAigPhase(constraintMan);
 
             int constrStatus = Abc_NtkMiterSat(constraintNtk, 100000, 0, 0, NULL, NULL);
-            if (constrStatus == 1)
-            {
+            if (constrStatus !=0)
+            {   
+                // Aig_ManShow(constraintMan,0,NULL);
                 cout << "Failed to satisfy auxilary variable constraints. Terminating...\n";
                 cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
                 cout<<"UNSATISFIABLE"<<endl;
@@ -412,16 +444,17 @@ int main(int argc, char *argv[])
             return 0;
         }
 
-        cout << "Formula is SAT. Working on the counter-example...\n";
+        if(verbose)    cout << "Formula is SAT. Working on the counter-example...\n";
 
         int *cex = FNtk->pModel;
-        cout << "CEX : ";
 
-        for (int i = 0; i < totalInputs; i++)
-        {
-            cout << cex[i] << " ";
-        }
-        cout << endl;
+        // cout << "CEX : ";
+
+        // for (int i = 0; i < totalInputs; i++)
+        // {
+        //     cout << cex[i] << " ";
+        // }
+        // cout << endl;
 
         Aig_Obj_t *newConstr1 = Aig_ManConst0(origFormula);
         Aig_Obj_t *newConstr2 = Aig_ManConst0(constraintMan);
@@ -430,14 +463,14 @@ int main(int argc, char *argv[])
         Aig_Obj_t *tmpMu = Aig_ManConst1(origFormula);
 
         int constraintManInitialSize = constraintMan->vObjs->nSize;
-        set<int> constraintTempSet;
+        // set<int> constraintTempSet;
         for (auto id : exs)
         {
 
             int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id], cex)[0];
             int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[id], cex)[0];
 
-            // printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
+            if(verbose) printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
             if (!(a_i == 0 && b_i == 1))
             {
                 continue;
@@ -446,7 +479,7 @@ int main(int argc, char *argv[])
             // get the set cex|dep
             set<int> depVal;
             set<int> depSet = phiCNF->get_dependencySet(id);
-
+            // if(id==13) cout<<"DBBBB: size: "<<depSet.size()<<endl;
             for (auto dep : depSet)
             {
                 if (cex[dep - 1] == 0)
@@ -461,15 +494,22 @@ int main(int argc, char *argv[])
             }
 
             // Aig_Obj_t* newCase = Aig_ManConst1(origFormula);
+            // if(id==13){
+            //     cout<<"DEBUG: ";
+            //     for(auto dep:depVal){
+            //         cout<<dep<<" ";
+            //     }
+            //     cout<<endl;
+            // }
             if (ex_caseToAuxMapping.find({id, depVal}) == ex_caseToAuxMapping.end())
             {
-                // cout << "Created new auxiliary variable for id: " << id << endl;
+                cout << "Created new auxiliary variable for id: " << id << endl;
                 changeFlag = true;
                 // generate new aux var and update mu
                 Aig_Obj_t *newAux = Aig_ObjCreateCi(origFormula);
                 Aig_Obj_t *newAuxConstraint = Aig_ObjCreateCi(constraintMan);
                 // cout<<"CIO id: "<<Aig_ObjCioId(newAux)<<endl;
-                constraintTempSet.insert(-Aig_ManCiNum(origFormula));
+                // constraintTempSet.insert(-Aig_ManCiNum(origFormula));
                 auxToIdMapping[newAux] = Aig_ManCiNum(origFormula);
 
                 // mu =  mu AND case-> h<->newAux
@@ -518,44 +558,49 @@ int main(int argc, char *argv[])
                 int inputId = auxToIdMapping[p.first];
                 // cout<<inputId<<endl;
                 // cout<<"CEX[inputId]: "<<cex[inputId]<<endl;
-                if(cex[inputId]==1){
-                    constraintTempSet.insert(-inputId);
+                if(cex[inputId-1]==1){
+                    // constraintTempSet.insert(-inputId);
                     newConstr1 = Aig_Or(origFormula, newConstr1, Aig_Not(p.first));
                     newConstr2 = Aig_Or(constraintMan, newConstr2, Aig_Not(p.second));
                 }
                 else{
-                    constraintTempSet.insert(inputId);
+                    // constraintTempSet.insert(inputId);
                     newConstr1 = Aig_Or(origFormula, newConstr1, p.first);
                     newConstr2 = Aig_Or(constraintMan, newConstr2, p.second);
                 }
             }
         }
-        cout<<"PRINTING CONSTRAINT SET SETS: "<<endl;
-        int sid=0;
-        for(auto s:constraintSet){
-            cout<<sid<<": [";
-            for(auto e:s){
-                cout<<e<<" ";
-            }
-            cout<<"]"<<endl;
-            sid++;
-        }
-        int initVal = constraintSet.size();
-        constraintSet.insert(constraintTempSet);
-        int newVal = constraintSet.size();
-        printf("SET VAL: init: %d | new: %d\n",initVal,newVal);
-        if(newVal!=initVal){
-            changeFlag=true;
-        }
+        // cout<<"PRINTING CONSTRAINT SET SETS: "<<endl;
+        // int sid=0;
+        // for(auto s:constraintSet){
+        //     cout<<sid<<": [";
+        //     for(auto e:s){
+        //         cout<<e<<" ";
+        //     }
+        //     cout<<"]"<<endl;
+        //     sid++;
+        // }
+        // int initVal = constraintSet.size();
+        // constraintSet.insert(constraintTempSet);
+        // int newVal = constraintSet.size();
+        // if(iter%500==0) printf("SET VAL: init: %d | new: %d\n",initVal,newVal);
+        // if(newVal!=initVal){
+            // changeFlag=true;
+        // }
 
         // update origFormula
         Aig_Obj_t *newOut_tmp = Aig_ManConst1(origFormula);
 
         // update mu
-        mu = Aig_And(origFormula, mu, tmpMu);
+        if(tmpMu != Aig_ManConst1(origFormula)){
+            mu = Aig_Or(origFormula, mu, tmpMu);
+        }
 
         // update constraint
-        constraint = Aig_And(origFormula, constraint, newConstr1);
+        if(newConstr1 != Aig_ManConst0(origFormula)){
+            // newConstr1 = Aig_ManConst1(origFormula);
+            constraint = Aig_And(origFormula, constraint, newConstr1);
+        }
 
         // build defaultCase
         defaultCase = Aig_ManConst1(origFormula);
@@ -564,6 +609,10 @@ int main(int argc, char *argv[])
             Aig_Obj_t *currCase = exToCases[id];
 
             // ~case => h<=>1 = case v h
+            // if(iter==2) {Aig_ManShow(origFormula,0,NULL);
+            // int aa;
+            // cin>>aa;}
+
             Aig_Obj_t *tmp = Aig_Or(origFormula, currCase, exToHMapping[id]);
             defaultCase = Aig_And(origFormula, defaultCase, tmp);
         }
@@ -590,8 +639,14 @@ int main(int argc, char *argv[])
         //  output = output AND newConstr2
         
         Aig_Obj_t *constrNewOut = Aig_ManCo(constraintMan, 0)->pFanin0;
-        constrNewOut = Aig_And(constraintMan, constrNewOut, newConstr2);
+        Aig_Obj_t* constrOldOut = constrNewOut;
+        if(newConstr2 !=Aig_ManConst0(constraintMan)){
+            constrNewOut = Aig_And(constraintMan, constrNewOut, newConstr2);
+        }
         
+        if(constrOldOut !=constrNewOut){
+            changeFlag=true;
+        }
 
         Aig_ObjCreateCo(constraintMan, constrNewOut);
 
@@ -614,6 +669,13 @@ int main(int argc, char *argv[])
             Abc_Stop();
             exit(1);
         }
+        // if(1){
+        //     cout<<"INITIAL SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
+        // }
+        // origFormula = Dar_ManCompress2(origFormula,1,1,50,1,1);
+        // if(1){
+        //     cout<<"New SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
+        // }
     }
     Abc_Stop();
     cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
