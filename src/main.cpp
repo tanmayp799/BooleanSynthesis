@@ -714,10 +714,16 @@ int main(int argc, char *argv[])
         }
         // if(1){
         //     cout<<"INITIAL SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
+        //     Aig_ManShow(origFormula,0,NULL);
+        //     int aa;
+        //     cin>>aa;
         // }
-        // origFormula = Dar_ManCompress2(origFormula,1,1,50,1,1);
+        // origFormula = compressAig(origFormula);
         // if(1){
         //     cout<<"New SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
+        //     Aig_ManShow(origFormula,0,NULL);
+        //     int aa;
+        //     cin>>aa;
         // }
     }
     Abc_Stop();
