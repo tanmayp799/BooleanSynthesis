@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
     cout << "Read the file\n";
     Aig_Man_t *phi_Man = phiCNF->genAIGMan();
     // Aig_ManShow(phi_Man,0,NULL);
+    // int xx;
+    // cin>>xx;
     // exit(1);
     cout << "Generated Manager for PHI\n";
     Abc_Ntk_t *phi_Ntk = Abc_NtkFromAigPhase(phi_Man);
@@ -274,6 +276,7 @@ int main(int argc, char *argv[])
         Aig_Obj_t *outB = Aig_ManCo(tMan, exToOutMapping[id].second)->pFanin0;
 
         Aig_Obj_t *currH = Aig_ObjCreateCi(tMan);
+        // Aig_ObjCreat
 
         exToHMapping[id] = currH;
         Aig_Obj_t *HAndB = Aig_And(tMan, currH, outB);
@@ -310,8 +313,13 @@ int main(int argc, char *argv[])
     Aig_ManCleanup(tMan);
 
     Aig_Man_t *origFormula = tMan;
-
+    // origFormula = compressAig(origFormula);
+    // origFormula = compressAig(origFormula);
+    Aig_ManCleanup(origFormula);
+    // Aig_ManReduceLaches(origFormula,1);
     Aig_Obj_t *deltaAndNegPhi = Aig_ManCo(origFormula, 0)->pFanin0;
+    
+    // Aig_ManShow(ori)
 
     map<int, Aig_Obj_t *> exToCases; // cases when h=0;
 
@@ -392,6 +400,9 @@ int main(int argc, char *argv[])
         int totalInputs = Aig_ManCiNum(origFormula);
         iter++;
         bool verbose=false;
+
+
+
         if(iter%500==0){
             verbose=true;
         }
@@ -403,10 +414,11 @@ int main(int argc, char *argv[])
             cout<<"NETWORK SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
             cout<<"Num Aux Created: "<<auxToIdMapping.size()<<endl;
         }
-
+        // cout<<"SHOWING ORIGFORMULA: ";
+        // int aa;
+        // cin>>aa;
         // Aig_ManShow(origFormula,0,NULL);
         
-        int aa;
         // cin>>aa;
         Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(origFormula);
         int status = Abc_NtkMiterSat(FNtk, 100000, 0, 0, NULL, NULL);
@@ -470,7 +482,7 @@ int main(int argc, char *argv[])
             int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id], cex)[0];
             int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[id], cex)[0];
 
-            if(verbose) printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
+            // if(verbose) printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
             if (!(a_i == 0 && b_i == 1))
             {
                 continue;
@@ -495,11 +507,11 @@ int main(int argc, char *argv[])
 
             // Aig_Obj_t* newCase = Aig_ManConst1(origFormula);
             // if(id==13){
-            //     cout<<"DEBUG: ";
-            //     for(auto dep:depVal){
-            //         cout<<dep<<" ";
-            //     }
-            //     cout<<endl;
+                // cout<<"DEBUG: ";
+                // for(auto dep:depVal){
+                //     cout<<dep<<" ";
+                // }
+                // cout<<endl;
             // }
             if (ex_caseToAuxMapping.find({id, depVal}) == ex_caseToAuxMapping.end())
             {
@@ -517,6 +529,7 @@ int main(int argc, char *argv[])
                 if (caseToNodeMapping.find(depVal) == caseToNodeMapping.end())
                 {
                     // create the node for case
+                    // cout<<"HERE\n";
                     for (auto dep : depVal)
                     {
                         if (dep > 0)
@@ -534,7 +547,7 @@ int main(int argc, char *argv[])
                 {
                     newCase = caseToNodeMapping[depVal];
                 }
-
+        
                 Aig_Obj_t *hImpAux = Aig_Or(origFormula, Aig_Not(exToHMapping[id]), newAux);
                 Aig_Obj_t *auxImpH = Aig_Or(origFormula, Aig_Not(newAux), exToHMapping[id]);
                 Aig_Obj_t *hIFFaux = Aig_And(origFormula, hImpAux, auxImpH);
@@ -542,7 +555,10 @@ int main(int argc, char *argv[])
                 Aig_Obj_t *caseImpAsg = Aig_Or(origFormula, Aig_Not(newCase), hIFFaux);
                 // update tmpMu -> tmpMu AND caseImpAsg
                 tmpMu = Aig_And(origFormula, tmpMu, caseImpAsg);
-
+                // cout<<"Added implication: ";
+                // cin>>aa;
+                // Aig_ManShow(origFormula,0,NULL);
+                // cin>>aa;
                 exToCases[id] = Aig_Or(origFormula, exToCases[id], newCase); // for defaultCase node.
 
                 // uodate the newConstr nodes.
@@ -570,8 +586,14 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        // int initVal = constraintSet.size();
+        // constraintSet.insert(constraintTempSet);
+        // int newVal = constraintSet.size();
         // cout<<"PRINTING CONSTRAINT SET SETS: "<<endl;
-        // int sid=0;
+        int sid=0;
+        int cont;
+        // cin>>cont;
+        
         // for(auto s:constraintSet){
         //     cout<<sid<<": [";
         //     for(auto e:s){
@@ -580,20 +602,29 @@ int main(int argc, char *argv[])
         //     cout<<"]"<<endl;
         //     sid++;
         // }
-        // int initVal = constraintSet.size();
-        // constraintSet.insert(constraintTempSet);
-        // int newVal = constraintSet.size();
-        // if(iter%500==0) printf("SET VAL: init: %d | new: %d\n",initVal,newVal);
+        // cout<<"DONE PRINTING\n";
+        // if(verbose) printf("SET VAL: init: %d | new: %d\n",initVal,newVal);
         // if(newVal!=initVal){
-            // changeFlag=true;
+        //     changeFlag=true;
         // }
 
         // update origFormula
         Aig_Obj_t *newOut_tmp = Aig_ManConst1(origFormula);
 
         // update mu
+        // cout<<"BEFORE APPENDING tmpMu: ";
+        // cin>>aa;
+        // Aig_ManShow(origFormula,0,NULL);
+        // cin>>aa;
+
         if(tmpMu != Aig_ManConst1(origFormula)){
-            mu = Aig_Or(origFormula, mu, tmpMu);
+            // cout<<"HERE2\n";
+            mu = Aig_And(origFormula, mu, tmpMu);
+            // cout<<Aig_ObjId(mu)<<endl;
+            // cout<<"AFTER APPENDING: ";
+            // cin>>aa;
+            // Aig_ManShow(origFormula,0,NULL);
+            // cin>>aa;
         }
 
         // update constraint
@@ -606,6 +637,7 @@ int main(int argc, char *argv[])
         defaultCase = Aig_ManConst1(origFormula);
         for (auto id : exs)
         {
+
             Aig_Obj_t *currCase = exToCases[id];
 
             // ~case => h<=>1 = case v h
@@ -615,6 +647,11 @@ int main(int argc, char *argv[])
 
             Aig_Obj_t *tmp = Aig_Or(origFormula, currCase, exToHMapping[id]);
             defaultCase = Aig_And(origFormula, defaultCase, tmp);
+            // cout<<"BUILT DEFAULT CASE FOR id: "<<id<<endl;
+            // cout<<"PRINTING: ";
+            // cin>>aa;
+            // Aig_ManShow(origFormula,0,NULL);
+            // cin>>aa;
         }
 
         newOut_tmp = Aig_And(origFormula, newOut_tmp, deltaAndNegPhi);
@@ -660,6 +697,12 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(constraintMan, Aig_ManConst0(constraintMan));
         }
+        // cout<<"ENTER 1 to show constraint network: ";
+        // int inp;
+        // cin>>inp;
+        // if(inp == 1){Aig_ManShow(constraintMan,0,NULL);
+        // cin>>aa;}
+
         // changeFlag=true;
         if (changeFlag == false)
         {
