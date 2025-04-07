@@ -3,3 +3,5 @@ sudo apt-get install -y libreadline-dev libncurses5-dev libboost-program-options
 git submodule update --init
 cd dependencies/abc
 make libabc.a -j $(nproc)
+cd ../cadical
+./configure && make

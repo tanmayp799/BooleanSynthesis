@@ -14,9 +14,12 @@
 #include <ctime>
 #include <chrono>
 #include <signal.h>
+#include <cstdlib> // For rand() and srand()
+// #include <ctime>
 #include <filesystem>
 #include "cxxopts.hpp"
 #include "json.hpp"
+#include "cadical.hpp"
 
 #ifndef NO_UNIGEN
 // #include "cusp.h"
@@ -56,6 +59,8 @@ namespace ABC_NAMESPACE {
 	Abc_Ntk_t * Abc_NtkFromAigPhase(Aig_Man_t * pMan);
 	Vec_Ptr_t * Io_FileReadCnf( char * pFileName, int fMulti );
 	void Aig_ManAppend( Aig_Man_t * pBase, Aig_Man_t * pNew );
+	Abc_Ntk_t * Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
+	
 	}
 }
 
@@ -279,18 +284,36 @@ void print(vector<T> v, string delim) {
 
 //////////////////////////////////// TANMAY's AND ANANYA's HELPERS ////////////////////////////////////////////////////////
 class DQCNF{
+
+
+	struct defaultPair  : std::pair<int, int> {
+		defaultPair() : std::pair<int, int>(-1, -1) {}
+    	using std::pair<int, int>::pair;
+	};
+	bool preprocessed=false;
 	set<int> universal;
 	set<int> existential;
+	set<int> deps;
 	map<int, set<int>> dependency;
 	int numInputs;
 	int numClauses;
-
+	map<int, map< int , map<int, defaultPair>>> dependencyGraph;
 	vector<set<int>> clauses;
 	Aig_Man_t* man;
+
+
+	vector<set<int>> processed_clauses;
+	int processed_numInputs;
+	int processed_numClauses;
+
+	set<int> unate_0;
+	set<int> unate_1;
+
 	public:
 		DQCNF(string filename);
 		Aig_Man_t* genAIGMan();
 		set<int> get_existentials(){return this->existential;}
+		set<int> get_deps(){return this->deps;}
 		set<int> get_universals(){return this->universal;}
 		set<int> get_dependencySet(int id);
 		Aig_Man_t* getMan(){return this->man;}
@@ -298,10 +321,14 @@ class DQCNF{
 		int getNumInputs(){return this->numInputs;}
 		int getNumClauses(){return this->numClauses;}
 
-		DQCNF(set<int> universal, set<int> existential,
+		DQCNF(set<int> universal, set<int> existential, set<int> deps,
 		 int numInputs, int numClauses, vector<set<int>> clauses);
 		
 		DQCNF* getProjection(int id);
+		void preprocess();
+		void unateCheck();
+		set<int> get_posUnates(){return unate_1;}
+		set<int> get_negUnates(){return unate_0;}
 };
 
 Abc_Ntk_t * getNtkFromCNF(char* filename);
@@ -309,5 +336,11 @@ void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk
 					vector<Aig_Man_t*> &A_Man, vector<Aig_Man_t*> &B_Man);
 
 
+Aig_Man_t* remapInputs(Aig_Man_t* p, vector<int> remapIds);
+
+Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fChangePol, int fVerbose);
+
+static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-1 : (Lit >> 1)+1;  }
+static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
 #endif

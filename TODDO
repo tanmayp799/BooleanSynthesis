@@ -1,0 +1,5 @@
+1) Run Manthan/BFSS as blackbox, get skolem of e vars, plug it in as e <=> f(a,d)
+use updated formula
+
+----------------------------------------
+1) remove projected clauses that contain only the universal variables.
