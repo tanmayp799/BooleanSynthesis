@@ -4,6 +4,7 @@ MAIN 	= main
 RCNF	= readCnf
 
 ABC_PATH = ./dependencies/abc
+CADICAL_PATH = ./dependencies/cadical
 
 ifndef CXX
 CXX = g++
@@ -17,14 +18,16 @@ TARGET_MAIN  = $(BINDIR)/$(MAIN)
 TARGET_RCNF  = $(BINDIR)/$(RCNF)
 
 ABC_INCLUDES = -I $(ABC_PATH) -I $(ABC_PATH)/src
-LIB_DIRS = -L $(ABC_PATH)/
-DIR_INCLUDES = $(ABC_INCLUDES) $(LIB_DIRS)
+CADICAL_INCLUDES = -I $(CADICAL_PATH)/src
+LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/
+DIR_INCLUDES = $(ABC_INCLUDES) $(LIB_DIRS) $(CADICAL_INCLUDES)
 
 LIB_ABC    = -Wl,-Bstatic  -labc
 LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz
+LIB_CADICAL = -Wl,-Bstatic -lcadical
 
 CPP_FLAGS += -std=c++17 -DNO_UNIGEN
-LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_COMMON)
+LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
 
 CPP_FLAGS += -O3 -g -pg
 

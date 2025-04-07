@@ -64,6 +64,85 @@ bool CMSat::CUSP::unigenRunning = false;
 
 ////////////////////// TANMAY and ANANYA's HELPERS ////////////////////////////
 
+
+
+Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fChangePol, int fVerbose){
+	Aig_Man_t* pMan;
+	Cnf_Dat_t* pCnf;
+	Abc_Ntk_t* pNtkNew = NULL;
+	abctime clk=Abc_Clock();
+	assert(Abc_NtkIsStrash(pNtk));
+
+
+	pMan = Abc_NtkToDar(pNtk,0,0);
+	if(pMan==NULL){
+		return NULL;
+	}
+	if(!Aig_ManCheck(pMan)){
+		cerr<<"myDarToCnf: Aig_ManCheck failed"<<endl;
+		Aig_ManStop(pMan);
+		return NULL;
+	}
+
+	if(fVerbose)
+	Aig_ManPrintStats(pMan);
+
+	if(fFastAlgo){
+		pCnf = Cnf_DeriveFast(pMan,0);
+	}
+	else{
+		pCnf = Cnf_Derive(pMan,0);
+	}
+
+	if(fChangePol){
+		Cnf_DataTranformPolarity(pCnf,0);
+	}
+
+	Abc_Print( 1, "CNF stats: Vars = %6d. Clauses = %7d. Literals = %8d.   ", pCnf->nVars, pCnf->nClauses, pCnf->nLiterals );
+    Abc_PrintTime( 1, "Time", Abc_Clock() - clk );
+	// Cnf_DataWriteIntoFile(pCnf,pFilename,0,NULL,NULL);
+	Aig_ManStop(pMan);
+	return pCnf;
+
+}
+
+
+
+
+
+Aig_Man_t* remapInputs(Aig_Man_t* p, vector<int> remapIds){
+	
+	Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
+
+	pNew = Aig_ManStart(Aig_ManObjNumMax(p));
+
+	Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+	cout<<"REMAP INPUTS CREATING PIs\n";
+	cout<<Aig_ManCiNum(p)<<endl;
+
+	Aig_ManForEachCi(p,pObj,i){
+		Aig_ObjCreateCi(pNew);
+	}
+
+	Aig_ManForEachCi(p, pObj, i){
+		cout<<i+1<<" "<<remapIds[i]<<endl;	
+		Aig_ManCi(p, i)->pData = Aig_ManCi(pNew, remapIds[i]-1 );
+	}
+
+	Aig_ManForEachNode(p, pObj, i){
+		pObj->pData = Aig_And(pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj));
+	}
+
+	Aig_ManForEachCo(p, pObj, i){
+		Aig_ObjCreateCo(pNew,Aig_ObjChild0Copy(pObj));
+	}
+
+
+	return pNew;
+}
+
 Abc_Ntk_t * getNtkFromCNF(char* filename){
 	Vec_Ptr_t * vSops;
 	Abc_Ntk_t * ntk1;
@@ -185,6 +264,422 @@ void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk
 	}
 
 
+void DQCNF::unateCheck(){
+	int x;
+	Aig_Man_t* phi_man = this->genAIGMan();
+
+	int numInputs = Aig_ManCiNum(phi_man);
+	map<int, int> y_yPrime_map;
+	map<int,int> yPrime_y_map;
+	for(auto d:this->deps){
+		Aig_ObjCreateCi(phi_man);
+		numInputs++;
+		y_yPrime_map[d] = numInputs; 
+		yPrime_y_map[numInputs]=d;
+	}
+	vector<int> mapIds(numInputs);
+	for(int i=0;i<numInputs;i++){
+		mapIds[i]=i+1;
+	}
+	phi_man = remapInputs(phi_man,mapIds);
+	
+	Aig_Man_t* negPhi_Man = Aig_ManDupOrdered(phi_man);
+	Aig_ManCo(negPhi_Man, 0)->pFanin0 = Aig_Not(Aig_ManCo(negPhi_Man, 0)->pFanin0);
+
+	int numUniversals = this->universal.size();
+	int numExistentials = this->existential.size();
+	int numOrigInputs = this->universal.size()+this->existential.size()+this->deps.size();
+	int numDeps = this->deps.size();
+	vector<int> remapIds(numInputs);
+	for(auto u:this->universal){
+		remapIds[u-1] = u;
+	}
+	for(auto e:this->existential){
+		remapIds[e-1]=e;
+	}
+	for(auto p:y_yPrime_map){
+		remapIds[p.first-1] = p.second;
+	}
+	for(auto p:yPrime_y_map){
+		remapIds[p.first-1]=p.second;
+	}
+
+	negPhi_Man = remapInputs(negPhi_Man,remapIds);
+
+	// Aig_ManShow(phi_man,0,NULL);
+	// int x;
+	// cin>>x;
+	// Aig_ManShow(negPhi_Man,0,NULL);
+	// cin>>x;
+	// exit(1);
+
+
+	Abc_Ntk_t* phiNtk = Abc_NtkFromAigPhase(phi_man);
+	Abc_Ntk_t* negPhi_Ntk = Abc_NtkFromAigPhase(negPhi_Man);
+	
+	Abc_NtkAppend(phiNtk,negPhi_Ntk,1);
+
+ 	Aig_Man_t* formula = Abc_NtkToDar(phiNtk,0,0);
+
+	// Aig_ManShow(formula,0,NULL);
+	// int x;
+	// cin>>x;
+	// exit(1);
+
+	Aig_Obj_t* outputDriver = Aig_And(formula,Aig_ManCo(formula,0)->pFanin0, (Aig_ManCo(formula,1)->pFanin0));
+
+	Aig_ObjCreateCo(formula,outputDriver);
+	
+	Aig_ObjDisconnect(formula,Aig_ManCo(formula,0));
+	Aig_ObjConnect(formula,Aig_ManCo(formula,0),Aig_ManConst0(formula),NULL);
+
+
+	Aig_ObjDisconnect(formula,Aig_ManCo(formula,1));
+	Aig_ObjConnect(formula,Aig_ManCo(formula,1),Aig_ManConst0(formula),NULL);
+
+	Aig_ManCoCleanup(formula);
+	Aig_ManCleanup(formula);
+
+	// Aig_ManShow(formula,0,NULL);
+	// cin>>x;
+	// exit(1);
+
+	Abc_Ntk_t* formula_ntk = Abc_NtkFromAigPhase(formula);
+	Cnf_Dat_t* pCnf = myDarToCnf(formula_ntk,NULL,0,0,1);
+
+
+	CaDiCaL::Solver solver;
+
+	int * pLit, * pStop;
+    // printf("Num Vars: %d, Num Clauses: %d\n",pCnf->nVars, pCnf->nClauses);
+    for(int i=0;i<pCnf->nClauses;i++){
+        for(pLit=pCnf->pClauses[i],pStop=pCnf->pClauses[i+1];pLit<pStop;pLit++){
+            // printf("%d ", Cnf_Lit2Var2(*pLit));
+            solver.add(Cnf_Lit2Var2(*pLit));
+        }
+        // printf("0\n");
+        solver.add(0);
+    }
+
+	int numAigInputs = Abc_NtkCiNum(formula_ntk);
+    map<int, int> inputToVarMapping;
+    
+    for(int i=0;i<Abc_NtkCiNum(formula_ntk);i++){
+        if(i==numOrigInputs){
+            // fprintf(mapFile,"H Variables:\n");
+        }
+        // fprintf(mapFile,"INPUT %d , var map: %d\n",i+1, pCnf->pVarNums[Abc_ObjId(Abc_NtkCi(origFormulaNtk,i))]);
+        inputToVarMapping[i+1] = pCnf->pVarNums[Abc_ObjId(Abc_NtkCi(formula_ntk,i))];
+    }
+
+	map<int,int> d_to_selector_map;
+	for(auto d:this->deps){
+		int d_prime_id = y_yPrime_map[d];
+
+		int selector = solver.vars()+1;
+
+		int d_var = inputToVarMapping[d];
+		int d_prime_var = inputToVarMapping[d_prime_id];
+
+		solver.add(-selector);
+		solver.add(-d_var);
+		solver.add(-d_prime_var);
+		solver.add(0);
+
+		solver.add(-selector);
+		solver.add(d_var);
+		solver.add(d_prime_var);
+		solver.add(0);
+
+		solver.add(selector);
+		solver.add(d_var);
+		solver.add(-d_prime_var);
+		solver.add(0);
+
+		solver.add(selector);
+		solver.add(-d_var);
+		solver.add(d_prime_var);
+		solver.add(0);
+
+		d_to_selector_map[d] = selector;
+	}
+
+
+	for(auto d:this->deps){
+
+		//first check if phi(d=1) => phi(d'=0)
+		int d_var = inputToVarMapping[d];
+
+		solver.assume(d_var);
+
+		// force d_prime_var = ~d_var
+		for(auto p:d_to_selector_map){
+			int selector = p.second;
+			if(p.first==d){
+				solver.assume(selector);
+			}
+			else{
+				solver.assume(-selector);
+			}
+		}
+
+		int status1 = solver.solve();
+
+		if(status1 == CaDiCaL::UNSATISFIABLE){
+			int s = d_to_selector_map[d];
+			solver.add(-d);
+			solver.add(0);
+
+			solver.add(-s);
+			solver.add(0);
+
+			this->unate_0.insert(d);
+
+			continue;
+		}
+		if(status1==CaDiCaL::UNKNOWN){
+			cerr<<"Terminated unateCheck due to timeout\n";
+			exit(1);
+		}
+		if(status1 == CaDiCaL::SATISFIABLE){
+
+			printf("Unate 0 check ** SAT ** for var: %d\n",d);
+
+			int cex[numAigInputs];
+			for(int i=1;i<=numAigInputs;i++){
+				int val = solver.val(inputToVarMapping[i]);
+                cex[i-1]=val>0? 1:0;
+			}
+
+			cout<<"CEX: ";
+			for (int i = 0; i < numAigInputs; i++)
+            {
+                cout << cex[i] << " ";
+            }
+            cout << endl;
+
+			int output = Abc_NtkVerifySimulatePattern(formula_ntk,cex)[0];
+			cout<<"OUTPUT: "<<output<<endl;
+		}
+
+		// check phi(d=0) => phi(d'=1)
+		solver.assume(-d_var);
+
+		for(auto p:d_to_selector_map){
+			int selector = p.second;
+			if(p.first == d){
+				solver.assume(selector);
+			}
+			else{
+				solver.assume(-selector);
+			}
+		}
+
+		int status2 = solver.solve();
+
+		if(status2 == CaDiCaL::UNSATISFIABLE){
+			int s = d_to_selector_map[d];
+			solver.add(d);
+			solver.add(0);
+			
+			this->unate_1.insert(d);
+
+			solver.add(-s);
+			solver.add(0);
+
+			continue;
+		}
+		if(status1 == CaDiCaL::SATISFIABLE){
+
+			printf("Unate 1 check ** SAT ** for var: %d\n",d);
+
+			int cex[numAigInputs];
+			for(int i=1;i<=numAigInputs;i++){
+				int val = solver.val(inputToVarMapping[i]);
+                cex[i-1]=val>0? 1:0;
+			}
+
+			cout<<"CEX: ";
+			for (int i = 0; i < numAigInputs; i++)
+            {
+                cout << cex[i] << " ";
+            }
+            cout << endl;
+			int output = Abc_NtkVerifySimulatePattern(formula_ntk,cex)[0];
+			cout<<"OUTPUT: "<<output<<endl;
+		}
+		if(status1==CaDiCaL::UNKNOWN){
+			cerr<<"Terminated unateCheck due to timeout\n";
+			exit(1);
+		}
+	}
+
+cout<<"unate 0:\n";
+for(auto d:this->unate_0){
+	cout<<d<<endl;
+}
+
+cout<<"unate 1:\n";
+for(auto d:this->unate_1){
+	cout<<d<<endl;
+}
+// exit(1);
+}
+
+void DQCNF::preprocess(){
+
+	//build dependency based graph
+	// map of {id} -> ( map of {id} -> (map of {dep_var}-> (pair of clauses)))
+
+	for(auto d1:this->deps){
+		set<int> depSet1 = this->get_dependencySet(d1);
+
+		for(auto d2:this->deps){
+			set<int> depSet2 = this->get_dependencySet(d2);
+
+			set<int> commonDependencies;
+			set_intersection(depSet1.begin(),depSet1.end(),
+			depSet2.begin(),depSet2.end(),
+			inserter(commonDependencies, commonDependencies.begin()));
+
+			if(commonDependencies.empty()) continue;
+
+			for(int i=0;i<numClauses;i++){
+				set<int> c=this->clauses[i];
+
+				if(c.find(d2)!=c.end()){
+
+					for(auto depVar:commonDependencies){
+						if(c.find(depVar) !=c.end() || c.find(-depVar)!=c.end()){
+							dependencyGraph[d1][d2][depVar].first = i;
+						}
+					}
+
+				}
+				if(c.find(-d2) !=c.end()){
+					for(auto depVar:commonDependencies){
+						if(c.find(depVar) !=c.end() || c.find(-depVar)!=c.end()){
+							dependencyGraph[d1][d2][depVar].second = i;
+						}
+					}
+				}
+
+			}
+
+		}
+	}
+
+	set<int> dLits(deps.begin(),deps.end());
+	for(auto d:deps){
+		dLits.insert(-d);
+	}
+
+
+	for(auto c:this->clauses){
+
+		set<int> dep_lits;
+		set_intersection(c.begin(),c.end(),dLits.begin(),dLits.end(),inserter(dep_lits, dep_lits.begin()));
+
+
+		bool resolved=false;
+		for(auto dep_lit:dep_lits){
+			set<int> depSet = this->get_dependencySet(abs(dep_lit));
+			set<int> depSetLits(depSet.begin(),depSet.end());
+			for(auto dep_var:depSet){
+				depSetLits.insert(-dep_var);
+			}
+
+			set<int> dep_occurence;
+			set_intersection(c.begin(),c.end(),depSetLits.begin(),depSetLits.end(),
+						inserter(dep_occurence, dep_occurence.begin()));
+
+			
+			if(dep_occurence.empty()){
+				
+				for(auto second_dep_lit:dep_lits){
+					if(dep_lit==second_dep_lit) continue;
+
+					if(second_dep_lit > 0){
+						int second_clause_id=-1;
+						for(auto p:dependencyGraph[abs(dep_lit)][abs(second_dep_lit)]){
+
+							if(p.second.second == -1) continue;
+
+							second_clause_id = p.second.second;
+							break;
+						}
+						if(second_clause_id==-1) continue;
+						resolved=true;
+						set<int> c2 = this->clauses[second_clause_id];
+
+						set<int> resolvedClause;
+						for(auto e:c){
+							if(e==second_dep_lit) continue;
+							resolvedClause.insert(e);
+						}
+
+						for(auto e:c2){
+							if(e==-second_dep_lit) continue;
+							resolvedClause.insert(e);
+						}
+						processed_clauses.push_back(resolvedClause);
+
+						break;
+
+					}
+					else{
+						int second_clause_id=-1;
+						for(auto p:dependencyGraph[abs(dep_lit)][abs(second_dep_lit)]){
+
+							if(p.second.first == -1) continue;
+
+							second_clause_id = p.second.first;
+							break;
+						}
+						if(second_clause_id==-1) continue;
+						resolved=true;
+						set<int> c2 = this->clauses[second_clause_id];
+
+						set<int> resolvedClause;
+						for(auto e:c){
+							if(e==second_dep_lit) continue;
+							resolvedClause.insert(e);
+						}
+
+						for(auto e:c2){
+							if(e==-second_dep_lit) continue;
+							resolvedClause.insert(e);
+						}
+						processed_clauses.push_back(resolvedClause);
+
+						break;
+					}
+
+				}
+
+			}
+			if(resolved) break;
+		}
+
+		if(!resolved){
+			processed_clauses.push_back(c);
+		}
+
+	}
+
+	printf("Num Clauses: %d\n",processed_clauses.size());
+
+	for(auto c:processed_clauses){
+		for(auto e:c){
+			printf("%d ",e);
+		}
+		printf("\n");
+	}
+	this->preprocessed=true;
+	// exit(1);
+
+}
+
 DQCNF::DQCNF(string filename){
 	ifstream file(filename);
 	if(!file){
@@ -208,7 +703,8 @@ DQCNF::DQCNF(string filename){
 			int var;
 			iss>>var;
 			int dep;
-			this->existential.insert(var);
+			// this->existential.insert(var);
+			this->deps.insert(var);
 			while(iss>>dep && dep!=0){
 				this->dependency[var].insert(dep);
 			}
@@ -246,6 +742,10 @@ Aig_Man_t* DQCNF::genAIGMan(){
 	}
 
 	Aig_Obj_t* finalConjunction = Aig_ManConst1(tMan);
+
+	// vector<set<int>> workingClauses;
+	// if(preprocessed) workingClauses = processed_clauses;
+	// else workingClauses = clauses;
 
 	for(auto clause:this->clauses){
 		// cout<<"CLAUSE : ";
@@ -328,27 +828,71 @@ set<int> DQCNF::get_dependencySet(int id){
 	return dependency[id];
 }
 
-DQCNF::DQCNF(set<int> universal, set<int> existential,
+DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
 		int numInputs, int numClauses, vector<set<int>> clauses){
 			this->universal=universal;
 			this->existential=existential;
 			this->numClauses=numClauses;
 			this->numInputs=numInputs;
 			this->clauses=clauses;
+			this->deps=deps;
 		}
 DQCNF* DQCNF::getProjection(int id){
 	vector<set<int>> projectedClauses;
 	set<int> dep = this->get_dependencySet(id);
+	set<int> dep2(dep.begin(),dep.end());
 	for(auto e:dep){
-		dep.insert(-e);
+		dep2.insert(-e);
 	}
-	dep.insert(id);
-	dep.insert(-id);
-	for(auto clause: this->clauses){
+	dep2.insert(id);
+	dep2.insert(-id);
+	dep=dep2;
+	bool posFound=false;
+	bool negFound=false;
+	int posPos, negPos;
+
+	vector<set<int>> workingClauses = preprocessed? processed_clauses:clauses;
+	// cout<<preprocessed<<endl;
+	// exit(1);
+
+	cout<<"Getting projection for var: "<<id<<endl;
+	printf("Clauses:\n");
+	for(auto clause: workingClauses){
 		vector<int> newClause;
 		set_intersection(clause.begin(),clause.end(),dep.begin(),dep.end(),back_inserter(newClause));
-		if(newClause.size()==0) continue;
-		projectedClauses.push_back(set(newClause.begin(), newClause.end()));
+		set<int> clauseSet(newClause.begin(),newClause.end());
+		// for(auto e:clauseSet){
+		// 	cout<<e<<" ";
+		// }
+		// cout<<endl;
+		if(clauseSet.size()==0) continue;
+		if(clauseSet.find(id) == clauseSet.end() && clauseSet.find(-id)== clauseSet.end()) continue;
+		// if(clauseSet.size()==1){
+		// 	if(clauseSet.find(id)==clauseSet.end()){
+		// 		negFound=true;
+
+		// 		if(posFound){
+		// 			projectedClauses.erase(projectedClauses.begin()+ posPos);
+		// 			continue;
+		// 		}
+		// 		negPos = projectedClauses.size();
+		// 	}
+		// 	else{
+		// 		posFound=true;
+		// 		if(negFound){
+		// 			projectedClauses.erase(projectedClauses.begin()+negPos);
+		// 			continue;
+		// 		}
+		// 		posPos=projectedClauses.size();
+		// 	}
+		// }
+
+		projectedClauses.push_back(clauseSet);
+
+		for(auto e:clauseSet){
+			printf("%d ", e);
+		}
+		cout<<0<<endl;
 	}
 	// for(auto c:projectedClauses){
 	// 	cout<<"[";
@@ -358,7 +902,7 @@ DQCNF* DQCNF::getProjection(int id){
 	// 	cout<<"]\n";
 	// }
 	// exit(1);
-	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->numInputs,
+	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->deps, this->numInputs,
 								projectedClauses.size(),projectedClauses);
 	return projectedDQCNF;
 }
@@ -2576,7 +3120,7 @@ void updateAbsRef(Aig_Man_t*&pMan, int M, int k1Level, int k1MaxLevel, vector<ve
 Aig_Man_t* compressAig(Aig_Man_t* SAig) {
 	OUT("Cleaning up...");
 	int removed = Aig_ManCleanup(SAig);
-	cout << "Removed " << removed <<" nodes" << endl;
+	// cout << "Removed " << removed <<" nodes" << endl;
 
 	Aig_Man_t* temp = SAig;
 	// Dar_ManCompress2( Aig_Man_t * pAig, int fBalance,

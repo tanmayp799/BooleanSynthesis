@@ -1,0 +1,68 @@
+./data/small.dqdimacs
+Read the file
+REMAP INPUTS CREATING PIs
+5
+1 1
+2 2
+3 3
+4 4
+5 5
+REMAP INPUTS CREATING PIs
+5
+1 1
+2 2
+3 5
+4 4
+5 3
+(null)          : pi =     5  po =     1  and =      18  lev =   6
+CNF stats: Vars =     10. Clauses =      15. Literals =       39.   Time =     0.01 sec
+Unate 0 check ** SAT ** for var: 3
+CEX: 0 1 1 1 0 
+OUTPUT: 1
+unate 0:
+unate 1:
+3
+Num Clauses: 4
+1 3 
+-1 2 3 
+-2 3 4 
+-3 4 
+Generated Manager for PHI
+Generating DQCNF and Aig_Man_t Objects for Projected PHI_i
+Getting projection for var: 3
+Clauses:
+1 3 0
+-1 2 3 0
+-2 3 0
+-3 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_3
+DONE. Time Elapsed: 0.001098
+Generating PHI_i(0) and PHI_i(1)...
+Generating Phi(1) and Phi(0) for EX_VAR: 3
+DONE. Time Elapsed: 3e-06
+Generating Basis Functions...
+Generating Basis for EX_VAR: 3
+DONE. Time Elapsed: 0.001232
+Generating AIG Manager for negPHI...
+Creating the formula DELTA (AND) !PHI
+Appended Basis for EX_VAR: 3
+(null)          : pi =     5  po =     1  and =       7  lev =   4
+CNF stats: Vars =      9. Clauses =      12. Literals =       33.   Time =     0.00 sec
+(null)          : pi =     4  po =     1  and =       3  lev =   3
+CNF stats: Vars =      7. Clauses =       7. Literals =       17.   Time =     0.00 sec
+Verbose? : c opening file to write './f1.dimacs'
+c writing 'p cnf 4 3' header
+c wrote 3 clauses in 0.00 seconds process time
+c opening file to write './f2.dimacs'
+c writing 'p cnf 0 0' header
+c wrote 0 clauses in 0.00 seconds process time
+**************           ITER: 1        ******************
+CEX : 1 1 1 0 1 
+Universal Assumptions:
+1
+2
+-4
+Auxiliary Assumptions:
+3
+UNSAT CORE D Variables:
+No change occured....

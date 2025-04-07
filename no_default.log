@@ -1,0 +1,143 @@
+Read the file
+Generated Manager for PHI
+Generating DQCNF and Aig_Man_t Objects for Projected PHI_i
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_3
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_4
+DONE. Time Elapsed: 0.002043
+Generating PHI_i(0) and PHI_i(1)...
+Generating Phi(1) and Phi(0) for EX_VAR: 3
+Generating Phi(1) and Phi(0) for EX_VAR: 4
+DONE. Time Elapsed: 1.3e-05
+Generating Basis Functions...
+Generating Basis for EX_VAR: 3
+Generating Basis for EX_VAR: 4
+DONE. Time Elapsed: 0.00058
+Generating AIG Manager for negPHI...
+Creating the formula DELTA (AND) !PHI
+Appended Basis for EX_VAR: 3
+Appended Basis for EX_VAR: 4
+(null)          : pi =     7  po =     1  and =      15  lev =   4
+CNF stats: Vars =     12. Clauses =      20. Literals =       67.   Time =     0.01 sec
+(null)          : pi =     5  po =     1  and =       7  lev =   3
+CNF stats: Vars =      8. Clauses =      10. Literals =       34.   Time =     0.00 sec
+Verbose? : c opening file to write './f1.dimacs'
+c writing 'p cnf 10 10' header
+c wrote 10 clauses in 0.00 seconds process time
+c opening file to write './f2.dimacs'
+c writing 'p cnf 5 4' header
+c wrote 4 clauses in 0.00 seconds process time
+**************           ITER: 1        ******************
+CEX : 1 1 1 1 1 1 1 
+Universal Assumptions:
+2
+3
+6
+Auxiliary Assumptions:
+4
+5
+Unsat Core D Variables:
+3
+Unsat Core A Variables:
+1
+Dependent Var_ AiBi check pass: 3
+Dependent Var new Aux created: 3
+adding constraint clause...
+-16 
+**************           ITER: 2        ******************
+CEX : 0 1 1 1 1 1 1 0 
+Universal Assumptions:
+-2
+3
+6
+Auxiliary Assumptions:
+4
+5
+Unsat Core D Variables:
+4
+Unsat Core A Variables:
+2
+Dependent Var_ AiBi check pass: 4
+Dependent Var new Aux created: 4
+adding constraint clause...
+-22 
+**************           ITER: 3        ******************
+CEX : 0 1 1 1 0 1 1 0 0 
+Universal Assumptions:
+-2
+3
+-6
+Auxiliary Assumptions:
+4
+5
+Unsat Core D Variables:
+4
+Unsat Core A Variables:
+2
+Dependent Var_ AiBi check pass: 4
+Dependent Var new Aux created: 4
+adding constraint clause...
+-28 
+**************           ITER: 4        ******************
+CEX : 0 0 0 1 0 0 1 0 0 0 
+Universal Assumptions:
+-2
+-3
+-6
+Auxiliary Assumptions:
+-4
+5
+Unsat Core D Variables:
+-3
+Unsat Core A Variables:
+-1
+Dependent Var_ AiBi check pass: 3
+Dependent Var new Aux created: 3
+adding constraint clause...
+34 
+**************           ITER: 5        ******************
+CEX : 0 0 1 0 0 1 0 0 0 0 1 
+Universal Assumptions:
+-2
+-3
+-6
+Auxiliary Assumptions:
+4
+-5
+Unsat Core D Variables:
+-4
+Unsat Core A Variables:
+-2
+Dependent Var_ AiBi check pass: 4
+Dependent Var new Aux created: 4
+adding constraint clause...
+40 
+**************           ITER: 6        ******************
+CEX : 1 0 0 0 1 0 0 0 0 0 1 1 
+Universal Assumptions:
+2
+-3
+6
+Auxiliary Assumptions:
+-4
+-5
+Unsat Core D Variables:
+-4
+Unsat Core A Variables:
+-2
+Dependent Var_ AiBi check pass: 4
+Dependent Var new Aux created: 4
+adding constraint clause...
+46 
+**************           ITER: 7        ******************
+7
+D Variable: 3
+-1    =>     H_Val: 1
+1    =>     H_Val: 0
+**************************
+D Variable: 4
+-5 -2    =>     H_Val: 1
+-5 2    =>     H_Val: 0
+-2 5    =>     H_Val: 1
+2 5    =>     H_Val: 0
+**************************
+HURRAY

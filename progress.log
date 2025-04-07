@@ -1,0 +1,27 @@
+1) Implemented ABC Interface. 
+    a) Memory issues(AIG too large).
+2) Used ABC to build the formula quickly. Shifted the CEG synthesis to CaDiCaL Solver.
+    a) Took too many iterations (400,000+)
+        Reason: Eliminating only a single point.
+        Solution: Implemented unsatCore Extraction. (Iterations reduced to ~15000)
+3) Existential (e) variables still have too many cases, leads to more iterations.
+    Solution: Used Manthan to find skolem functions of "e" variables in terms of "a" and "d" variables
+    Iterations reduced to ~4000 (Since only need to work with "d" variables)
+
+4) No default value for the "d" variables
+    Problem: Need to generate auxilary variable for each case.
+    Solution: Implement the default value as an if-then-else condition
+            (Reduced number of iterations to ~1400)
+
+5) Lots of constant Basis functions, because phi_i is constant.
+    Problem: Doesn't fulfill the function of basis functions to remove cases.
+    Solution:
+        a) Removed projected clauses containing ONLY the input variables.
+        b) Performed clause resolution:
+            If a clause has an output without any of it's inputs, we find another output
+            variable in the clause, and find another clause which we can use to get a resolved clause
+            which contains the output varibale along with its input variable 
+            (The second output variable is removed during resolution)
+        c) Performed unate check on the "d" variables.
+    Result:
+        Reduced iterations to ~900.

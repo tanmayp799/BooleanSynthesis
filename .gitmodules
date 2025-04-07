@@ -1,3 +1,6 @@
 [submodule "dependencies/abc"]
 	path = dependencies/abc
 	url = https://github.com/tanmayp799/abc.git
+[submodule "dependencies/cadical"]
+	path = dependencies/cadical
+	url = https://github.com/tanmayp799/cadical.git
