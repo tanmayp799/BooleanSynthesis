@@ -107,6 +107,9 @@ class  edge;
 class  node;
 class  Nnf_Man;
 
+
+// extern int numTrue, numFalse, numBoth;
+
 enum sType {skolemR0, skolemR1, skolemRx};
 struct optionStruct {
 	bool 	proactiveProp;

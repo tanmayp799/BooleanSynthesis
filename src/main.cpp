@@ -26,7 +26,7 @@ double verify_sat_solving_time = 0;
 double reverse_sub_time = 0;
 chrono_steady_time helper_time_measure_start = TIME_NOW;
 chrono_steady_time main_time_start = TIME_NOW;
-
+int numTrue=0, numFalse=0, numBoth=0;
 // Abc_Frame_t *pAbc = NULL;
 
 // int numX, numY;
@@ -169,6 +169,10 @@ int main(int argc, char *argv[])
     cout << "Generating DQCNF and Aig_Man_t Objects for Projected PHI_i" << endl;
     map<int, DQCNF *> projectedPhis;
     map<int, Aig_Man_t *> projectedMans;
+
+    string stat_filename = "/home/coolboy19/Desktop/RnD/BooleanSynthesis/projection_stat.csv";
+    FILE* stat_file = fopen(stat_filename.c_str(),"a");
+    // fprintf(stat_file, "tc_name, numPos, numNeg, numBoth\n");
     for (auto id : deps)
     {
         DQCNF *tCNF = phiCNF->getProjection(id);
@@ -191,6 +195,14 @@ int main(int argc, char *argv[])
         // int q;
         // cin>>q;
     }
+
+    std::ostringstream oss;
+    oss << phiPath.filename().string() << ", " << numTrue << ", " << numFalse << ", " << numBoth << "\n";
+    std::string result = oss.str(); // result: "example, 1, 2, 3\n"
+    // string output_stat = std::format("{}, {}, {}, {}\n", phiPath.filename().string(), numTrue, numFalse, numBoth);
+    fprintf(stat_file,result.c_str());
+    fclose(stat_file);
+    // exit(1);
     cout<<"DONE. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
 
 
@@ -218,12 +230,11 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
         }
-        // cout<<"Printing A_i\n";
+        // cout<<"Printing Phi_1\n";
         // Aig_ManShow(tMan,0,NULL);
         // int q;
         // cin>>q;
-        // tMan = compressAig(tMan);
-        // tMan = compressAig(tMan);
+        
 
         phi_1_Man[p.first] = tMan;
 
@@ -246,12 +257,11 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
         }
-        // cout<<"Printing B_i\n";
+        // cout<<"Printing Phi_0\n";
         // Aig_ManShow(tMan,0,NULL);
         // // int q;
         // cin>>q;
-        // tMan = compressAig(tMan);
-        // tMan = compressAig(tMan);
+       
 
         phi_0_Man[p.first] = tMan;
         Aig_ManStop(p.second);
@@ -309,12 +319,22 @@ int main(int argc, char *argv[])
 
         A_Man[id] = tMan;
         A_Ntk[id] = Abc_NtkFromAigPhase(tMan);
+
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                printf("A_i is const 0 for id: %d\n",id);
+            }
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+            && !Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                printf("A_i is const 1 for id: %d\n",id);
+            }
+
         // if(id==25){
 
-        //     cout<<"Printing A_i:\n";
-        //     Aig_ManShow(tMan,0,NULL);
-        //     int q;
-        //     cin>>q;
+            // cout<<"Printing A_i:\n";
+            // Aig_ManShow(tMan,0,NULL);
+            // int q;
+            // cin>>q;
         // }
         // get the manager for B
         tMan = Abc_NtkToDar(phi_0_Ntk, 0, 0);
@@ -343,18 +363,27 @@ int main(int argc, char *argv[])
         {
             Aig_ObjCreateCo(tMan, Aig_ManConst0(tMan));
         }
-        // tMan = compressAig(tMan);
+        
         tMan = compressAig(tMan);
 
         B_Man[id] = tMan;
         B_Ntk[id] = Abc_NtkFromAigPhase(tMan);
         
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                printf("B_i is const 0 for id: %d\n",id);
+            }
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+            && !Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                printf("B_i is const 1 for id: %d\n",id);
+            }
+
         // if(id==25){
 
-        //     cout<<"Printing B_i:\n";
-        //     Aig_ManShow(tMan,0,NULL);
-        //     int q;
-        //     cin>>q;
+            // cout<<"Printing B_i:\n";
+            // Aig_ManShow(tMan,0,NULL);
+            // // int q;
+            // cin>>q;
         // }
         // if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) == Aig_ManConst1(tMan)){
         //     if(Aig_ObjFaninC0())
@@ -627,14 +656,12 @@ int main(int argc, char *argv[])
     //     Aig_ObjCreateCo(tMan2, Aig_ManConst0(tMan2));
     // }
 
-    // tMan = compressAig(tMan);
-    // tMan = compressAig(tMan);
+    
     Aig_ManCleanup(tMan);
 
     origFormula = Aig_ManDupSimple(tMan);
     Aig_ManStop(tMan);
-    // origFormula = compressAig(origFormula);
-    // origFormula = compressAig(origFormula);
+    
     Aig_ManCleanup(origFormula);
     // Aig_ManReduceLaches(origFormula,1);
     
@@ -857,13 +884,17 @@ int main(int argc, char *argv[])
         //z0 <=> 1
         int randomNumber = (rand() % 100);
 
-        if(randomNumber >=50){
+        // if(randomNumber >=0){
 
-            solver.add(z0);
-        }
-        else solver.add(-z0);
-        solver.add(0);
+        //     solver.add(z0);
+        // }
+        // else solver.add(-z0);
+        // solver.add(0);
         
+        solver.add(z0);
+        solver.add(0);
+
+
         // -h or z or s
         solver.add(-h_var);
         solver.add(z0);
@@ -925,6 +956,8 @@ int main(int argc, char *argv[])
     map<set<int>, int> caseToAuxMap;
     map<set<int>, int> caseToAuxMap_unsatCore;
 
+    map<int, vector<int>> exToAuxMap;
+
     while(true){
         iter++;
         //check for sat
@@ -936,11 +969,13 @@ int main(int argc, char *argv[])
             vector<int> selectors = HtoSelectorMapping[h_id];
             int sz = selectors.size();
             for(int i=0;i<sz-1;i++){
+                printf("Assuming %d\n", selectors[i]);
                 solver.assume(selectors[i]);
             }
+            printf("Assuming %d\n", -selectors[sz-1]);
             solver.assume(-selectors[sz-1]);
         }
-
+        solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
         if(iter%1==0){
@@ -960,82 +995,152 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if(status == 20){
-            int constrStatus = constraintSolver.solve();
+        if(status == CaDiCaL::UNSATISFIABLE){
 
-            if(constrStatus == 10){
-                cout<<iter<<endl;
+            cout<<"UNSAT BUT WHY?"<<endl;
+            for(int asgNo=0;asgNo<3;asgNo++){
+                int constrStatus = constraintSolver.solve();
 
-
-
-                vector<int> newConstraint;
-                
-                for(auto e:auxilaries){
-                    int val = constraintSolver.val(inputToVarMapping[e]);
-                    if(val>0){
-                        newConstraint.push_back(-e);
-                    }
-                    else{
-                        newConstraint.push_back(e);
-                    }
-                }
-                
-                // newConstraint.push_back(0);
-                
-                for(auto e:newConstraint){
-                    if(e>0){
-                        constraintSolver.add(inputToVarMapping[e]);
-                    }
-                    else{
-                        constraintSolver.add(-inputToVarMapping[-e]);
-                    }
-                }
-                constraintSolver.add(0);
-                
-                int newStatus = constraintSolver.solve();
-
-                if(newStatus == CaDiCaL::UNSATISFIABLE){
-                    cerr<<"Couldn't find another assignment for auxilary vars\n";
+                if(constrStatus == CaDiCaL::UNSATISFIABLE){
+                    printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
                     exit(1);
                 }
 
-                
-                map<int, int> cex_aux;
-                for(auto e:auxilaries){
-                    int val = constraintSolver.val(inputToVarMapping[e]);
-                    cex_aux[e] = val>0?1:0;
-                    
-                }
+                if(constrStatus == CaDiCaL::SATISFIABLE){
 
-                for(auto p:ex_caseToAuxMapping){
-                    int d_var = p.first;
-                    auto cases = p.second;
-                    printf("D Variable: %d\n",d_var);
+                    map<int, int> cex_aux;
 
-                    for(auto p2:cases){
-                        set<int> currCase = p2.first;
-                        int aux = p2.second.first;
-                        if(cex_aux.find(aux)==cex_aux.end()){
-                            cerr<<"Error in aux map\n";
-                            exit(1);
-                        }
-                        for(auto e:currCase){
-                            printf("%d ",e);
-                        }
-                        printf("   =>     H_Val: %d\n",cex_aux[aux]);
+                    for(auto e:auxilaries){
+                        int val = constraintSolver.val(inputToVarMapping[e]);
+                        cex_aux[e] = val>0?1:0;
+                        
                     }
-                    printf("**************************\n");
+                    string filename = "./assignments_NoUnit/asg_"+ to_string(asgNo) +".txt";
+                    FILE* asgFile = fopen(filename.c_str(),"w");
+                    for(auto p:ex_caseToAuxMapping){
+                        int d_var = p.first;
+                        auto cases = p.second;
+                        fprintf(asgFile,"D Variable: %d\n",d_var);
+    
+                        for(auto p2:cases){
+                            set<int> currCase = p2.first;
+                            int aux = p2.second.first;
+                            if(cex_aux.find(aux)==cex_aux.end()){
+                                cerr<<"Error in aux map\n";
+                                exit(1);
+                            }
+                            for(auto e:currCase){
+                                fprintf(asgFile,"%d ",e);
+                            }
+                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]);
+                        }
+                        fprintf(asgFile,"**************************\n");
+                    }
+
+                    vector<int> newConstraint;
+                    vector<int> curr_auxilaries = exToAuxMap[19];
+                    for(auto e:curr_auxilaries){
+                        int val = constraintSolver.val(inputToVarMapping[e]);
+                        if(val>0){
+                            newConstraint.push_back(-e);
+                        }
+                        else{
+                            newConstraint.push_back(e);
+                        }
+                    }
+
+                    for(auto e:newConstraint){
+                        if(e>0){
+                            constraintSolver.add(inputToVarMapping[e]);
+                        }
+                        else{
+                            constraintSolver.add(-inputToVarMapping[-e]);
+                        }
+                    }
+                    constraintSolver.add(0);
                 }
+                // else{
+                //     printf("Ran out of possible assignments, terminating. \n");
+                //     printf("Total assignments generated: %d\n",asgNo+1);
+                //     return 0;
+                // }
+            }
+
+            // int constrStatus = constraintSolver.solve();
+
+            // if(constrStatus == 10){
+            //     cout<<iter<<endl;
+
+
+
+            //     vector<int> newConstraint;
+                
+            //     for(auto e:auxilaries){
+            //         int val = constraintSolver.val(inputToVarMapping[e]);
+            //         if(val>0){
+            //             newConstraint.push_back(-e);
+            //         }
+            //         else{
+            //             newConstraint.push_back(e);
+            //         }
+            //     }
+                
+            //     // newConstraint.push_back(0);
+                
+            //     for(auto e:newConstraint){
+            //         if(e>0){
+            //             constraintSolver.add(inputToVarMapping[e]);
+            //         }
+            //         else{
+            //             constraintSolver.add(-inputToVarMapping[-e]);
+            //         }
+            //     }
+            //     constraintSolver.add(0);
+                
+            //     int newStatus = constraintSolver.solve();
+
+            //     if(newStatus == CaDiCaL::UNSATISFIABLE){
+            //         cerr<<"Couldn't find another assignment for auxilary vars\n";
+            //         exit(1);
+            //     }
+
+                
+            //     map<int, int> cex_aux;
+            //     for(auto e:auxilaries){
+            //         int val = constraintSolver.val(inputToVarMapping[e]);
+            //         cex_aux[e] = val>0?1:0;
+                    
+            //     }
+
+            //     for(auto p:ex_caseToAuxMapping){
+            //         int d_var = p.first;
+            //         auto cases = p.second;
+            //         printf("D Variable: %d\n",d_var);
+
+            //         for(auto p2:cases){
+            //             set<int> currCase = p2.first;
+            //             int aux = p2.second.first;
+            //             if(cex_aux.find(aux)==cex_aux.end()){
+            //                 cerr<<"Error in aux map\n";
+            //                 exit(1);
+            //             }
+            //             for(auto e:currCase){
+            //                 printf("%d ",e);
+            //             }
+            //             printf("   =>     H_Val: %d\n",cex_aux[aux]);
+            //         }
+            //         printf("**************************\n");
+            //     }
 
                 cout<<"HURRAY\n";
                 return 0;
-            }
-            if(constrStatus == 20){
-                cout<<iter<<endl;
-                cout<<"CONSTRAINT UNSAT :(\n";
-                return 0;
-            }
-            cout<<"TIMEOUT ON CONSTR\n";
+            // }
+            // if(constrStatus == 20){
+            //     cout<<iter<<endl;
+            //     cout<<"CONSTRAINT UNSAT :(\n";
+            //     return 0;
+            // }
+            // cout<<"TIMEOUT ON CONSTR\n";
             return 1;
         }
 
@@ -1167,16 +1272,16 @@ int main(int argc, char *argv[])
                 }
             }
 
-            // cout<<"Unsat Core A Variables:\n";
+            cout<<"Unsat Core A Variables:\n";
             for(auto e:univAssumptions){
                 if(e>0){
                     if(unsatCoreExtractor.failed(inputToVarMapping_unsatCore[e])){
-                        // cout<<e<<endl;
+                        cout<<e<<endl;
                     }
                 }
                 else{
                     if(unsatCoreExtractor.failed(-inputToVarMapping_unsatCore[-e])){
-                        // cout<<e<<endl;
+                        cout<<e<<endl;
                     }
                 }
             }
@@ -1189,6 +1294,7 @@ int main(int argc, char *argv[])
         // unsatCoreLits.insert(27);
 
         bool setMinimized = false;
+        vector<int> removed_lits;
         while(true){
 
             setMinimized=false;
@@ -1244,7 +1350,7 @@ int main(int argc, char *argv[])
                     printf("Removed %d\n",lit);
                     // unsatCoreLits
                     unsatCoreLits.erase(lit);
-                    
+                    removed_lits.push_back(lit);
                     setMinimized=true;
                     break;
                 }
@@ -1257,6 +1363,14 @@ int main(int argc, char *argv[])
             if(!setMinimized){
                 break;
             }
+        }
+        cout<<"Printing A_i and B_i for removed lits:\n";
+        for(auto e:removed_lits){
+            int id = abs(e);
+            
+            int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id], cex)[0];
+            int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[id], cex)[0];
+            printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
         }
 
         cout<<"UNSAT CORE D Variables:\n";
@@ -1272,6 +1386,7 @@ int main(int argc, char *argv[])
 
             // if(verbose) printf("var: %d => a_i: %d | b_i: %d\n",id,a_i,b_i);
             if(!(a_i==0 && b_i==1)){
+                printf("AiBi Check Failed: %d\n",id);
                 continue;
             }
 
@@ -1301,6 +1416,7 @@ int main(int argc, char *argv[])
                 int cnfVar = solver.vars()+1;
                 inputToVarMapping[newAux] = cnfVar;
                 fprintf(mapFile,"INPUT %d , var map: %d\n", newAux, cnfVar);
+                exToAuxMap[id].push_back(newAux);
                 
                 auxilaries.push_back(newAux);
                 int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
