@@ -1,0 +1,131 @@
+./noUnit_Examples/noUnit4.dqdimacs
+Read the file
+REMAP INPUTS CREATING PIs
+6
+1 1
+2 2
+3 3
+4 4
+5 5
+6 6
+REMAP INPUTS CREATING PIs
+6
+1 1
+2 2
+3 5
+4 6
+5 3
+6 4
+(null)          : pi =     6  po =     1  and =      17  lev =   5
+CNF stats: Vars =     11. Clauses =      19. Literals =       59.   Time =     0.01 sec
+Unate 0 check ** SAT ** for var: 3
+CEX: 1 1 1 1 0 1 
+OUTPUT: 1
+Unate 1 check ** SAT ** for var: 3
+CEX: 1 1 0 0 1 0 
+OUTPUT: 1
+Unate 0 check ** SAT ** for var: 4
+CEX: 1 1 1 1 1 0 
+OUTPUT: 1
+Unate 1 check ** SAT ** for var: 4
+CEX: 1 0 1 0 1 1 
+OUTPUT: 1
+unate 0:
+unate 1:
+Generated Manager for PHI
+Generating DQCNF and Aig_Man_t Objects for Projected PHI_i
+Getting projection for var: 3
+Clauses:
+3 0
+-3 0
+1 3 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_3
+Phi_i is const 0 for id: 3
+Getting projection for var: 4
+Clauses:
+-4 0
+-4 2 0
+-2 4 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_4
+DONE. Time Elapsed: 0.002634
+Generating PHI_i(0) and PHI_i(1)...
+Generating Phi(1) and Phi(0) for EX_VAR: 3
+Generating Phi(1) and Phi(0) for EX_VAR: 4
+DONE. Time Elapsed: 1.1e-05
+Generating Basis Functions...
+Generating Basis for EX_VAR: 3
+Generating Basis for EX_VAR: 4
+DONE. Time Elapsed: 0.003949
+Generating AIG Manager for negPHI...
+Creating the formula DELTA (AND) !PHI
+Appended Basis for EX_VAR: 3
+Appended Basis for EX_VAR: 4
+(null)          : pi =     6  po =     1  and =      14  lev =   5
+CNF stats: Vars =     12. Clauses =      23. Literals =       67.   Time =     0.00 sec
+(null)          : pi =     4  po =     1  and =       6  lev =   4
+CNF stats: Vars =      7. Clauses =       9. Literals =       27.   Time =     0.00 sec
+Verbose? : c opening file to write './f1.dimacs'
+c writing 'p cnf 15 17' header
+c wrote 17 clauses in 0.00 seconds process time
+c opening file to write './f2.dimacs'
+c writing 'p cnf 5 4' header
+c wrote 4 clauses in 0.00 seconds process time
+Assuming -13
+Assuming -15
+c opening file to write './f1_assumed.dimacs'
+c writing 'p cnf 15 17' header
+c wrote 17 clauses in 0.00 seconds process time
+**************           ITER: 1        ******************
+CEX : 0 1 0 0 0 0 
+Universal Assumptions:
+-1
+2
+Auxiliary Assumptions:
+-3
+-4
+Trying to remove -3
+-3 in UNSAT Core
+CEX : 0 1 1 1 
+UNSAT CORE D Variables:
+-3
+Dependent Var_ AiBi check pass: 3
+Dependent Var new Aux created: 3
+adding constraint clause...
+7 
+Printing current constraint:
+7
+Assuming 13
+Assuming -21
+Assuming -15
+c opening file to write './f1_assumed.dimacs'
+c writing 'p cnf 21 23' header
+c wrote 23 clauses in 0.00 seconds process time
+**************           ITER: 2        ******************
+CEX : 0 1 1 0 1 0 1 
+Universal Assumptions:
+-1
+2
+Auxiliary Assumptions:
+3
+-4
+Trying to remove -4
+-4 in UNSAT Core
+CEX : 0 1 1 1 
+UNSAT CORE D Variables:
+-4
+Dependent Var_ AiBi check pass: 4
+Dependent Var new Aux created: 4
+adding constraint clause...
+8 
+Printing current constraint:
+8
+Assuming 13
+Assuming -21
+Assuming 15
+Assuming -27
+c opening file to write './f1_assumed.dimacs'
+c writing 'p cnf 27 30' header
+c wrote 30 clauses in 0.00 seconds process time
+**************           ITER: 3        ******************
+UNSAT BUT WHY?
+Couldn't satisfy constraints, total assignments generated: 1

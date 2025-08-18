@@ -17,7 +17,7 @@
     Problem: Doesn't fulfill the function of basis functions to remove cases.
     Solution:
         a) Removed projected clauses containing ONLY the input variables.
-        b) Performed clause resolution:
+        b) Performed clause resolution: WRONG WRONG WRONG
             If a clause has an output without any of it's inputs, we find another output
             variable in the clause, and find another clause which we can use to get a resolved clause
             which contains the output varibale along with its input variable 

@@ -36,6 +36,7 @@ int exhaustiveCollapsedTill = 0;
 // 						"--pivotUniGen=27.0", "--maxTotalTime=72000", "--startIteration=0", \
 // 						"--maxLoopTime=3000", "--tApproxMC=1", "--pivotAC=60", "--gaussuntil=400", \
 // 						"--verbosity=0", "--multisample", UNIGEN_DIMAC_FNAME, UNIGEN_MODEL_FPATH};
+extern int numTrue, numFalse, numBoth;
 int unigen_argc = 8;
 int unigen_samples_argnum = 1;
 int unigen_threads_argnum = 2;
@@ -857,6 +858,7 @@ DQCNF* DQCNF::getProjection(int id){
 
 	cout<<"Getting projection for var: "<<id<<endl;
 	printf("Clauses:\n");
+	// set<int> testSet = {15,17,19,20,21,23,24,25,26,27};
 	for(auto clause: workingClauses){
 		vector<int> newClause;
 		set_intersection(clause.begin(),clause.end(),dep.begin(),dep.end(),back_inserter(newClause));
@@ -867,7 +869,18 @@ DQCNF* DQCNF::getProjection(int id){
 		// cout<<endl;
 		if(clauseSet.size()==0) continue;
 		if(clauseSet.find(id) == clauseSet.end() && clauseSet.find(-id)== clauseSet.end()) continue;
-		// if(clauseSet.size()==1){
+		if(clauseSet.size()==1){
+			if (clauseSet.find(id)!=clauseSet.end()){
+				posFound=true;
+			}
+			else if (clauseSet.find(-id)!=clauseSet.end()){
+				negFound=true;
+			}
+		}
+		// if(clauseSet.size()==1 && testSet.find(id)==testSet.end()){
+		// 	if(clauseSet.find(id)==clauseSet.end()) continue;
+		// }
+		// if(clauseSet.size()==1 && testSet.find(id)==testSet.end()){
 		// 	if(clauseSet.find(id)==clauseSet.end()){
 		// 		negFound=true;
 
@@ -894,6 +907,19 @@ DQCNF* DQCNF::getProjection(int id){
 		}
 		cout<<0<<endl;
 	}
+
+	if(posFound && negFound) {
+		numBoth++;
+	}
+	else if(posFound){
+		numTrue++;
+	}
+	else if(negFound){
+		numFalse++;
+	}
+
+	
+
 	// for(auto c:projectedClauses){
 	// 	cout<<"[";
 	// 	for(auto e:c){
