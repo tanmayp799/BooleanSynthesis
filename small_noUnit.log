@@ -1,0 +1,70 @@
+./small_tests/noUnit.dqdimacs
+Read the file
+REMAP INPUTS CREATING PIs
+7
+1 1
+2 2
+3 3
+4 4
+5 5
+6 6
+7 7
+REMAP INPUTS CREATING PIs
+7
+1 1
+2 2
+3 3
+4 6
+5 7
+6 4
+7 5
+(null)          : pi =     7  po =     1  and =      20  lev =   7
+CNF stats: Vars =     11. Clauses =      13. Literals =       38.   Time =     0.01 sec
+Unate 0 check ** SAT ** for var: 4
+CEX: 1 1 1 1 0 0 0 
+OUTPUT: 1
+unate 0:
+5
+unate 1:
+4
+Generated Manager for PHI
+Generating DQCNF and Aig_Man_t Objects for Projected PHI_i
+Getting projection for var: 4
+Clauses:
+-2 4 0
+-2 4 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_4
+Getting projection for var: 5
+Clauses:
+-3 2 5 0
+-5 -2 3 0
+2 5 0
+-5 -2 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_5
+DONE. Time Elapsed: 0.00498
+Generating PHI_i(0) and PHI_i(1)...
+Generating Phi(1) and Phi(0) for EX_VAR: 4
+Generating Phi(1) and Phi(0) for EX_VAR: 5
+DONE. Time Elapsed: 1.1e-05
+Generating Basis Functions...
+Generating Basis for EX_VAR: 4
+Generating Basis for EX_VAR: 5
+B_i is const 0 for id: 5
+DONE. Time Elapsed: 0.003066
+Generating AIG Manager for negPHI...
+Creating the formula DELTA (AND) !PHI
+Appended Basis for EX_VAR: 4
+Appended Basis for EX_VAR: 5
+(null)          : pi =     7  po =     1  and =       0  lev =   0
+CNF stats: Vars =      9. Clauses =       2. Literals =        2.   Time =     0.00 sec
+(null)          : pi =     5  po =     1  and =       4  lev =   3
+CNF stats: Vars =      8. Clauses =       7. Literals =       18.   Time =     0.00 sec
+Verbose? : c opening file to write './f1.dimacs'
+c writing 'p cnf 0 1' header
+c wrote 1 clauses in 0.00 seconds process time
+c opening file to write './f2.dimacs'
+c writing 'p cnf 0 0' header
+c wrote 0 clauses in 0.00 seconds process time
+**************           ITER: 1        ******************
+UNSAT BUT WHY?
+Couldn't satisfy constraints, total assignments generated: 1

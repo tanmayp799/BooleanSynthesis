@@ -105,6 +105,8 @@ int main(int argc, char *argv[])
     cout<<inpPath<<endl;
     FS::path phiPath(inpPath);
     DQCNF *phiCNF = new DQCNF(phiPath.string());
+    numX = phiCNF->get_universals().size();
+    numY = phiCNF->get_deps().size();
     cout << "Read the file\n";
     phiCNF->unateCheck();
     // phiCNF->preprocess();
@@ -961,7 +963,7 @@ int main(int argc, char *argv[])
     while(true){
         iter++;
         //check for sat
-
+        if(iter>3000) exit(1);
         
         for(auto id:deps){
             int h_id = exToHMapping[id];
@@ -969,13 +971,13 @@ int main(int argc, char *argv[])
             vector<int> selectors = HtoSelectorMapping[h_id];
             int sz = selectors.size();
             for(int i=0;i<sz-1;i++){
-                printf("Assuming %d\n", selectors[i]);
+                // printf("Assuming %d\n", selectors[i]);
                 solver.assume(selectors[i]);
             }
-            printf("Assuming %d\n", -selectors[sz-1]);
+            // printf("Assuming %d\n", -selectors[sz-1]);
             solver.assume(-selectors[sz-1]);
         }
-        solver.write_dimacs("./f1_assumed.dimacs");
+        // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
         if(iter%1==0){
@@ -1158,6 +1160,9 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < numAigInputs; i++)
         {
+            if(i==numX) cout<<"| ";
+            if(i==numX + numY) cout <<"| ";
+            if(i==numX + numY + numY) cout<<"| ";
             cout << cex[i] << " ";
         }
         cout << endl;}
@@ -1252,6 +1257,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         set<int> unsatCoreLits;
+        set<int> unsatCoreUnivVars;
         if(unsatCoreStatus == CaDiCaL::UNSATISFIABLE){
             // unsatCoreExtractor.write_dimacs("./debug.dimacs");
             // cout<<"Unsat Core D Variables:\n";
@@ -1273,15 +1279,19 @@ int main(int argc, char *argv[])
             }
 
             cout<<"Unsat Core A Variables:\n";
+            // unsatCoreUnivLits
             for(auto e:univAssumptions){
                 if(e>0){
                     if(unsatCoreExtractor.failed(inputToVarMapping_unsatCore[e])){
                         cout<<e<<endl;
+                        unsatCoreUnivVars.insert(e);
+
                     }
                 }
                 else{
                     if(unsatCoreExtractor.failed(-inputToVarMapping_unsatCore[-e])){
                         cout<<e<<endl;
+                        unsatCoreUnivVars.insert(-e);
                     }
                 }
             }
@@ -1397,6 +1407,8 @@ int main(int argc, char *argv[])
             // if(id==13) cout<<"DBBBB: size: "<<depSet.size()<<endl;
             for (auto dep : depSet)
             {
+                //unsatCore Filtering for if condition
+                if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
                 if (cex[dep - 1] == 0)
                 {
                     depVal.insert(-dep);
@@ -1407,7 +1419,30 @@ int main(int argc, char *argv[])
                 }
                 // depVal.insert(cex[dep-1]);
             }
-
+            
+            if(depVal.empty()){
+                // cout<<"Err: depVal empty for d: "<<id<<endl;
+                // continue;
+                for (auto dep : depSet)
+                {
+                    //unsatCore Filtering for if condition
+                    // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
+                    if (cex[dep - 1] == 0)
+                    {
+                        depVal.insert(-dep);
+                    }
+                    else
+                    {
+                        depVal.insert(dep);
+                    }
+                    // depVal.insert(cex[dep-1]);
+                }
+            }
+            cout<<"DepVal for d: "<<id<<" => ";
+            for(auto u:depVal){
+                cout<<u<<" ";
+            }
+            cout<<endl;
             if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
                 
                 changeFlag = true;
@@ -1419,10 +1454,10 @@ int main(int argc, char *argv[])
                 exToAuxMap[id].push_back(newAux);
                 
                 auxilaries.push_back(newAux);
-                int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
-                inputToVarMapping_unsatCore[newAux] = unsatCoreCnfVar;
-                fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
-                VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
+                // int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
+                // inputToVarMapping_unsatCore[newAux] = unsatCoreCnfVar;
+                // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
+                // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
 
                 cout<<"Dependent Var new Aux created: "<<id<<endl;
 
