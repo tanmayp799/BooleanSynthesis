@@ -936,7 +936,7 @@ int main(int argc, char *argv[])
                             for(auto e:currCase){
                                 fprintf(asgFile,"%d ",e);
                             }
-                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]==1?0:1);
+                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]);
                         }
                         fprintf(asgFile,"**************************\n");
                     }

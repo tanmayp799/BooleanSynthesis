@@ -402,7 +402,7 @@ Clauses:
 -11 -5 27 0
 10 27 0
 Generated DQCNF and Aig_Man_t Objects for Projected PHI_27
-DONE. Time Elapsed: 0.017351
+DONE. Time Elapsed: 0.012993
 Generating PHI_i(0) and PHI_i(1)...
 Generating Phi(1) and Phi(0) for EX_VAR: 14
 Generating Phi(1) and Phi(0) for EX_VAR: 15
@@ -418,7 +418,7 @@ Generating Phi(1) and Phi(0) for EX_VAR: 24
 Generating Phi(1) and Phi(0) for EX_VAR: 25
 Generating Phi(1) and Phi(0) for EX_VAR: 26
 Generating Phi(1) and Phi(0) for EX_VAR: 27
-DONE. Time Elapsed: 7.9e-05
+DONE. Time Elapsed: 5.8e-05
 Generating Basis Functions...
 Generating Basis for EX_VAR: 14
 A_i is const 0 for id: 14
@@ -460,7 +460,7 @@ Generating Basis for EX_VAR: 26
 A_i is const 0 for id: 26
 B_i is const 1 for id: 26
 Generating Basis for EX_VAR: 27
-DONE. Time Elapsed: 0.021848
+DONE. Time Elapsed: 0.021038
 Generating AIG Manager for negPHI...
 Creating the formula DELTA (AND) !PHI
 Appended Basis for EX_VAR: 14
