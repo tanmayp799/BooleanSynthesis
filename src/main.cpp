@@ -59,46 +59,6 @@ int main(int argc, char *argv[])
     }
 
 
-   
-    // Abc_Ntk_t* n = getNtkFromCNF("./data/small.dqdimacs");
-    // DQCNF* dqcnf = new DQCNF("./data/small.dqdimacs");
-
-    // Aig_Man_t* m = dqcnf->genAIGMan();
-    // Cnf_Dat_t* c = Cnf_Derive(m,1);
-    // Abc_Ntk_t* n = Abc_NtkFromAigPhase(m);
-    // Aig_ManShow(m,0,NULL);
-
-    // printf("numClauses: %d | numVars: %d\n",c->nClauses,c->nVars);
-    // for(int i=0;i<c->nClauses;i++){
-    //     for(int j=0;j<c->pClauses[i][j]!=0;j++){
-    //         // solver.add(pCnf->pClauses[i][j]);
-    //         printf("%d ",c->pClauses[i][j]);
-    //     }
-    //     cout<<endl;
-    //     // solver.add(0);
-    // }
-
-    // Io_WriteCnf(n,"./out_test.dimacs",1);
-    // Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
-    // Abc_Ntk_t* newNtK = Abc_NtkDarToCnf( n, "./out_test.dimacs",0,0,1);
-    // Cnf_Dat_t* myCnf = myDarToCnf(n, "./out_test2.dimacs",0,0,1);
-    // cout<<"NEW CNFFFFFFFFFFFFFFF\n";
-    
-    // int * pLit, * pStop;
-    // for(int i=0;i<myCnf->nClauses;i++){
-    //     for(pLit=myCnf->pClauses[i],pStop=myCnf->pClauses[i+1];pLit<pStop;pLit++){
-    //         printf("%d ", Cnf_Lit2Var2(*pLit));
-    //     }
-    //     printf("0\n");
-    // }
-
-    // for(int i=0;i<Abc_NtkCiNum(n);i++){
-    //     printf("INPUT %d , var map: %d\n",i+1, myCnf->pVarNums[Abc_ObjId(Abc_NtkCi(n,i))]);
-    // }
-
-    // exit(1);
-    
-
     main_time_start = TIME_NOW;
 
     string inpPath = argv[1];
@@ -112,48 +72,7 @@ int main(int argc, char *argv[])
     // phiCNF->preprocess();
     Aig_Man_t *phi_Man = phiCNF->genAIGMan();
 
-    // Aig_ManShow(phi_Man,0,NULL);
-    // cin>>mySIG;
-    // exit(1);
-    // vector<int> ones = {27,25,23,22,21,19,18,17,15,14};
-    // vector<int> zeros = {26,24,20};
-
-
-    // for(auto id:ones){
-    //     Aig_Obj_t* newOut = Aig_SubstituteConst(phi_Man, Aig_ManCo(phi_Man,0), id, 1);
-    //     Aig_ObjCreateCo(phi_Man,newOut);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-    // }
-
-    // for(auto id:zeros){
-    //     Aig_Obj_t* newOut = Aig_SubstituteConst(phi_Man, Aig_ManCo(phi_Man,0), id, 0);
-    //     Aig_ObjCreateCo(phi_Man,newOut);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-    // }
-    // Aig_Man_t* tm = compressAig(phi_Man);
-    // Aig_ManShow(phi_Man,0,NULL);
-    // cin>>mySIG;
-
-    // Aig_Obj_t* newOut2 = Aig_Substitute(phi_Man, Aig_ManCo(phi_Man,0), 16, Aig_Not(Aig_ManCi(phi_Man,5)));
-    // Aig_ObjCreateCo(phi_Man,newOut2);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-
-    // Aig_Man_t* tm = compressAig(phi_Man);
-    // Aig_ManShow(tm,0,NULL);
-    // cin>>mySIG;
-    // exit(1);
+    
 
     numOrigInputs = Aig_ManCiNum(phi_Man);
 
@@ -692,20 +611,7 @@ int main(int argc, char *argv[])
     Aig_Obj_t *defaultCase = Aig_ManConst1(origFormula);
 
 
-    // for (auto id : deps)
-    // {
-    //     Aig_Obj_t *currCase = exToCases[id];
-
-    //     // case imp ~h = ~case v ~h
-
-
-    //     Aig_Obj_t *tmp = Aig_Or(origFormula, Aig_Not(currCase), Aig_Not(Aig_ManCi(origFormula,exToHMapping[id]-1)));
-    //     mu = Aig_And(origFormula, mu, tmp);
-
-    //     // ~case => h<=>1 = case v h
-    //     // tmp = Aig_Or(origFormula, currCase, Aig_ManCi(origFormula,exToHMapping[id]-1));
-    //     // defaultCase = Aig_And(origFormula, defaultCase, tmp);
-    // }
+    
 
     Aig_Obj_t *constraint = Aig_ManConst1(origFormula);
 
@@ -717,20 +623,12 @@ int main(int argc, char *argv[])
     newOut = Aig_And(origFormula, newOut, constraint);     // this updates by constraint -> constraint AND newConstraint.
 
     Aig_ObjCreateCo(origFormula, newOut);
-    // Aig_ObjCreateCo(origFormula,mu);
-    // Aig_ObjCreateCo(origFormula,defaultCase);
-    // Aig_ObjCreateCo(origFormula,constraint);
-    // Aig_ObjCreateCo(origFormula,deltaAndNegPhi);
-
-    // Aig_ManShow(origFormula,0,NULL);
-    // cin>>mySIG;
+    
     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 0));
     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 0), Aig_ManConst0(origFormula), NULL);
     Aig_ManCoCleanup(origFormula);
     Aig_ManCleanup(origFormula);
-    // Aig_ManShow(origFormula,0,NULL);
-    // cin>>mySIG;
-    // exit(1);
+    
 
     if (Aig_ManCoNum(origFormula) == 0)
     {
@@ -738,9 +636,6 @@ int main(int argc, char *argv[])
     }
 
     // A manager for constraints to check for sat
-
-    
-
     Aig_Man_t *constraintMan = Aig_ManDupOrdered(origFormula);
 
 
@@ -748,19 +643,11 @@ int main(int argc, char *argv[])
     Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan, 0));
     Aig_ObjConnect(constraintMan, Aig_ManCo(constraintMan, 0), Aig_ManConst0(constraintMan), NULL);
 
-    // Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan, 1));
-    // Aig_ObjConnect(constraintMan, Aig_ManCo(constraintMan, 1), Aig_ManConst0(constraintMan), NULL);
-
-    // Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan, 2));
-    // Aig_ObjConnect(constraintMan, Aig_ManCo(constraintMan, 2), Aig_ManConst0(constraintMan), NULL);
-
-    // Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan, 4));
-    // Aig_ObjConnect(constraintMan, Aig_ManCo(constraintMan, 4), Aig_ManConst0(constraintMan), NULL);
+    
 
     Aig_ManCoCleanup(constraintMan);
     Aig_ManCleanup(constraintMan);
-    // Abc_Ntk_t* ontk = Abc_NtkFromAigPhase(origFormula);
-    // ontk =  Abc_NtkToLogic(ontk);
+    
     
 
     if (Aig_ManCoNum(constraintMan) == 0)
@@ -769,12 +656,7 @@ int main(int argc, char *argv[])
     }
    
 
-    // Aig_ManShow(deltaAndPhi_Man,0,NULL);
-    // cin>>mySIG;
-    // Aig_ManShow(origFormula,0,NULL);
-    // exit(1);
-    // Aig_ManShow(origFormula,0,NULL);
-    // cin>>mySIG;
+    
     origFormula = compressAig(origFormula);
     
     // Aig_ManShow(origFormula,0,NULL);
@@ -853,7 +735,7 @@ int main(int argc, char *argv[])
     // exit(1);
     CaDiCaL::Solver constraintSolver;
     
-    map<int, map<set<int>,pair<int,int>>> ex_caseToAuxMapping; // ex_id -> {set -> {CI_id,CI_id}}
+    map<int, map<set<int>,int>> ex_caseToAuxMapping; // ex_id -> {set -> {CI_id,CI_id}}
     set<set<int>> constraints;
 
     Aig_ManStop(origFormula);
@@ -877,60 +759,75 @@ int main(int argc, char *argv[])
     map<int, int> HtoZMapping_unsatCore;
     map<int, vector<int>> HtoSelectorMapping_unsatCore;
     
+
+
+    //implication default case initialization
+    /*
+        - initially z0 == h (-h) && assume z0=1
+        - when encounter an implication,
+            - z1 == (z0 OR (sigma_1 AND (h==v1)))
+            - t1 <-> h==v1
+            - t2 <-> sigma1
+            - t3 <-> t1 AND t2
+            - z1 <-> (z0 OR t3)
+            - assume z1=1
+    */
+   set<int> initZ;
     for(auto id:deps){
+
         int z0 = solver.vars()+1;
-        int s0 = solver.vars()+2;
+        // int s0=solver.vars()+2;
+        printf("id: %d | Z0: %d\n", id, z0);
         int h_id = exToHMapping[id];
         int h_var = inputToVarMapping[h_id];
+
+        // -z v h
+        solver.add(-z0);
+        // solver.add(h_var);
+        solver.add(0);
+
+        //-h v z
+        // solver.add(-h_var);
+        // solver.add(z0);
+        // solver.add(0);
+
+        // ~s => (~z => h) == s v (z v h)
+        // solver.clause({s0,z0,h_var});
+
+        HtoZMapping[h_id] = z0;
+        // HtoSelectorMapping[h_id].push_back(s0);
+        initZ.insert(z0);
+
+
+        //################################################ OLD APPROACH #########################
+
+        // int z0 = solver.vars()+1;
+        // int s0 = solver.vars()+2;
+        // int h_id = exToHMapping[id];
+        // int h_var = inputToVarMapping[h_id];
         
-        //z0 <=> 1
-        int randomNumber = (rand() % 100);
+        // //z0 <=> 1
+        // int randomNumber = (rand() % 100);
+        
+        // solver.add(z0);
+        // solver.add(0);
 
-        // if(randomNumber >=0){
 
-        //     solver.add(z0);
-        // }
-        // else solver.add(-z0);
+        // // -h or z or s
+        // solver.add(-h_var);
+        // solver.add(z0);
+        // solver.add(s0);
         // solver.add(0);
         
-        solver.add(z0);
-        solver.add(0);
-
-
-        // -h or z or s
-        solver.add(-h_var);
-        solver.add(z0);
-        solver.add(s0);
-        solver.add(0);
+        // //h or -z or s
+        // solver.add(h_var);
+        // solver.add(-z0);
+        // solver.add(s0);
+        // solver.add(0);
         
-        //h or -z or s
-        solver.add(h_var);
-        solver.add(-z0);
-        solver.add(s0);
-        solver.add(0);
+        // HtoZMapping[h_id] = z0;
+        // HtoSelectorMapping[h_id].push_back(s0);
         
-        HtoZMapping[h_id] = z0;
-        HtoSelectorMapping[h_id].push_back(s0);
-        
-        // int uc_z0 = unsatCoreExtractor.vars()+1;
-        // int uc_s0 = unsatCoreExtractor.vars()+2;
-        // int uc_h_var = inputToVarMapping_unsatCore[h_id];
-        
-        // unsatCoreExtractor.add(-uc_z0);
-        // unsatCoreExtractor.add(0);
-        
-        // unsatCoreExtractor.add(-uc_h_var);
-        // unsatCoreExtractor.add(uc_z0);
-        // unsatCoreExtractor.add(uc_s0);
-        // unsatCoreExtractor.add(0);
-        
-        // unsatCoreExtractor.add(uc_h_var);
-        // unsatCoreExtractor.add(-uc_z0);
-        // unsatCoreExtractor.add(uc_s0);
-        // unsatCoreExtractor.add(0);
-        
-        // HtoZMapping_unsatCore[h_id] = uc_z0;
-        // HtoSelectorMapping_unsatCore[h_id].push_back(uc_s0);
     }
 
     set<int> posUnates = phiCNF->get_posUnates();
@@ -959,23 +856,29 @@ int main(int argc, char *argv[])
     map<set<int>, int> caseToAuxMap_unsatCore;
 
     map<int, vector<int>> exToAuxMap;
-
+    verbose=true;
+    freq=true;
     while(true){
         iter++;
+        if(verbose && freq) cout<<"**************           ITER: "<<iter<<"        ******************"<<endl;
         //check for sat
         if(iter>3000) exit(1);
         
         for(auto id:deps){
             int h_id = exToHMapping[id];
 
-            vector<int> selectors = HtoSelectorMapping[h_id];
-            int sz = selectors.size();
-            for(int i=0;i<sz-1;i++){
-                // printf("Assuming %d\n", selectors[i]);
-                solver.assume(selectors[i]);
-            }
-            // printf("Assuming %d\n", -selectors[sz-1]);
-            solver.assume(-selectors[sz-1]);
+            int currZ = HtoZMapping[h_id];
+            printf("id: %d | Z: %d\n", id, currZ);
+            if(initZ.find(currZ) == initZ.end()) solver.assume(-currZ);
+            // solver.assume(currZ);
+            // vector<int> selectors = HtoSelectorMapping[h_id];
+            // int sz = selectors.size();
+            // for(int i=0;i<sz-1;i++){
+            //     // printf("Assuming %d\n", selectors[i]);
+            //     solver.assume(selectors[i]);
+            // }
+            // // printf("Assuming %d\n", -selectors[sz-1]);
+            // solver.assume(-selectors[sz-1]);
         }
         // solver.write_dimacs("./f1_assumed.dimacs");
 
@@ -984,7 +887,6 @@ int main(int argc, char *argv[])
             freq=true;
         }
 
-        if(verbose && freq) cout<<"**************           ITER: "<<iter<<"        ******************"<<endl;
 
         // if(verbose && freq){
         //     string dumpName = "./debug_"+to_string(iter)+".dimacs";
@@ -1017,7 +919,7 @@ int main(int argc, char *argv[])
                         cex_aux[e] = val>0?1:0;
                         
                     }
-                    string filename = "./assignments_NoUnit/asg_"+ to_string(asgNo) +".txt";
+                    string filename = "./assignments_NoUnit/test_asg_"+ to_string(asgNo) +".txt";
                     FILE* asgFile = fopen(filename.c_str(),"w");
                     for(auto p:ex_caseToAuxMapping){
                         int d_var = p.first;
@@ -1026,7 +928,7 @@ int main(int argc, char *argv[])
     
                         for(auto p2:cases){
                             set<int> currCase = p2.first;
-                            int aux = p2.second.first;
+                            int aux = p2.second;
                             if(cex_aux.find(aux)==cex_aux.end()){
                                 cerr<<"Error in aux map\n";
                                 exit(1);
@@ -1034,7 +936,7 @@ int main(int argc, char *argv[])
                             for(auto e:currCase){
                                 fprintf(asgFile,"%d ",e);
                             }
-                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]);
+                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]==1?0:1);
                         }
                         fprintf(asgFile,"**************************\n");
                     }
@@ -1303,6 +1205,7 @@ int main(int argc, char *argv[])
 
         // unsatCoreLits.insert(27);
 
+        //unsatCore Minimization START
         bool setMinimized = false;
         vector<int> removed_lits;
         while(true){
@@ -1374,6 +1277,9 @@ int main(int argc, char *argv[])
                 break;
             }
         }
+
+        //UnsatCore Minimization END
+
         cout<<"Printing A_i and B_i for removed lits:\n";
         for(auto e:removed_lits){
             int id = abs(e);
@@ -1388,7 +1294,7 @@ int main(int argc, char *argv[])
             cout<<e<<endl;
         }
 
-        vector<vector<int>> implicationClauses;
+        // vector<vector<int>> implicationClauses;
         for(auto e:unsatCoreLits){
             int id = abs(e);
             int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id], cex)[0];
@@ -1408,7 +1314,7 @@ int main(int argc, char *argv[])
             for (auto dep : depSet)
             {
                 //unsatCore Filtering for if condition
-                if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
+                // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
                 if (cex[dep - 1] == 0)
                 {
                     depVal.insert(-dep);
@@ -1421,8 +1327,8 @@ int main(int argc, char *argv[])
             }
             
             if(depVal.empty()){
-                // cout<<"Err: depVal empty for d: "<<id<<endl;
-                // continue;
+                cout<<"Empty depVal for: "<<id<<endl;
+                //   continue;
                 for (auto dep : depSet)
                 {
                     //unsatCore Filtering for if condition
@@ -1437,7 +1343,9 @@ int main(int argc, char *argv[])
                     }
                     // depVal.insert(cex[dep-1]);
                 }
-            }
+
+
+            }   
             cout<<"DepVal for d: "<<id<<" => ";
             for(auto u:depVal){
                 cout<<u<<" ";
@@ -1445,30 +1353,42 @@ int main(int argc, char *argv[])
             cout<<endl;
             if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
                 
-                changeFlag = true;
+
+                changeFlag=true;
                 numAigInputs++;
                 int newAux = numAigInputs;
-                int cnfVar = solver.vars()+1;
-                inputToVarMapping[newAux] = cnfVar;
-                fprintf(mapFile,"INPUT %d , var map: %d\n", newAux, cnfVar);
+                int aux_cnfVar = solver.vars()+1;
+                inputToVarMapping[newAux] = aux_cnfVar;
+                fprintf(mapFile,"INPUT %d , var map: %d\n", newAux, aux_cnfVar);
                 exToAuxMap[id].push_back(newAux);
-                
                 auxilaries.push_back(newAux);
-                // int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
-                // inputToVarMapping_unsatCore[newAux] = unsatCoreCnfVar;
-                // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
-                // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
 
-                cout<<"Dependent Var new Aux created: "<<id<<endl;
+                // !!  STEP 1   !!
+                    //add clauses for t<-> h==newAux
+                int h_id = exToHMapping[id];
 
+                int h_var = inputToVarMapping[h_id];
+                int tseitin_1 = solver.vars()+2;
+                
+                //Add 4 clauses for t1 <-> h!=aux
+                //clause 1: -t v -h v -aux
+                solver.clause({-tseitin_1,-h_var, -aux_cnfVar});
 
-                //Check if auxilary for this depVal exists or Not, if it does, use it else create one.
+                //clause 2: -t v -aux v -h
+                solver.clause({-tseitin_1,-aux_cnfVar,-h_var});
 
+                //clause 3: h v -aux v t
+                solver.clause({h_var,-aux_cnfVar,tseitin_1});
+                
+                //clause 4: -h v aux v t
+                solver.clause({-h_var, aux_cnfVar, tseitin_1});
 
-                if(caseToAuxMap.find(depVal)==caseToAuxMap.end()){
-                    int newCaseVar = solver.vars()+2;
+                // !! STEP 2 !!
+                    // check if tseitin for the current sigma exists, create if it does not.
+                if(caseToAuxMap.find(depVal) == caseToAuxMap.end()){
+                    int newCaseVar = solver.vars()+1;
 
-                    // dep => var === ~dep or var
+                    //clause 1: sigma => newCaseVar == ~sigma OR newCaseVar
                     vector<int> c1;
                     for(auto d:depVal){
                         if(d>0){
@@ -1479,166 +1399,161 @@ int main(int argc, char *argv[])
                         }
                     }
                     c1.push_back(newCaseVar);
-                    c1.push_back(0);
 
-                    for(auto e:c1){
-                        solver.add(e);
-                    }
+                    solver.clause(c1);
 
-
-                    // var => dep ---> ~ var OR dep
+                    //clause 2: newCaseVar => sigma == ~newCaseVar OR sigma
                     for(auto d:depVal){
-                        solver.add(-newCaseVar);
                         if(d>0){
-                            solver.add(inputToVarMapping[d]);
+                            solver.clause({-newCaseVar, inputToVarMapping[d]});
                         }
                         else{
-                            solver.add(-inputToVarMapping[-d]);
+                            solver.clause({-newCaseVar, -inputToVarMapping[-d]});
                         }
-                        solver.add(0);
                     }
-
-                    caseToAuxMap[depVal] = newCaseVar;
+                    caseToAuxMap[depVal]=newCaseVar;
                 }
 
-                int caseVar = caseToAuxMap[depVal];
+                int tseitin_2 = caseToAuxMap[depVal];
 
-                int h_id = exToHMapping[id];
-                int hVar = inputToVarMapping[h_id];
-                int zVar = HtoZMapping[h_id];
+                // !! STEP 3 !!
+                    // add clauses for t3 <-> t1 AND t2
+                int tseitin_3 = solver.vars()+1;
+                
+                //clause 1 & 2: t3 -> t1 ^ t2
+                solver.clause({-tseitin_3, tseitin_1});
+                solver.clause({-tseitin_3, tseitin_2});
 
-                int newZ = solver.vars()+3;
-                int newS = solver.vars()+4;
+                //clause 3: t1 ^ t2 -> t3
+                solver.clause({-tseitin_1, -tseitin_2, tseitin_3});
 
-                // newZ = ite(caseVar, newAux,zVar)
-                //adding clause 1
-                solver.add(-caseVar);
-                solver.add(newZ);
-                solver.add(-cnfVar);
-                solver.add(0);
 
-                //adding clause 2
-                solver.add(-caseVar);
-                solver.add(-newZ);
-                solver.add(cnfVar);
-                solver.add(0);
+                // !! STEP 4 !!
+                    // add clauses for z_i <-> (z_{i-1} OR t3)
+                
+                int newZ = solver.vars() + 1;
+                int currZ = HtoZMapping[h_id];
 
-                //adding clause 3
-                solver.add(caseVar);
-                solver.add(newZ);
-                solver.add(-zVar);
-                solver.add(0);
+                //clause 1: z_i -> z_{i-1} OR t3
+                solver.clause({-newZ, currZ, tseitin_3});
 
-                //adding clause 4
-                solver.add(caseVar);
-                solver.add(-newZ);
-                solver.add(zVar);
-                solver.add(0);
-
-                //Now we will add h<=> newZ if ~selector
-                //adding h or -newZ or newS
-                solver.add(hVar);
-                solver.add(-newZ);
-                solver.add(newS);
-                solver.add(0);
-
-                //adding -h or newZ or newS
-                solver.add(-hVar);
-                solver.add(newZ);
-                solver.add(newS);
-                solver.add(0);
+                //clause 2 & 3: (z_{i-1} OR t3) -> z_i
+                solver.clause({-currZ, newZ});
+                solver.clause({-tseitin_3, newZ});
 
                 HtoZMapping[h_id] = newZ;
-                HtoSelectorMapping[h_id].push_back(newS);
 
-                ///////////////////////////////////////////////////////////////////////////////////
+                //######################### OLD APPROACH #####################################
 
-                // if(caseToAuxMap_unsatCore.find(depVal)==caseToAuxMap_unsatCore.end()){
-                //     int newCaseVar = unsatCoreExtractor.vars()+2;
+                // changeFlag = true;
+                // numAigInputs++;
+                // int newAux = numAigInputs;
+                // int cnfVar = solver.vars()+1;
+                // inputToVarMapping[newAux] = cnfVar;
+                // fprintf(mapFile,"INPUT %d , var map: %d\n", newAux, cnfVar);
+                // exToAuxMap[id].push_back(newAux);
+                
+                // auxilaries.push_back(newAux);
+                // // int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
+                // // inputToVarMapping_unsatCore[newAux] = unsatCoreCnfVar;
+                // // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
+                // // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
+
+                // cout<<"Dependent Var new Aux created: "<<id<<endl;
+
+
+                //Check if auxilary for this depVal exists or Not, if it does, use it else create one.
+
+
+                // if(caseToAuxMap.find(depVal)==caseToAuxMap.end()){
+                //     int newCaseVar = solver.vars()+2;
 
                 //     // dep => var === ~dep or var
                 //     vector<int> c1;
                 //     for(auto d:depVal){
                 //         if(d>0){
-                //             c1.push_back(-inputToVarMapping_unsatCore[d]);
+                //             c1.push_back(-inputToVarMapping[d]);
                 //         }
                 //         else{
-                //             c1.push_back(inputToVarMapping_unsatCore[-d]);
+                //             c1.push_back(inputToVarMapping[-d]);
                 //         }
                 //     }
                 //     c1.push_back(newCaseVar);
                 //     c1.push_back(0);
 
                 //     for(auto e:c1){
-                //         unsatCoreExtractor.add(e);
+                //         solver.add(e);
                 //     }
 
 
                 //     // var => dep ---> ~ var OR dep
                 //     for(auto d:depVal){
-                //         unsatCoreExtractor.add(-newCaseVar);
+                //         solver.add(-newCaseVar);
                 //         if(d>0){
-                //             unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
+                //             solver.add(inputToVarMapping[d]);
                 //         }
                 //         else{
-                //             unsatCoreExtractor.add(-inputToVarMapping_unsatCore[-d]);
+                //             solver.add(-inputToVarMapping[-d]);
                 //         }
-                //         unsatCoreExtractor.add(0);
+                //         solver.add(0);
                 //     }
-                //     caseToAuxMap_unsatCore[depVal] = newCaseVar;
+
+                //     caseToAuxMap[depVal] = newCaseVar;
                 // }
 
-                // int uc_caseVar = caseToAuxMap_unsatCore[depVal];
+                // int caseVar = caseToAuxMap[depVal];
 
-                // h_id = exToHMapping[id];
-                // int uc_hVar = inputToVarMapping_unsatCore[h_id];
-                // int uc_zVar = HtoZMapping_unsatCore[h_id];
+                // int h_id = exToHMapping[id];
+                // int hVar = inputToVarMapping[h_id];
+                // int zVar = HtoZMapping[h_id];
 
-                // int uc_newZ = unsatCoreExtractor.vars()+3;
-                // int uc_newS = unsatCoreExtractor.vars()+4;
-                // int uc_cnfVar = unsatCoreCnfVar;
+                // int newZ = solver.vars()+3;
+                // int newS = solver.vars()+4;
+
                 // // newZ = ite(caseVar, newAux,zVar)
                 // //adding clause 1
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_cnfVar);
-                // unsatCoreExtractor.add(0);
+                // solver.add(-caseVar);
+                // solver.add(newZ);
+                // solver.add(-cnfVar);
+                // solver.add(0);
 
                 // //adding clause 2
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_cnfVar);
-                // unsatCoreExtractor.add(0);
+                // solver.add(-caseVar);
+                // solver.add(-newZ);
+                // solver.add(cnfVar);
+                // solver.add(0);
 
                 // //adding clause 3
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_zVar);
-                // unsatCoreExtractor.add(0);
+                // solver.add(caseVar);
+                // solver.add(newZ);
+                // solver.add(-zVar);
+                // solver.add(0);
 
                 // //adding clause 4
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_zVar);
-                // unsatCoreExtractor.add(0);
+                // solver.add(caseVar);
+                // solver.add(-newZ);
+                // solver.add(zVar);
+                // solver.add(0);
 
-                // //Now we will add h<=> newZ if selector
+                // //Now we will add h<=> newZ if ~selector
                 // //adding h or -newZ or newS
-                // unsatCoreExtractor.add(uc_hVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
+                // solver.add(hVar);
+                // solver.add(-newZ);
+                // solver.add(newS);
+                // solver.add(0);
 
                 // //adding -h or newZ or newS
-                // unsatCoreExtractor.add(-uc_hVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
+                // solver.add(-hVar);
+                // solver.add(newZ);
+                // solver.add(newS);
+                // solver.add(0);
 
-                // HtoZMapping_unsatCore[h_id] = uc_newZ;
-                // HtoSelectorMapping_unsatCore[h_id].push_back(uc_newS);
+                // HtoZMapping[h_id] = newZ;
+                // HtoSelectorMapping[h_id].push_back(newS);
 
+                ///////////////////////////////////////////////////////////////////////////////////
 
+                
 
 
 
@@ -1646,94 +1561,7 @@ int main(int argc, char *argv[])
 
 
                 //////////////////////////////////////////////////////////////////////////////
-                // cout<<newAux<<" "<<cnfVar<<endl;
-                // we add the clause ~depVal or h or ~newAux
-                // printf("depVal: ");
-                // vector<int> c1;
-                // vector<int> c1_unsatCore;
-                // for(auto d: depVal){
-                //     // printf("d: %d | val-> %d, inputMap->%d\n",d,cex[d-1],inputToVarMapping[d]);
-                //     // printf("%d ",d);
-                //     if(d > 0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c1.push_back(-inputToVarMapping[d]);
-                //         c1_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //         // cout<<-inputToVarMapping[d]<<" | ";    
-                //     }
-                //     else{
-                //         c1.push_back(inputToVarMapping[-d]);
-                //         c1_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //         // solver.add(inputToVarMapping[-d]);
-                //         // cout<<inputToVarMapping[-d]<<" | ";
-                //     }
-                // }
-                // // cout<<endl;
-                // c1.push_back(inputToVarMapping[exToHMapping[id]]);
-                // c1.push_back(-inputToVarMapping[newAux]);
-                // c1.push_back(0);
                 
-                // c1_unsatCore.push_back(inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c1_unsatCore.push_back(-inputToVarMapping_unsatCore[newAux]);
-                // c1_unsatCore.push_back(0);
-                
-                // cout<<"Adding clause 1...\n";
-                // for(auto e:c1){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-                // // implicationClauses.push_back(c1_unsatCore);
-
-                // for(auto e:c1_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-
-                // // solver.write_dimacs("./debug_1stClause.dimacs");
-                // // cin>>mySIG;
-                // //we add the clause ~depVal or ~h or newAux
-                // vector<int> c2;
-                // vector<int> c2_unsatCore;
-                // for(auto d:depVal){
-                //     if(d>0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c2.push_back(-inputToVarMapping[d]);
-                //         c2_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //     }
-                //     else{
-                //         // solver.add(inputToVarMapping[-d]);
-                //         c2.push_back(inputToVarMapping[-d]);
-                //         c2_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //     }
-                // }
-                
-                // c2.push_back(-inputToVarMapping[exToHMapping[id]]);
-                // c2.push_back(inputToVarMapping[newAux]);
-                // c2.push_back(0);
-
-                // c2_unsatCore.push_back(-inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c2_unsatCore.push_back(inputToVarMapping_unsatCore[newAux]);
-                // c2_unsatCore.push_back(0);
-
-                // // implicationClauses.push_back(c2_unsatCore);
-
-
-
-                // cout<<"Adding clause 2...\n";
-                // for(auto e:c2){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-
-                // for(auto e:c2_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-                // solver.add(-inputToVarMapping[exToHMapping[id]]);
-                // solver.add(inputToVarMapping[newAux]);
-                // solver.add(0);
-
                 if(cex[id-1]>0){
                     currConstraint.push_back(-newAux);
                     // currAssumptions.push_back(newAux);
@@ -1743,11 +1571,11 @@ int main(int argc, char *argv[])
                     // currAssumptions.push_back(-newAux);
                 }
 
-                ex_caseToAuxMapping[id][depVal]= {newAux, newAux};
+                ex_caseToAuxMapping[id][depVal]= newAux;
             }
             else{
                 changeFlag=true;
-                int aux = ex_caseToAuxMapping[id][depVal].first;
+                int aux = ex_caseToAuxMapping[id][depVal];
                 if(cex[id-1]>0){
                     currConstraint.push_back(-aux);
                     // currAssumptions.push_back(aux);
@@ -1850,7 +1678,7 @@ int main(int argc, char *argv[])
             cout<<e<<endl;
         }
         constraintSolver.add(0);
-        freq=false;
+        // freq=false;
 
         // for(auto e:currConstraint){
         //     if(e>0) unsatCoreExtractor.add(inputToVarMapping_unsatCore[e]);
