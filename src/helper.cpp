@@ -63,7 +63,7 @@ bool CMSat::CUSP::unigenRunning = false;
 ////////////////////////////////////////////////////////////////////////
 
 
-////////////////////// TANMAY and ANANYA's HELPERS ////////////////////////////
+////////////////////// TANMAY's HELPERS ////////////////////////////
 
 
 
@@ -515,15 +515,15 @@ void DQCNF::unateCheck(){
 		}
 	}
 
-cout<<"unate 0:\n";
-for(auto d:this->unate_0){
-	cout<<d<<endl;
-}
+	cout<<"unate 0:\n";
+	for(auto d:this->unate_0){
+		cout<<d<<endl;
+	}
 
-cout<<"unate 1:\n";
-for(auto d:this->unate_1){
-	cout<<d<<endl;
-}
+	cout<<"unate 1:\n";
+	for(auto d:this->unate_1){
+		cout<<d<<endl;
+	}
 // exit(1);
 }
 
@@ -933,6 +933,39 @@ DQCNF* DQCNF::getProjection(int id){
 	return projectedDQCNF;
 }
 
+
+/*
+	This function is called recursively.
+	At each step, the function does the following:
+		1. Check whether there exist a clause consisting of only inputs. If yes, return nullptr.
+		2. Look for outputs that have unit clauses in the projection, s.t., no sharing of dependency occurs in original clause.
+		3. Split on one such output:
+			- substitute y_i = 1 (set skolem function as constant 1), and call driver on the modified DQCNF
+			- substitute y_i = 0 (set skolem function as constant 0), ---------""--------------------
+			- remove y_i from such clauses, so it doesn't cause unit projecions in future.
+		4. keep exploring all the possibilites. Once a solution is found, return the solution FILE*
+		5. When a recursive call returns a NON-NULL FILE*, append the constant function in that file and return.
+*/
+FILE* driverFunction(DQCNF obj){
+
+	//Check for clause consisting of only inputs
+	if(obj.containsBadClause()){
+		//return nullptr if found a clause consisting of only inputs.
+		return nullptr;
+	}
+
+	vector<set<int>> candidates = obj.findSplitCandidates();
+
+	
+
+
+}
+
+
+
+bool DQCNF::containsBadClause(){
+
+}
 
 ///////////////////////////////////////////////////////////
 

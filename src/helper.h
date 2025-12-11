@@ -285,7 +285,11 @@ void print(vector<T> v, string delim) {
 }
 
 
-//////////////////////////////////// TANMAY's AND ANANYA's HELPERS ////////////////////////////////////////////////////////
+//////////////////////////////////// TANMAY's HELPERS ////////////////////////////////////////////////////////
+
+
+FILE* driverFunction(DQCNF obj);
+
 class DQCNF{
 
 
@@ -311,6 +315,7 @@ class DQCNF{
 
 	set<int> unate_0;
 	set<int> unate_1;
+	
 
 	public:
 		DQCNF(string filename);
@@ -332,6 +337,9 @@ class DQCNF{
 		void unateCheck();
 		set<int> get_posUnates(){return unate_1;}
 		set<int> get_negUnates(){return unate_0;}
+		bool containsBadClause();
+
+		vector<set<int>> findSplitCandidates();
 };
 
 Abc_Ntk_t * getNtkFromCNF(char* filename);
