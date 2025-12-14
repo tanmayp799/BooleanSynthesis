@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
     map<int, DQCNF *> projectedPhis;
     map<int, Aig_Man_t *> projectedMans;
 
-    string stat_filename = "/home/coolboy19/Desktop/RnD/BooleanSynthesis/projection_stat.csv";
+    string stat_filename = "/home/coolboy19/Desktop/BooleanSynthesis/projection_stat.csv";
     FILE* stat_file = fopen(stat_filename.c_str(),"a");
     // fprintf(stat_file, "tc_name, numPos, numNeg, numBoth\n");
     for (auto id : deps)
@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
     oss << phiPath.filename().string() << ", " << numTrue << ", " << numFalse << ", " << numBoth << "\n";
     std::string result = oss.str(); // result: "example, 1, 2, 3\n"
     // string output_stat = std::format("{}, {}, {}, {}\n", phiPath.filename().string(), numTrue, numFalse, numBoth);
+    string output_stat = phiPath.filename().string() +","+ to_string(numTrue) + ","+to_string(numFalse)+ ","+to_string(numBoth)+"\n";
     fprintf(stat_file,result.c_str());
     fclose(stat_file);
     // exit(1);
