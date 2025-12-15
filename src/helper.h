@@ -337,9 +337,13 @@ class DQCNF{
 		void unateCheck();
 		set<int> get_posUnates(){return unate_1;}
 		set<int> get_negUnates(){return unate_0;}
-		bool containsBadClause();
 
-		vector<set<int>> findSplitCandidates();
+		//-----------------------------   MODULARISATION    ----------------------------------
+		bool containsBadClause();
+		pair<int,int> findSplitCandidates();
+		DQCNF* substituteConst(int var, bool setTrue);
+		DQCNF* removeProblemUnits(int var);
+		FILE* cegis();
 };
 
 Abc_Ntk_t * getNtkFromCNF(char* filename);
