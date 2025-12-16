@@ -988,7 +988,7 @@ FILE* driverFunction(DQCNF* obj){
 		}
 
 		delete obj2;
-		obj2 = obj->removeProblemUnits(splitVar); //todo
+		obj2 = obj->removeProblemUnits(splitVar);
 		retVal = driverFunction(obj2);
 		
 		delete obj2;
@@ -1007,6 +1007,72 @@ FILE* driverFunction(DQCNF* obj){
 		FILE* retVal = obj->cegis(); //todo
 		return retVal;
 	}
+}
+
+DQCNF* DQCNF::removeProblemUnits(int var){
+	vector<set<int>> newClauses;
+
+	set<int> depSet = this->get_dependencySet(var);
+
+	set<int> totalDepset(depSet);
+	for(auto e:depSet){
+		totalDepset.insert(-e);
+	}
+
+	totalDepset.insert(var);
+	totalDepset.insert(-var);
+
+	for(auto clause:this->clauses){
+
+		vector<int> projectedClause;
+		set_intersection(clause.begin(),clause.end(),
+						totalDepset.begin(), totalDepset.end(),
+						back_inserter(projectedClause));
+		
+		if(projectedClause.size()==1){
+			if(projectedClause[0]==var || projectedClause[0]==-var){
+				// found unit projection. Check if shared dependency exists
+				bool hasShared=false;
+				for(auto lit:clause){
+					if(lit==var || lit==-var) continue;
+
+					if((this->deps).find(abs(lit))!=(this->deps).end()){
+						//found a d-var, check for shared dependency
+
+						set<int> depSet2 = this->get_dependencySet(abs(lit));
+						vector<int> sharedDep;
+						set_intersection(depSet.begin(),depSet.end(),
+										depSet2.begin(),depSet2.end(),
+										back_inserter(sharedDep));
+						
+						if(!sharedDep.empty()){
+							hasShared=true;
+							break;
+						}
+					}
+				}
+				if(hasShared){
+					newClauses.push_back(clause);
+				}
+				else{
+					set<int> newClause(clause);
+					newClause.erase(var);
+					newClause.erase(-var);
+					newClauses.push_back(newClause);
+				}
+			}
+			else{
+				newClauses.push_back(clause);
+			}
+		}
+		else{
+			newClauses.push_back(clause);
+		}
+	}
+
+	DQCNF* newObj = new DQCNF(this->universal, this->existential, this->deps,this->numInputs,newClauses.size(),newClauses, this->dependency);
+
+	return newObj;
 }
 
 DQCNF* DQCNF::substituteConst(int var, bool setTrue){
