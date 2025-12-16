@@ -288,7 +288,6 @@ void print(vector<T> v, string delim) {
 //////////////////////////////////// TANMAY's HELPERS ////////////////////////////////////////////////////////
 
 
-FILE* driverFunction(DQCNF obj);
 
 class DQCNF{
 
@@ -328,10 +327,10 @@ class DQCNF{
 		vector<set<int>> getClauses(){return this->clauses;}
 		int getNumInputs(){return this->numInputs;}
 		int getNumClauses(){return this->numClauses;}
-
-		DQCNF(set<int> universal, set<int> existential, set<int> deps,
-		 int numInputs, int numClauses, vector<set<int>> clauses);
 		
+		DQCNF(set<int> universal, set<int> existential, set<int> deps,
+			int numInputs, int numClauses, vector<set<int>> clauses);
+			
 		DQCNF* getProjection(int id);
 		void preprocess();
 		void unateCheck();
@@ -344,13 +343,13 @@ class DQCNF{
 		DQCNF* substituteConst(int var, bool setTrue);
 		DQCNF* removeProblemUnits(int var);
 		FILE* cegis();
-};
+	};
 
-Abc_Ntk_t * getNtkFromCNF(char* filename);
-void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
+	Abc_Ntk_t * getNtkFromCNF(char* filename);
+	void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
 					vector<Aig_Man_t*> &A_Man, vector<Aig_Man_t*> &B_Man);
 
-
+					
 Aig_Man_t* remapInputs(Aig_Man_t* p, vector<int> remapIds);
 
 Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fChangePol, int fVerbose);
@@ -358,4 +357,5 @@ Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fCha
 static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-1 : (Lit >> 1)+1;  }
 static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
+FILE* driverFunction(DQCNF obj);
 #endif

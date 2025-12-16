@@ -954,7 +954,7 @@ FILE* driverFunction(DQCNF* obj){
 		return nullptr;
 	}
 
-	pair<int,int> candidate = obj->findSplitCandidates(); //todo
+	pair<int,int> candidate = obj->findSplitCandidates(); 
 
 	if(candidate.second==0){
 		// found a {1,0, x x } split.
