@@ -830,13 +830,14 @@ set<int> DQCNF::get_dependencySet(int id){
 }
 
 DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
-		int numInputs, int numClauses, vector<set<int>> clauses){
+		int numInputs, int numClauses, vector<set<int>> clauses,map<int,set<int>> dependency){
 			this->universal=universal;
 			this->existential=existential;
 			this->numClauses=numClauses;
 			this->numInputs=numInputs;
 			this->clauses=clauses;
 			this->deps=deps;
+			this->dependency = dependency;
 		}
 DQCNF* DQCNF::getProjection(int id){
 	vector<set<int>> projectedClauses;
@@ -929,7 +930,7 @@ DQCNF* DQCNF::getProjection(int id){
 	// }
 	// exit(1);
 	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->deps, this->numInputs,
-								projectedClauses.size(),projectedClauses);
+								projectedClauses.size(),projectedClauses, this->dependency);
 	return projectedDQCNF;
 }
 
@@ -961,7 +962,7 @@ FILE* driverFunction(DQCNF* obj){
 		int splitVar = candidate.first;
 
 		//skolem function y_i = 1
-		DQCNF* obj2 = obj->substituteConst(splitVar,true); //todo
+		DQCNF* obj2 = obj->substituteConst(splitVar,true);
 		FILE* retVal = driverFunction(obj2);
 		if(retVal!=nullptr){
 			delete obj2;
@@ -1008,6 +1009,37 @@ FILE* driverFunction(DQCNF* obj){
 	}
 }
 
+DQCNF* DQCNF::substituteConst(int var, bool setTrue){
+	vector<set<int>> newClauses;
+
+
+	for(auto clause: this->clauses){
+		if(clause.find(var)!=clause.end()){
+
+			if(setTrue) continue;
+			
+			set<int> newClause(clause);
+			newClause.erase(var);
+			newClauses.push_back(newClause);
+		}
+		if(clause.find(-var)!=clause.end()){
+			
+			if(!setTrue) continue;
+
+			set<int> newClause(clause);
+			newClause.erase(-var);
+			newClauses.push_back(newClause);
+		}
+	}
+
+
+	DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency);
+
+	return newObj;
+	
+
+
+}
 
 
 bool DQCNF::containsBadClause(){

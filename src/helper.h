@@ -329,8 +329,10 @@ class DQCNF{
 		int getNumClauses(){return this->numClauses;}
 		
 		DQCNF(set<int> universal, set<int> existential, set<int> deps,
-			int numInputs, int numClauses, vector<set<int>> clauses);
-			
+			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency);
+		
+		
+
 		DQCNF* getProjection(int id);
 		void preprocess();
 		void unateCheck();
