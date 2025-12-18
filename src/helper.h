@@ -359,5 +359,5 @@ Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fCha
 static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-1 : (Lit >> 1)+1;  }
 static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
-FILE* driverFunction(DQCNF obj);
+FILE* driverFunction(DQCNF* obj);
 #endif

@@ -1,29 +1,7 @@
 ORIGINAL INPUTS:
-INPUT 1 , var map: 97
-INPUT 2 , var map: 98
-INPUT 3 , var map: 99
-INPUT 4 , var map: 100
-INPUT 5 , var map: 101
-INPUT 6 , var map: 102
-INPUT 7 , var map: 103
-INPUT 8 , var map: 104
-INPUT 9 , var map: 105
-INPUT 10 , var map: 106
-INPUT 11 , var map: 107
-INPUT 12 , var map: 108
-INPUT 13 , var map: 109
-INPUT 14 , var map: 110
-INPUT 15 , var map: 111
-INPUT 16 , var map: 112
-INPUT 17 , var map: 113
-INPUT 18 , var map: 114
-INPUT 19 , var map: 115
-INPUT 20 , var map: 116
-INPUT 21 , var map: 117
-INPUT 22 , var map: 118
-INPUT 23 , var map: 119
-INPUT 24 , var map: 120
-INPUT 25 , var map: 121
-INPUT 26 , var map: 122
-INPUT 27 , var map: 123
+INPUT 1 , var map: 1
+INPUT 2 , var map: 2
+INPUT 3 , var map: 3
+INPUT 4 , var map: 4
+INPUT 5 , var map: 5
 AUXILIARIES:
