@@ -531,6 +531,27 @@ void DQCNF::unateCheck(){
 // exit(1);
 }
 
+int is_trivialSolver(const std::string& path) {
+    std::ifstream in(path);
+    std::string word;
+    while (in >> word) {
+        if (word == "p") {
+            std::string cnf;
+            int v, c;
+            in >> cnf >> v >> c;
+            if(v==0 && c==0){
+				return 0;
+			}
+			if(v==0 && c==1){
+				return 1;
+			}
+			return -1;
+        }
+    }
+    return -1;
+}
+
+
 void DQCNF::preprocess(){
 
 	//build dependency based graph
@@ -834,7 +855,7 @@ set<int> DQCNF::get_dependencySet(int id){
 }
 
 DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
-		int numInputs, int numClauses, vector<set<int>> clauses,map<int,set<int>> dependency){
+		int numInputs, int numClauses, vector<set<int>> clauses,map<int,set<int>> dependency, map<int, bool> constAssumption){
 			this->universal=universal;
 			this->existential=existential;
 			this->numClauses=numClauses;
@@ -842,6 +863,7 @@ DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
 			this->clauses=clauses;
 			this->deps=deps;
 			this->dependency = dependency;
+			this->constAssumption = constAssumption;
 		}
 DQCNF* DQCNF::getProjection(int id){
 	vector<set<int>> projectedClauses;
@@ -934,7 +956,7 @@ DQCNF* DQCNF::getProjection(int id){
 	// }
 	// exit(1);
 	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->deps, this->numInputs,
-								projectedClauses.size(),projectedClauses, this->dependency);
+								projectedClauses.size(),projectedClauses, this->dependency, this->constAssumption);
 	return projectedDQCNF;
 }
 
@@ -967,6 +989,7 @@ FILE* driverFunction(DQCNF* obj){
 
 		//skolem function y_i = 1
 		DQCNF* obj2 = obj->substituteConst(splitVar,true);
+		// obj2->removeDepVar(splitVar);
 		printf("Setting to TRUE\n");
 		FILE* retVal = driverFunction(obj2);
 		printf("Return from recursion\n");
@@ -981,6 +1004,7 @@ FILE* driverFunction(DQCNF* obj){
 
 		delete obj2;
 		obj2 = obj->substituteConst(splitVar,false);
+		// obj2->removeDepVar(splitVar);
 		printf("Setting to FALSE\n");
 		retVal = driverFunction(obj2);
 		printf("Return from recursion\n");
@@ -990,7 +1014,7 @@ FILE* driverFunction(DQCNF* obj){
 			
 			fprintf(retVal, "D Variable: %d\n",splitVar);
 			fprintf(retVal, "Constant 0\n");
-			fprintf(retVal, string('*',26).c_str());
+			fprintf(retVal, string(26,'*').c_str());
 			fprintf(retVal,"\n");
 			return retVal;
 		}
@@ -1006,9 +1030,53 @@ FILE* driverFunction(DQCNF* obj){
 	}
 	else if(candidate.second==1){
 		// found a {1, x x} split
+		int splitVar = candidate.first;
+		DQCNF* obj2 = obj->substituteConst(splitVar,true);
+		printf("Setting to TRUE\n");
+		FILE* retVal = driverFunction(obj2);
+		printf("Return from recursion\n");
+		if(retVal!=nullptr){
+			delete obj2;
+			obj2=nullptr;
+			
+			fprintf(retVal, "D Variable: %d\n",splitVar);
+			fprintf(retVal, "Constant 1\n");
+			return retVal;
+		}
+		delete obj2;
+
+		obj2 = obj->removeProblemUnits(splitVar);
+		retVal = driverFunction(obj2);
+		
+		delete obj2;
+		obj2 = nullptr;
+
+		return retVal;	
 	}
 	else if(candidate.second==2){
 		// found a {0, x x} split
+		int splitVar = candidate.first;
+		DQCNF* obj2 = obj->substituteConst(splitVar,false);
+		printf("Setting to FALSE\n");
+		FILE* retVal = driverFunction(obj2);
+		printf("Return from recursion\n");
+		if(retVal!=nullptr){
+			delete obj2;
+			obj2=nullptr;
+			
+			fprintf(retVal, "D Variable: %d\n",splitVar);
+			fprintf(retVal, "Constant 1\n");
+			return retVal;
+		}
+		delete obj2;
+
+		obj2 = obj->removeProblemUnits(splitVar);
+		retVal = driverFunction(obj2);
+		
+		delete obj2;
+		obj2 = nullptr;
+
+		return retVal;	
 	}
 	else{
 		// no unit clause causing outputs, can run cegis on the dqcnf now.
@@ -1659,6 +1727,8 @@ FILE* DQCNF::cegis(){
     map<int, int> HtoZMapping_unsatCore;
     map<int, vector<int>> HtoSelectorMapping_unsatCore;
 
+	map<int, bool> defaultVal;
+
 	for(auto id:deps){
         int z0 = solver.vars()+1;
         int s0 = solver.vars()+2;
@@ -1677,6 +1747,7 @@ FILE* DQCNF::cegis(){
         
         solver.add(z0);
         solver.add(0);
+		defaultVal[id] = true;
 
 
         // -h or z or s
@@ -1735,12 +1806,106 @@ FILE* DQCNF::cegis(){
 
 	solver.write_dimacs("./f1.dimacs");
     unsatCoreExtractor.write_dimacs("./f2.dimacs");
+	// exit(1);
+
+	// FILE* solver_dimacs =fopen("./f1.dimacs","r");
+
+
     // unsatCoreExtractor.write_dimacs("./before.dimacs");
     map<set<int>, int> caseToAuxMap;
     map<set<int>, int> caseToAuxMap_unsatCore;
 
     map<int, vector<int>> exToAuxMap;
 
+
+	int trivialityStatus = is_trivialSolver("./f1.dimacs");
+
+	if(trivialityStatus==0) return nullptr;
+
+	//return a file pointer if the forumula is trivially UNSAT
+	if(trivialityStatus==1){
+		cout<<"here"<<endl;
+		string filename = "./solution/skolem_functions.txt";
+        FILE* asgFile = fopen(filename.c_str(),"w");
+		
+
+		int totalOutputs = this->deps.size();
+		int constOutputs = this->constAssumption.size();
+
+		fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
+		auto dep_vars = this->deps;
+
+		for(auto p:this->constAssumption){
+			int currOutVar = p.first;
+			bool constVal = p.second;
+			dep_vars.erase(currOutVar);
+
+			fprintf(asgFile, "%d %d\n", currOutVar, (int)(constVal));
+		}
+
+		map<int, int> cex_aux;
+
+		for(auto e:auxilaries){
+			int val = constraintSolver.val(inputToVarMapping[e]);
+			cex_aux[e]=val>0?1:0;
+		}
+		for(auto currOutVar: dep_vars){
+			vector<set<int>> positiveCases;
+			vector<set<int>> negativeCases;
+
+
+			auto cases = ex_caseToAuxMapping[currOutVar];
+			for(auto p2:cases){
+				set<int> currCase = p2.first;
+				int aux = p2.second.first;
+				if(cex_aux.find(aux)==cex_aux.end()){
+					cerr<<"Error in aux map\n";
+					exit(1);
+				}
+				if(cex_aux[aux]==1){
+					positiveCases.push_back(currCase);
+				}
+				else{
+					negativeCases.push_back(currCase);
+				}
+			}
+
+			fprintf(asgFile, "%d %d %d %d\n",currOutVar,
+					 positiveCases.size(), negativeCases.size(),
+					 (int)(defaultVal[currOutVar]));
+			
+			for(auto currCase:positiveCases){
+				for(auto e:currCase){
+					fprintf(asgFile, "%d ", e);
+				}
+				fprintf(asgFile,"0\n");
+			}
+			for(auto currCase:negativeCases){
+				for(auto e:currCase){
+					fprintf(asgFile,"%d ",e);
+				}
+				fprintf(asgFile,"0\n");
+			}
+		}
+		
+		fclose(asgFile);
+
+		filename = "./solution/reduced_dqbf.dqdimacs";
+		FILE* dqbfFile = fopen(filename.c_str(),"w");
+
+		for(auto clause:this->clauses){
+			for(auto lit:clause){
+				fprintf(dqbfFile,"%d ",lit);
+			}
+			fprintf(dqbfFile,"0\n");
+		}
+		fclose(dqbfFile);
+		exit(0);
+
+
+
+		return asgFile;
+	}
 
 	while(true){
         iter++;
@@ -1784,13 +1949,30 @@ FILE* DQCNF::cegis(){
 
             std::cout<<"UNSAT BUT WHY?"<<endl;
 			FILE* ansFile=nullptr;
+
+
+			string dqbf_filename = "./solution/reduced_dqbf.dqdimacs";
+			FILE* dqbfFile = fopen(dqbf_filename.c_str(),"w");
+			
+			for(auto clause:this->clauses){
+				for(auto lit:clause){
+					fprintf(dqbfFile,"%d ",lit);
+				}
+				fprintf(dqbfFile,"0\n");
+			}
+			fclose(dqbfFile);
+
+
+
             for(int asgNo=0;asgNo<3;asgNo++){
                 int constrStatus = constraintSolver.solve();
 
                 if(constrStatus == CaDiCaL::UNSATISFIABLE){
                     printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
 					Abc_Stop();
+					// if(asgNo>0) exit(0);
                     return nullptr;
+
                 }
 
                 if(constrStatus == CaDiCaL::SATISFIABLE){
@@ -1802,29 +1984,83 @@ FILE* DQCNF::cegis(){
                         cex_aux[e] = val>0?1:0;
                         
                     }
-                    string filename = "./assignments_NoUnit/asg_"+ to_string(asgNo) +".txt";
+                    string filename = "./solution/skolem_functions_"+ to_string(asgNo) +".txt";
                     FILE* asgFile = fopen(filename.c_str(),"w");
-                    for(auto p:ex_caseToAuxMapping){
-                        int d_var = p.first;
-                        auto cases = p.second;
-                        fprintf(asgFile,"D Variable: %d\n",d_var);
-    
-                        for(auto p2:cases){
-                            set<int> currCase = p2.first;
-                            int aux = p2.second.first;
-                            if(cex_aux.find(aux)==cex_aux.end()){
-                                cerr<<"Error in aux map\n";
-                                exit(1);
-                            }
-                            for(auto e:currCase){
-                                fprintf(asgFile,"%d ",e);
-                            }
-                            fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]);
-                        }
-                        fprintf(asgFile,"**************************\n");
-                    }
 
-					if(ansFile==nullptr) ansFile=asgFile;
+					int totalOutputs = this->deps.size();
+					int constOutputs = this->constAssumption.size();
+
+					fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
+					auto dep_vars = this->deps;
+
+					for(auto p:constAssumption){
+						int currOutVar = p.first;
+						bool constVal = p.second;
+						dep_vars.erase(currOutVar);
+						fprintf(asgFile, "%d %d\n", currOutVar, (int)(constVal));
+					}
+
+					for(auto currOutVar:dep_vars){
+						vector<set<int>> positiveCases;
+						vector<set<int>> negativeCases;
+
+						auto cases = ex_caseToAuxMapping[currOutVar];
+
+						for(auto p2:cases){
+							set<int> currCase = p2.first;
+							int aux = p2.second.first;
+							if(cex_aux.find(aux)==cex_aux.end()){
+								cerr<<"Error in aux map\n";
+								exit(1);
+							}
+							if(cex_aux[aux]==1){
+								positiveCases.push_back(currCase);
+							}
+							else{
+								negativeCases.push_back(currCase);
+							}
+						}
+
+						fprintf(asgFile, "%d %d %d %d\n",currOutVar,
+								positiveCases.size(), negativeCases.size(),
+								(int)(defaultVal[currOutVar]));
+						
+						for(auto currCase:positiveCases){
+							for(auto e:currCase){
+								fprintf(asgFile, "%d ", e);
+							}
+							fprintf(asgFile,"0\n");
+						}
+						for(auto currCase:negativeCases){
+							for(auto e:currCase){
+								fprintf(asgFile,"%d ",e);
+							}
+							fprintf(asgFile,"0\n");
+						}
+					}
+					fclose(asgFile);
+
+                    // for(auto p:ex_caseToAuxMapping){
+                    //     int d_var = p.first;
+                    //     auto cases = p.second;
+                    //     fprintf(asgFile,"D Variable: %d\n",d_var);
+    
+                    //     for(auto p2:cases){
+                    //         set<int> currCase = p2.first;
+                    //         int aux = p2.second.first;
+                    //         if(cex_aux.find(aux)==cex_aux.end()){
+                    //             cerr<<"Error in aux map\n";
+                    //             exit(1);
+                    //         }
+                    //         for(auto e:currCase){
+                    //             fprintf(asgFile,"%d ",e);
+                    //         }
+                    //         fprintf(asgFile,"   =>     H_Val: %d\n",cex_aux[aux]);
+                    //     }
+                    //     fprintf(asgFile,"**************************\n");
+                    // }
+
+					// if(ansFile==nullptr) ansFile=asgFile;
 
 
                     vector<int> newConstraint;
@@ -1849,90 +2085,15 @@ FILE* DQCNF::cegis(){
                     }
                     constraintSolver.add(0);
                 }
-                // else{
-                //     printf("Ran out of possible assignments, terminating. \n");
-                //     printf("Total assignments generated: %d\n",asgNo+1);
-                //     return 0;
-                // }
+                
             }
 
-            // int constrStatus = constraintSolver.solve();
+            
 
-            // if(constrStatus == 10){
-            //     cout<<iter<<endl;
-
-
-
-            //     vector<int> newConstraint;
-                
-            //     for(auto e:auxilaries){
-            //         int val = constraintSolver.val(inputToVarMapping[e]);
-            //         if(val>0){
-            //             newConstraint.push_back(-e);
-            //         }
-            //         else{
-            //             newConstraint.push_back(e);
-            //         }
-            //     }
-                
-            //     // newConstraint.push_back(0);
-                
-            //     for(auto e:newConstraint){
-            //         if(e>0){
-            //             constraintSolver.add(inputToVarMapping[e]);
-            //         }
-            //         else{
-            //             constraintSolver.add(-inputToVarMapping[-e]);
-            //         }
-            //     }
-            //     constraintSolver.add(0);
-                
-            //     int newStatus = constraintSolver.solve();
-
-            //     if(newStatus == CaDiCaL::UNSATISFIABLE){
-            //         cerr<<"Couldn't find another assignment for auxilary vars\n";
-            //         exit(1);
-            //     }
-
-                
-            //     map<int, int> cex_aux;
-            //     for(auto e:auxilaries){
-            //         int val = constraintSolver.val(inputToVarMapping[e]);
-            //         cex_aux[e] = val>0?1:0;
-                    
-            //     }
-
-            //     for(auto p:ex_caseToAuxMapping){
-            //         int d_var = p.first;
-            //         auto cases = p.second;
-            //         printf("D Variable: %d\n",d_var);
-
-            //         for(auto p2:cases){
-            //             set<int> currCase = p2.first;
-            //             int aux = p2.second.first;
-            //             if(cex_aux.find(aux)==cex_aux.end()){
-            //                 cerr<<"Error in aux map\n";
-            //                 exit(1);
-            //             }
-            //             for(auto e:currCase){
-            //                 printf("%d ",e);
-            //             }
-            //             printf("   =>     H_Val: %d\n",cex_aux[aux]);
-            //         }
-            //         printf("**************************\n");
-            //     }
-
-                std::cout<<"HURRAY\n";
-				Abc_Stop();
-                return ansFile;
-            // }
-            // if(constrStatus == 20){
-            //     cout<<iter<<endl;
-            //     cout<<"CONSTRAINT UNSAT :(\n";
-            //     return 0;
-            // }
-            // cout<<"TIMEOUT ON CONSTR\n";
-            // return 1;
+			std::cout<<"HURRAY\n";
+			Abc_Stop();
+			return ansFile;
+            
         }
 
 		assert(status==10);
@@ -2329,90 +2490,7 @@ FILE* DQCNF::cegis(){
 
                 ///////////////////////////////////////////////////////////////////////////////////
 
-                // if(caseToAuxMap_unsatCore.find(depVal)==caseToAuxMap_unsatCore.end()){
-                //     int newCaseVar = unsatCoreExtractor.vars()+2;
-
-                //     // dep => var === ~dep or var
-                //     vector<int> c1;
-                //     for(auto d:depVal){
-                //         if(d>0){
-                //             c1.push_back(-inputToVarMapping_unsatCore[d]);
-                //         }
-                //         else{
-                //             c1.push_back(inputToVarMapping_unsatCore[-d]);
-                //         }
-                //     }
-                //     c1.push_back(newCaseVar);
-                //     c1.push_back(0);
-
-                //     for(auto e:c1){
-                //         unsatCoreExtractor.add(e);
-                //     }
-
-
-                //     // var => dep ---> ~ var OR dep
-                //     for(auto d:depVal){
-                //         unsatCoreExtractor.add(-newCaseVar);
-                //         if(d>0){
-                //             unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
-                //         }
-                //         else{
-                //             unsatCoreExtractor.add(-inputToVarMapping_unsatCore[-d]);
-                //         }
-                //         unsatCoreExtractor.add(0);
-                //     }
-                //     caseToAuxMap_unsatCore[depVal] = newCaseVar;
-                // }
-
-                // int uc_caseVar = caseToAuxMap_unsatCore[depVal];
-
-                // h_id = exToHMapping[id];
-                // int uc_hVar = inputToVarMapping_unsatCore[h_id];
-                // int uc_zVar = HtoZMapping_unsatCore[h_id];
-
-                // int uc_newZ = unsatCoreExtractor.vars()+3;
-                // int uc_newS = unsatCoreExtractor.vars()+4;
-                // int uc_cnfVar = unsatCoreCnfVar;
-                // // newZ = ite(caseVar, newAux,zVar)
-                // //adding clause 1
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_cnfVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 2
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_cnfVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 3
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_zVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 4
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_zVar);
-                // unsatCoreExtractor.add(0);
-
-                // //Now we will add h<=> newZ if selector
-                // //adding h or -newZ or newS
-                // unsatCoreExtractor.add(uc_hVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
-
-                // //adding -h or newZ or newS
-                // unsatCoreExtractor.add(-uc_hVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
-
-                // HtoZMapping_unsatCore[h_id] = uc_newZ;
-                // HtoSelectorMapping_unsatCore[h_id].push_back(uc_newS);
+                
 
 
 
@@ -2422,94 +2500,10 @@ FILE* DQCNF::cegis(){
 
 
                 //////////////////////////////////////////////////////////////////////////////
-                // cout<<newAux<<" "<<cnfVar<<endl;
-                // we add the clause ~depVal or h or ~newAux
-                // printf("depVal: ");
-                // vector<int> c1;
-                // vector<int> c1_unsatCore;
-                // for(auto d: depVal){
-                //     // printf("d: %d | val-> %d, inputMap->%d\n",d,cex[d-1],inputToVarMapping[d]);
-                //     // printf("%d ",d);
-                //     if(d > 0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c1.push_back(-inputToVarMapping[d]);
-                //         c1_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //         // cout<<-inputToVarMapping[d]<<" | ";    
-                //     }
-                //     else{
-                //         c1.push_back(inputToVarMapping[-d]);
-                //         c1_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //         // solver.add(inputToVarMapping[-d]);
-                //         // cout<<inputToVarMapping[-d]<<" | ";
-                //     }
-                // }
-                // // cout<<endl;
-                // c1.push_back(inputToVarMapping[exToHMapping[id]]);
-                // c1.push_back(-inputToVarMapping[newAux]);
-                // c1.push_back(0);
                 
-                // c1_unsatCore.push_back(inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c1_unsatCore.push_back(-inputToVarMapping_unsatCore[newAux]);
-                // c1_unsatCore.push_back(0);
+
+
                 
-                // cout<<"Adding clause 1...\n";
-                // for(auto e:c1){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-                // // implicationClauses.push_back(c1_unsatCore);
-
-                // for(auto e:c1_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-
-                // // solver.write_dimacs("./debug_1stClause.dimacs");
-                // // cin>>mySIG;
-                // //we add the clause ~depVal or ~h or newAux
-                // vector<int> c2;
-                // vector<int> c2_unsatCore;
-                // for(auto d:depVal){
-                //     if(d>0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c2.push_back(-inputToVarMapping[d]);
-                //         c2_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //     }
-                //     else{
-                //         // solver.add(inputToVarMapping[-d]);
-                //         c2.push_back(inputToVarMapping[-d]);
-                //         c2_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //     }
-                // }
-                
-                // c2.push_back(-inputToVarMapping[exToHMapping[id]]);
-                // c2.push_back(inputToVarMapping[newAux]);
-                // c2.push_back(0);
-
-                // c2_unsatCore.push_back(-inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c2_unsatCore.push_back(inputToVarMapping_unsatCore[newAux]);
-                // c2_unsatCore.push_back(0);
-
-                // // implicationClauses.push_back(c2_unsatCore);
-
-
-
-                // cout<<"Adding clause 2...\n";
-                // for(auto e:c2){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-
-                // for(auto e:c2_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-                // solver.add(-inputToVarMapping[exToHMapping[id]]);
-                // solver.add(inputToVarMapping[newAux]);
-                // solver.add(0);
-
                 if(cex[id-1]>0){
                     currConstraint.push_back(-newAux);
                     // currAssumptions.push_back(newAux);
@@ -2642,7 +2636,7 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 		}
 	}
 
-	DQCNF* newObj = new DQCNF(this->universal, this->existential, this->deps,this->numInputs,newClauses.size(),newClauses, this->dependency);
+	DQCNF* newObj = new DQCNF(this->universal, this->existential, this->deps,this->numInputs,newClauses.size(),newClauses, this->dependency, this->constAssumption);
 
 	return newObj;
 }
@@ -2677,8 +2671,8 @@ DQCNF* DQCNF::substituteConst(int var, bool setTrue){
 	}
 
 
-	DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency);
-
+	DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency, this->constAssumption);
+	newObj->assumeConst(var, setTrue);
 	return newObj;
 }
 

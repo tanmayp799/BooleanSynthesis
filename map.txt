@@ -9,4 +9,3 @@ INPUT 6 , var map: 10
 INPUT 7 , var map: 11
 INPUT 8 , var map: 12
 AUXILIARIES:
-

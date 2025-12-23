@@ -315,6 +315,7 @@ class DQCNF{
 	set<int> unate_0;
 	set<int> unate_1;
 	
+	map<int, bool> constAssumption;
 
 	public:
 		DQCNF(string filename);
@@ -329,7 +330,7 @@ class DQCNF{
 		int getNumClauses(){return this->numClauses;}
 		
 		DQCNF(set<int> universal, set<int> existential, set<int> deps,
-			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency);
+			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency, map<int, bool> constAssumption);
 		
 		
 
@@ -345,6 +346,21 @@ class DQCNF{
 		DQCNF* substituteConst(int var, bool setTrue);
 		DQCNF* removeProblemUnits(int var);
 		FILE* cegis();
+		void removeDepVar(int var){
+			this->deps.erase(var);
+			return;
+		}
+
+		void assumeConst(int var, bool constVal){
+			this->constAssumption.insert({var,constVal});
+		}
+
+		// int isAssumedConst(int var){
+		// 	if(this->constAssumption.find(var)==this->constAssumption.end()){
+		// 		return -1;
+		// 	}
+		// 	return this->constAssumption[var];
+		// }
 	};
 
 	Abc_Ntk_t * getNtkFromCNF(char* filename);
@@ -360,4 +376,6 @@ static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-
 static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
 FILE* driverFunction(DQCNF* obj);
+
+int is_trivialSolver(const std::string& path);
 #endif
