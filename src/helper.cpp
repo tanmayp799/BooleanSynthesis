@@ -1817,10 +1817,18 @@ FILE* DQCNF::cegis(){
 
     map<int, vector<int>> exToAuxMap;
 
-
+	
 	int trivialityStatus = is_trivialSolver("./f1.dimacs");
-
-	if(trivialityStatus==0) return nullptr;
+	printf("Num Clauses: %d \nNum Vars: %d\n",solver.irredundant(),solver.active());
+	if(trivialityStatus==0) {
+		if(solver.irredundant()==0){
+			cout<<"Num Clause: 0\n";
+		}
+		if(solver.active()==0){
+			cout<<"Num var: 0\n";
+		}
+		return nullptr;
+	}
 
 	//return a file pointer if the forumula is trivially UNSAT
 	if(trivialityStatus==1){
