@@ -1,7 +1,8 @@
 sudo apt-get update 
 sudo apt-get install -y libreadline-dev libncurses5-dev libboost-program-options-dev gv
-git submodule update --init
+git submodule update --init --recursive
 cd dependencies/abc
 make libabc.a -j $(nproc)
 cd ../cadical
 ./configure && make
+cd ../manthan

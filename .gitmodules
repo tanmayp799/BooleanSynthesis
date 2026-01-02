@@ -4,3 +4,6 @@
 [submodule "dependencies/cadical"]
 	path = dependencies/cadical
 	url = https://github.com/tanmayp799/cadical.git
+[submodule "dependencies/manthan"]
+	path = dependencies/manthan
+	url = https://github.com/tanmayp799/manthan

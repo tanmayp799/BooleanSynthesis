@@ -1,7 +1,0 @@
-ORIGINAL INPUTS:
-INPUT 1 , var map: 1
-INPUT 2 , var map: 2
-INPUT 3 , var map: 3
-INPUT 4 , var map: 4
-INPUT 5 , var map: 5
-AUXILIARIES:

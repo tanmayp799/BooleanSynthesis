@@ -1110,8 +1110,8 @@ FILE* DQCNF::cegis(){
 	this->unateCheck();
 	Aig_Man_t *phi_Man = this->genAIGMan();
 
-	Aig_ManShow(phi_Man,0,NULL);
-	cin>>mySIG;
+	// Aig_ManShow(phi_Man,0,NULL);
+	// cin>>mySIG;
 
 
 	numOrigInputs = Aig_ManCiNum(phi_Man);
