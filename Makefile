@@ -30,6 +30,7 @@ CPP_FLAGS += -std=c++17 -DNO_UNIGEN
 LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
 
 CPP_FLAGS += -O3 -g -pg
+# CPP_FLAGS += -O0 -g
 
 COMMON_SOURCES  = $(SRCDIR)/helper.cpp $(SRCDIR)/nnf.cpp
 
