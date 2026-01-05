@@ -112,14 +112,14 @@ int main(int argc, char *argv[])
     DQCNF *phiCNF = new DQCNF(phiPath.string());
 
 
-    FILE* ansFile = driverFunction(phiCNF);
+    bool ansFile = driverFunction(phiCNF);
 
-    if(ansFile==nullptr){
+    if(!ansFile){
         printf("No valid assignments found\n");
         return 0;
     }
 
-    fclose(ansFile);
+    // fclose(ansFile);
     return 0;
 
 

@@ -345,7 +345,7 @@ class DQCNF{
 		pair<int,int> findSplitCandidates();
 		DQCNF* substituteConst(int var, bool setTrue);
 		DQCNF* removeProblemUnits(int var);
-		FILE* cegis();
+		bool cegis();
 		void removeDepVar(int var){
 			this->deps.erase(var);
 			return;
@@ -375,7 +375,7 @@ Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fCha
 static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-1 : (Lit >> 1)+1;  }
 static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
-FILE* driverFunction(DQCNF* obj);
+bool driverFunction(DQCNF* obj);
 
 int is_trivialSolver(const std::string& path);
 #endif

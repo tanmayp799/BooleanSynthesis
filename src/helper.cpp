@@ -973,12 +973,13 @@ DQCNF* DQCNF::getProjection(int id){
 		4. keep exploring all the possibilites. Once a solution is found, return the solution FILE*
 		5. When a recursive call returns a NON-NULL FILE*, append the constant function in that file and return.
 */
-FILE* driverFunction(DQCNF* obj){
+bool driverFunction(DQCNF* obj){
 
 	//Check for clause consisting of only inputs
 	if(obj->containsBadClause()){
 		//return nullptr if found a clause consisting of only inputs.
-		return nullptr;
+		printf("Found clause with only inputs\n");
+		return false;
 	}
 
 	pair<int,int> candidate = obj->findSplitCandidates(); 
@@ -990,38 +991,40 @@ FILE* driverFunction(DQCNF* obj){
 		//skolem function y_i = 1
 		DQCNF* obj2 = obj->substituteConst(splitVar,true);
 		// obj2->removeDepVar(splitVar);
-		printf("Setting to TRUE\n");
-		FILE* retVal = driverFunction(obj2);
-		printf("Return from recursion\n");
-		if(retVal!=nullptr){
+		printf("Var: %d | Setting to TRUE\n",candidate.first );
+		bool retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n",candidate.first);
+		if(retVal){
 			delete obj2;
 			obj2=nullptr;
 			
-			fprintf(retVal, "D Variable: %d\n",splitVar);
-			fprintf(retVal, "Constant 1\n");
+			// fprintf(retVal, "D Variable: %d\n",splitVar);
+			// fprintf(retVal, "Constant 1\n");
 			return retVal;
 		}
 
 		delete obj2;
 		obj2 = obj->substituteConst(splitVar,false);
 		// obj2->removeDepVar(splitVar);
-		printf("Setting to FALSE\n");
+		printf("Var: %d | Setting to FALSE\n",candidate.first );
 		retVal = driverFunction(obj2);
-		printf("Return from recursion\n");
-		if(retVal!=nullptr){
+		printf("Var: %d | Return from recursion\n",candidate.first);
+		if(retVal){
 			delete obj2;
 			obj2=nullptr;
 			
-			fprintf(retVal, "D Variable: %d\n",splitVar);
-			fprintf(retVal, "Constant 0\n");
-			fprintf(retVal, string(26,'*').c_str());
-			fprintf(retVal,"\n");
+			// fprintf(retVal, "D Variable: %d\n",splitVar);
+			// fprintf(retVal, "Constant 0\n");
+			// fprintf(retVal, string(26,'*').c_str());
+			// fprintf(retVal,"\n");
 			return retVal;
 		}
 
 		delete obj2;
 		obj2 = obj->removeProblemUnits(splitVar);
+		printf("Var: %d | Removed bad clauses\n",candidate.first);
 		retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n",candidate.first);
 		
 		delete obj2;
 		obj2 = nullptr;
@@ -1032,21 +1035,24 @@ FILE* driverFunction(DQCNF* obj){
 		// found a {1, x x} split
 		int splitVar = candidate.first;
 		DQCNF* obj2 = obj->substituteConst(splitVar,true);
-		printf("Setting to TRUE\n");
-		FILE* retVal = driverFunction(obj2);
-		printf("Return from recursion\n");
-		if(retVal!=nullptr){
+		printf("Var: %d | Setting to TRUE\n",candidate.first);
+		bool retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n",candidate.first);
+		if(retVal){
 			delete obj2;
 			obj2=nullptr;
 			
-			fprintf(retVal, "D Variable: %d\n",splitVar);
-			fprintf(retVal, "Constant 1\n");
+			// fprintf(retVal, "D Variable: %d\n",splitVar);
+			// fprintf(retVal, "Constant 1\n");
 			return retVal;
 		}
 		delete obj2;
 
 		obj2 = obj->removeProblemUnits(splitVar);
+		// retVal = driverFunction(obj2);
+		printf("Var: %d | Removed bad clauses\n",candidate.first);
 		retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n",candidate.first);
 		
 		delete obj2;
 		obj2 = nullptr;
@@ -1057,21 +1063,24 @@ FILE* driverFunction(DQCNF* obj){
 		// found a {0, x x} split
 		int splitVar = candidate.first;
 		DQCNF* obj2 = obj->substituteConst(splitVar,false);
-		printf("Setting to FALSE\n");
-		FILE* retVal = driverFunction(obj2);
-		printf("Return from recursion\n");
-		if(retVal!=nullptr){
+		printf("Var: %d | Setting to FALSE\n", candidate.first);
+		bool retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n", candidate.first);
+		if(retVal){
 			delete obj2;
 			obj2=nullptr;
 			
-			fprintf(retVal, "D Variable: %d\n",splitVar);
-			fprintf(retVal, "Constant 1\n");
+			// fprintf(retVal, "D Variable: %d\n",splitVar);
+			// fprintf(retVal, "Constant 1\n");
 			return retVal;
 		}
 		delete obj2;
 
 		obj2 = obj->removeProblemUnits(splitVar);
+		// retVal = driverFunction(obj2);
+		printf("Var: %d | Removed bad clauses\n",candidate.first);
 		retVal = driverFunction(obj2);
+		printf("Var: %d | Return from recursion\n",candidate.first);
 		
 		delete obj2;
 		obj2 = nullptr;
@@ -1080,10 +1089,10 @@ FILE* driverFunction(DQCNF* obj){
 	}
 	else{
 		// no unit clause causing outputs, can run cegis on the dqcnf now.
-		FILE* retVal = obj->cegis(); //todo
+		bool retVal = obj->cegis(); //todo
 		return retVal;
 	}
-	return nullptr;
+	return false;
 }
 
 /*
@@ -1092,7 +1101,7 @@ If successful in finding a set of solution, returns the FILE* used to store the 
 Else, returns nullptr.
 
 */
-FILE* DQCNF::cegis(){
+bool DQCNF::cegis(){
 
 	int mySIG;
     Abc_Start();
@@ -1730,7 +1739,7 @@ FILE* DQCNF::cegis(){
 	map<int, bool> defaultVal;
 
 	for(auto id:deps){
-        int z0 = solver.vars()+1;
+        int z_0 = solver.vars()+1;
         int s0 = solver.vars()+2;
         int h_id = exToHMapping[id];
         int h_var = inputToVarMapping[h_id];
@@ -1745,24 +1754,24 @@ FILE* DQCNF::cegis(){
         // else solver.add(-z0);
         // solver.add(0);
         
-        solver.add(z0);
+        solver.add(z_0);
         solver.add(0);
 		defaultVal[id] = true;
 
 
         // -h or z or s
         solver.add(-h_var);
-        solver.add(z0);
+        solver.add(z_0);
         solver.add(s0);
         solver.add(0);
         
         //h or -z or s
         solver.add(h_var);
-        solver.add(-z0);
+        solver.add(-z_0);
         solver.add(s0);
         solver.add(0);
         
-        HtoZMapping[h_id] = z0;
+        HtoZMapping[h_id] = z_0;
         HtoSelectorMapping[h_id].push_back(s0);
         
         // int uc_z0 = unsatCoreExtractor.vars()+1;
@@ -1827,7 +1836,7 @@ FILE* DQCNF::cegis(){
 		if(solver.active()==0){
 			cout<<"Num var: 0\n";
 		}
-		return nullptr;
+		return false;
 	}
 
 	//return a file pointer if the forumula is trivially UNSAT
@@ -1912,7 +1921,7 @@ FILE* DQCNF::cegis(){
 
 
 
-		return asgFile;
+		return true;
 	}
 
 	while(true){
@@ -1950,7 +1959,7 @@ FILE* DQCNF::cegis(){
         if(status == 0){
             cerr<<"Dunno what happened\n";
 			Abc_Stop();
-            return nullptr;
+            return false;
         }
 
 		if(status == CaDiCaL::UNSATISFIABLE){
@@ -1979,7 +1988,10 @@ FILE* DQCNF::cegis(){
                     printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
 					Abc_Stop();
 					// if(asgNo>0) exit(0);
-                    return nullptr;
+                    if(asgNo==0) return false;
+					else return true;
+
+					// return false;
 
                 }
 
@@ -2100,7 +2112,7 @@ FILE* DQCNF::cegis(){
 
 			std::cout<<"HURRAY\n";
 			Abc_Stop();
-			return ansFile;
+			return true;
             
         }
 
@@ -2541,7 +2553,7 @@ FILE* DQCNF::cegis(){
 		if(!changeFlag){
             std::cout<<"No change occured...."<<endl;
 			Abc_Stop();
-            return nullptr;
+            return false;
         }
         std::cout<<"adding constraint clause...\n";
         for(auto e:currConstraint){
@@ -2576,7 +2588,7 @@ FILE* DQCNF::cegis(){
 
     }
 	Abc_Stop();
-	return nullptr;
+	return false;
 }
 
 
@@ -2588,7 +2600,10 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 
 	set<int> depSet = this->get_dependencySet(var);
 
-	set<int> totalDepset(depSet);
+	set<int> totalDepset;
+	for(auto e:depSet){
+		totalDepset.insert(e);
+	}
 	for(auto e:depSet){
 		totalDepset.insert(-e);
 	}
@@ -2598,27 +2613,26 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 
 	for(auto clause:this->clauses){
 
-		vector<int> projectedClause;
+		vector<int> res;
 		set_intersection(clause.begin(),clause.end(),
 						totalDepset.begin(), totalDepset.end(),
-						back_inserter(projectedClause));
+						back_inserter(res));
+		
+		set<int> projectedClause(res.begin(),res.end());
 		
 		if(projectedClause.size()==1){
-			if(projectedClause[0]==var || projectedClause[0]==-var){
-				// found unit projection. Check if shared dependency exists
+			if(projectedClause.find(var)!=projectedClause.end()){
 				bool hasShared=false;
 				for(auto lit:clause){
-					if(lit==var || lit==-var) continue;
-
+					if(abs(lit)==var) continue;
 					if((this->deps).find(abs(lit))!=(this->deps).end()){
-						//found a d-var, check for shared dependency
-
 						set<int> depSet2 = this->get_dependencySet(abs(lit));
-						vector<int> sharedDep;
+						vector<int> tmpcont;
 						set_intersection(depSet.begin(),depSet.end(),
 										depSet2.begin(),depSet2.end(),
-										back_inserter(sharedDep));
+										back_inserter(tmpcont));
 						
+						set<int> sharedDep(tmpcont.begin(),tmpcont.end());
 						if(!sharedDep.empty()){
 							hasShared=true;
 							break;
@@ -2635,6 +2649,65 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 					newClauses.push_back(newClause);
 				}
 			}
+			else if(projectedClause.find(-var)!=projectedClause.end()){
+				bool hasShared=false;
+				for(auto lit:clause){
+					if(abs(lit)==var) continue;
+					if((this->deps).find(abs(lit))!=(this->deps).end()){
+						set<int> depSet2 = this->get_dependencySet(abs(lit));
+						vector<int> tmpcont;
+						set_intersection(depSet.begin(),depSet.end(),
+										depSet2.begin(),depSet2.end(),
+										back_inserter(tmpcont));
+						
+						set<int> sharedDep(tmpcont.begin(),tmpcont.end());
+						if(!sharedDep.empty()){
+							hasShared=true;
+							break;
+						}
+					}
+				}
+				if(hasShared){
+					newClauses.push_back(clause);
+				}
+				else{
+					set<int> newClause(clause);
+					newClause.erase(var);
+					newClause.erase(-var);
+					newClauses.push_back(newClause);
+				}
+			}
+			// if(projectedClause[0]==var || projectedClause[0]==-var){
+			// 	// found unit projection. Check if shared dependency exists
+			// 	bool hasShared=false;
+			// 	for(auto lit:clause){
+			// 		if(lit==var || lit==-var) continue;
+
+			// 		if((this->deps).find(abs(lit))!=(this->deps).end()){
+			// 			//found a d-var, check for shared dependency
+
+			// 			set<int> depSet2 = this->get_dependencySet(abs(lit));
+			// 			vector<int> sharedDep;
+			// 			set_intersection(depSet.begin(),depSet.end(),
+			// 							depSet2.begin(),depSet2.end(),
+			// 							back_inserter(sharedDep));
+						
+			// 			if(!sharedDep.empty()){
+			// 				hasShared=true;
+			// 				break;
+			// 			}
+			// 		}
+			// 	}
+			// 	if(hasShared){
+			// 		newClauses.push_back(clause);
+			// 	}
+			// 	else{
+			// 		set<int> newClause(clause);
+			// 		newClause.erase(var);
+			// 		newClause.erase(-var);
+			// 		newClauses.push_back(newClause);
+			// 	}
+			// }
 			else{
 				newClauses.push_back(clause);
 			}
@@ -2745,8 +2818,9 @@ pair<int,int> DQCNF::findSplitCandidates(){
 			if(projectedClause.size()==1){
 				if(projectedClause.find(e)!=projectedClause.end()){
 					//found a (y_i) instance. Check for shared dependency
-					
+					bool hasShared = false;
 					for(auto lit:clause){
+						if(abs(lit)==e) continue;
 						if(d_vars.find(abs(lit))!=d_vars.end()){
 							//found another d_var, check for shared dep
 							vector<int> shared_dep;
@@ -2756,15 +2830,22 @@ pair<int,int> DQCNF::findSplitCandidates(){
 											depset.begin(),depset.end(),
 											back_inserter(shared_dep));
 							
-							if(shared_dep.empty()){
-								posFound=true;
+							if(!shared_dep.empty()){
+								// set<int> posClause(clause);
+								// posFound=true;
+								hasShared=true;
 								break;
 							}
 						}
 					}
+					if(!hasShared){
+						posFound=true;
+					}
 				}
 				else if(projectedClause.find(-e)!=projectedClause.end()){
+					bool hasShared=false;
 					for(auto lit:clause){
+						if(abs(lit)==e) continue;
 						if(d_vars.find(abs(lit))!=d_vars.end()){
 							//found another d_var, check for shared dep
 							vector<int> shared_dep;
@@ -2774,11 +2855,16 @@ pair<int,int> DQCNF::findSplitCandidates(){
 											depset.begin(),depset.end(),
 											back_inserter(shared_dep));
 							
-							if(shared_dep.empty()){
-								negFound=true;
+							if(!shared_dep.empty()){
+								// set<int> negClause(clause);
+								// negFound=true;
+								hasShared=true;
 								break;
 							}
 						}
+					}
+					if(!hasShared){
+						negFound=true;
 					}
 				}
 			}
