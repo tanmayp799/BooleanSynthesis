@@ -2,6 +2,7 @@ CPP_FLAGS += -DLIN64
 
 MAIN 	= main
 RCNF	= readCnf
+VERIFIER = verifier
 
 ABC_PATH = ./dependencies/abc
 CADICAL_PATH = ./dependencies/cadical
@@ -16,6 +17,7 @@ BINDIR   = bin
 
 TARGET_MAIN  = $(BINDIR)/$(MAIN)
 TARGET_RCNF  = $(BINDIR)/$(RCNF)
+TARGET_VERIFIER = $(BINDIR)/$(VERIFIER)
 
 ABC_INCLUDES = -I $(ABC_PATH) -I $(ABC_PATH)/src
 CADICAL_INCLUDES = -I $(CADICAL_PATH)/src
@@ -36,14 +38,17 @@ COMMON_SOURCES  = $(SRCDIR)/helper.cpp $(SRCDIR)/nnf.cpp
 
 MAIN_SOURCES  = $(SRCDIR)/main.cpp $(COMMON_SOURCES)
 RCNF_SOURCES  = $(SRCDIR)/readCnf.cpp
+VERIFIER_SOURCES = $(SRCDIR)/verifier.cpp $(COMMON_SOURCES)
 MAIN_OBJECTS  = $(MAIN_SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
+VERIFIER_OBJECTS  = $(VERIFIER_SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
-ALL_OBJECTS   = $(sort $(MAIN_OBJECTS))
+ALL_OBJECTS   = $(sort $(MAIN_OBJECTS) $(VERIFIER_OBJECTS))
 
 .PHONY: all
 all: main
 main: directories $(TARGET_MAIN)
 readCnf: directories $(TARGET_RCNF)
+verifier: directories $(TARGET_VERIFIER)
 
 
 directories:
@@ -59,14 +64,18 @@ $(TARGET_RCNF): $(RCNF_SOURCES)
 	@echo "Compiled "$^" successfully!"
 	@echo "Built Target! - readCnf"
 
+$(TARGET_VERIFIER): $(VERIFIER_OBJECTS)
+	$(CXX) $(CPP_FLAGS) -o $@ $^ $(LFLAGS)
+	@echo "Built Target! - verifier"
+
 $(ALL_OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	$(CXX) $(CPP_FLAGS) -c $^ -o $@  $(LFLAGS)
 	@echo "Compiled "$<" successfully!"	
 
 clean:
-	@$(RM) $(MAIN_OBJECTS) $(POSTP_OBJECTS)
+	@$(RM) $(MAIN_OBJECTS) $(POSTP_OBJECTS) $(VERIFIER_OBJECTS)
 	@echo "Cleanup complete!"
 
 remove: clean
-	@$(RM) $(TARGET_MAIN) $(TARGET_POSTP) $(TARGET_RCNF)
+	@$(RM) $(TARGET_MAIN) $(TARGET_POSTP) $(TARGET_RCNF) $(TARGET_VERIFIER)
 	@echo "Executable removed!"
