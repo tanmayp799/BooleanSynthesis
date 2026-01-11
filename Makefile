@@ -31,8 +31,8 @@ LIB_CADICAL = -Wl,-Bstatic -lcadical
 CPP_FLAGS += -std=c++17 -DNO_UNIGEN
 LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
 
-CPP_FLAGS += -O3 -g -pg
-# CPP_FLAGS += -O0 -g
+# CPP_FLAGS += -O3 -g -pg
+CPP_FLAGS += -O0 -g
 
 COMMON_SOURCES  = $(SRCDIR)/helper.cpp $(SRCDIR)/nnf.cpp
 
@@ -45,7 +45,7 @@ VERIFIER_OBJECTS  = $(VERIFIER_SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 ALL_OBJECTS   = $(sort $(MAIN_OBJECTS) $(VERIFIER_OBJECTS))
 
 .PHONY: all
-all: main
+all: main verifier
 main: directories $(TARGET_MAIN)
 readCnf: directories $(TARGET_RCNF)
 verifier: directories $(TARGET_VERIFIER)

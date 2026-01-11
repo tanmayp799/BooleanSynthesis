@@ -276,7 +276,7 @@ void DQCNF::unateCheck(){
 	int numInputs = Aig_ManCiNum(phi_man);
 	map<int, int> y_yPrime_map;
 	map<int,int> yPrime_y_map;
-	for(auto d:this->deps){
+	for(auto d:this->get_all_edvars()){
 		Aig_ObjCreateCi(phi_man);
 		numInputs++;
 		y_yPrime_map[d] = numInputs; 
@@ -291,17 +291,17 @@ void DQCNF::unateCheck(){
 	Aig_Man_t* negPhi_Man = Aig_ManDupOrdered(phi_man);
 	Aig_ManCo(negPhi_Man, 0)->pFanin0 = Aig_Not(Aig_ManCo(negPhi_Man, 0)->pFanin0);
 
-	int numUniversals = this->universal.size();
-	int numExistentials = this->existential.size();
-	int numOrigInputs = this->universal.size()+this->existential.size()+this->deps.size();
-	int numDeps = this->deps.size();
+	int numUniversals = this->get_universals().size();
+	int numExistentials = this->get_existentials().size();
+	int numOrigInputs = this->get_universals().size()+this->get_all_edvars().size();
+	int numDeps = this->get_deps().size();
 	vector<int> remapIds(numInputs);
-	for(auto u:this->universal){
+	for(auto u:this->get_universals()){
 		remapIds[u-1] = u;
 	}
-	for(auto e:this->existential){
-		remapIds[e-1]=e;
-	}
+	// for(auto e:this->get_existentials()){
+	// 	remapIds[e-1]=e;
+	// }
 	for(auto p:y_yPrime_map){
 		remapIds[p.first-1] = p.second;
 	}
@@ -378,7 +378,7 @@ void DQCNF::unateCheck(){
     }
 
 	map<int,int> d_to_selector_map;
-	for(auto d:this->deps){
+	for(auto d:this->get_all_edvars()){
 		int d_prime_id = y_yPrime_map[d];
 
 		int selector = solver.vars()+1;
@@ -410,8 +410,8 @@ void DQCNF::unateCheck(){
 	}
 
 
-	for(auto d:this->deps){
-
+	for(auto d:this->get_all_edvars()){
+		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
 		//first check if phi(d=1) => phi(d'=0)
 		int d_var = inputToVarMapping[d];
 
@@ -551,16 +551,16 @@ int is_trivialSolver(const std::string& path) {
     return -1;
 }
 
-
+//DEPRECIATED
 void DQCNF::preprocess(){
 
 	//build dependency based graph
 	// map of {id} -> ( map of {id} -> (map of {dep_var}-> (pair of clauses)))
 
-	for(auto d1:this->deps){
+	for(auto d1:this->get_all_edvars()){
 		set<int> depSet1 = this->get_dependencySet(d1);
 
-		for(auto d2:this->deps){
+		for(auto d2:this->get_all_edvars()){
 			set<int> depSet2 = this->get_dependencySet(d2);
 
 			set<int> commonDependencies;
@@ -595,8 +595,8 @@ void DQCNF::preprocess(){
 		}
 	}
 
-	set<int> dLits(deps.begin(),deps.end());
-	for(auto d:deps){
+	set<int> dLits(this->get_all_edvars().begin(),this->get_all_edvars().end());
+	for(auto d:this->get_all_edvars()){
 		dLits.insert(-d);
 	}
 
@@ -783,6 +783,7 @@ Aig_Man_t* DQCNF::genAIGMan(){
 		Aig_Obj_t* tObj = Aig_ManConst0(tMan);
 
 		for(auto lit: clause){
+			
 			if(lit>0){
 				tObj = Aig_Or(tMan, tObj, Aig_ManCi(tMan,lit-1));
 				// if(tObj == Aig_Not(Aig_ManCi(tMan,lit-1))) cout<<"Here2\n";
@@ -791,8 +792,12 @@ Aig_Man_t* DQCNF::genAIGMan(){
 				tObj = Aig_Or(tMan, tObj, Aig_Not(Aig_ManCi(tMan,-lit-1)));
 				// if(tObj == Aig_Not(Aig_ManCi(tMan,-lit-1))) cout<<"Here\n";
 			}
+			// Aig_ManShow(tMan,0,NULL);
+			// int sig;
+			// cin>>sig;
 		}
 		finalConjunction=Aig_And(tMan, finalConjunction, tObj);
+
 		// if(clause.size()==1){
 		// 	if(finalConjunction == Aig_Not(Aig_ManCi(tMan,0))) cout<<"Here3\n";
 		// 	if(finalConjunction == (Aig_ManCi(tMan,0))) cout<<"Here4\n";
@@ -855,7 +860,7 @@ set<int> DQCNF::get_dependencySet(int id){
 }
 
 DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
-		int numInputs, int numClauses, vector<set<int>> clauses,map<int,set<int>> dependency, map<int, bool> constAssumption){
+		int numInputs, int numClauses, vector<set<int>> clauses,map<int,set<int>> dependency, map<int, bool> constAssumption, string filename){
 			this->universal=universal;
 			this->existential=existential;
 			this->numClauses=numClauses;
@@ -864,6 +869,7 @@ DQCNF::DQCNF(set<int> universal, set<int> existential, set<int> deps,
 			this->deps=deps;
 			this->dependency = dependency;
 			this->constAssumption = constAssumption;
+			this->filename=filename;
 		}
 DQCNF* DQCNF::getProjection(int id){
 	vector<set<int>> projectedClauses;
@@ -956,7 +962,7 @@ DQCNF* DQCNF::getProjection(int id){
 	// }
 	// exit(1);
 	DQCNF* projectedDQCNF = new DQCNF(this->universal, this->existential, this->deps, this->numInputs,
-								projectedClauses.size(),projectedClauses, this->dependency, this->constAssumption);
+								projectedClauses.size(),projectedClauses, this->dependency, this->constAssumption,this->filename);
 	return projectedDQCNF;
 }
 
@@ -1115,9 +1121,20 @@ bool DQCNF::cegis(){
 
 
 	numX = this->get_universals().size();
-	numY = this->get_deps().size();
+	numY = this->get_all_edvars().size();
 	this->unateCheck();
+	// for(auto id: this->get_posUnates()){
+	// 	this->constAssumption[id]=true;
+	// }
+
+	// for(auto id: this->get_negUnates()){
+	// 	this->constAssumption[id]=false;
+	// }
 	Aig_Man_t *phi_Man = this->genAIGMan();
+
+	// Aig_ManShow(phi_Man,0,NULL);
+	// cin>>mySIG;
+	
 
 	// Aig_ManShow(phi_Man,0,NULL);
 	// cin>>mySIG;
@@ -1126,7 +1143,7 @@ bool DQCNF::cegis(){
 	numOrigInputs = Aig_ManCiNum(phi_Man);
 	Abc_Ntk_t *phi_Ntk = Abc_NtkFromAigPhase(phi_Man);
 
-	auto deps = this->get_deps();
+	auto deps = this->get_all_edvars();
 
 	TIME_MEASURE_START
     cout << "Generating DQCNF and Aig_Man_t Objects for Projected PHI_i" << endl;
@@ -1138,6 +1155,7 @@ bool DQCNF::cegis(){
 
 	for (auto id : deps)
     {
+		if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
         DQCNF *tCNF = this->getProjection(id);
         projectedPhis[id] = tCNF;
         Aig_Man_t *tMan = tCNF->genAIGMan();
@@ -1243,6 +1261,7 @@ bool DQCNF::cegis(){
 
 	for (auto id : deps)
     {
+		if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
 
         cout << "Generating Basis for EX_VAR: " << id << endl;
 
@@ -1506,6 +1525,7 @@ bool DQCNF::cegis(){
 	map<int, pair<int, int>> exToOutMapping;
     for (auto id : deps)
     {
+		if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
         Abc_Ntk_t *ANtk = Abc_NtkFromAigPhase(A_Man[id]);
         Abc_Ntk_t *BNtk = Abc_NtkFromAigPhase(B_Man[id]);
 
@@ -1530,6 +1550,7 @@ bool DQCNF::cegis(){
     // Aig_Obj_t* delta2 = Aig_ManConst1(tMan2);
     for (auto id : deps)
     {
+		if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
         Aig_Obj_t *outA = Aig_ManCo(tMan, exToOutMapping[id].first)->pFanin0;
         Aig_Obj_t *outB = Aig_ManCo(tMan, exToOutMapping[id].second)->pFanin0;
 
@@ -1739,6 +1760,7 @@ bool DQCNF::cegis(){
 	map<int, bool> defaultVal;
 
 	for(auto id:deps){
+		if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
         int z_0 = solver.vars()+1;
         int s0 = solver.vars()+2;
         int h_id = exToHMapping[id];
@@ -1753,10 +1775,20 @@ bool DQCNF::cegis(){
         // }
         // else solver.add(-z0);
         // solver.add(0);
-        
-        solver.add(z_0);
-        solver.add(0);
-		defaultVal[id] = true;
+        // if(id==14){
+		// 	solver.add(-z_0);
+		// 	solver.add(0);
+		// 	defaultVal[id]=false;
+		// }
+		// else{
+		// 	solver.add(z_0);
+		// 	solver.add(0);
+		// 	defaultVal[id] = true;
+
+		// }
+		solver.add(z_0);
+		solver.add(0);
+		defaultVal[id]=true;
 
 
         // -h or z or s
@@ -1797,20 +1829,24 @@ bool DQCNF::cegis(){
 
 	set<int> posUnates = this->get_posUnates();
     for(auto d:posUnates){
+		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
         solver.add(inputToVarMapping[d]);
         solver.add(0);
 
         unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
         unsatCoreExtractor.add(0);
+		this->constAssumption[d] = true;
     }
 
     set<int> negUnates = this->get_negUnates();
     for(auto d:negUnates){
+		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
         solver.add(-inputToVarMapping[d]);
         solver.add(0);
 
         unsatCoreExtractor.add(-inputToVarMapping_unsatCore[d]);
         unsatCoreExtractor.add(0);
+		this->constAssumption[d]=false;
     }
 
 	solver.write_dimacs("./f1.dimacs");
@@ -1842,15 +1878,16 @@ bool DQCNF::cegis(){
 	//return a file pointer if the forumula is trivially UNSAT
 	if(trivialityStatus==1){
 		cout<<"here"<<endl;
-		string filename = "./solution/skolem_functions.txt";
+		string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
+		cout<<filename<<endl;
         FILE* asgFile = fopen(filename.c_str(),"w");
 		
 
-		int totalOutputs = this->deps.size();
+		int totalOutputs = this->get_all_edvars().size();
 		int constOutputs = this->constAssumption.size();
 
 		fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
-		auto dep_vars = this->deps;
+		auto dep_vars = this->get_all_edvars();
 
 		for(auto p:this->constAssumption){
 			int currOutVar = p.first;
@@ -1907,9 +1944,9 @@ bool DQCNF::cegis(){
 		
 		fclose(asgFile);
 
-		filename = "./solution/reduced_dqbf.dqdimacs";
+		filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/reduced_dqbf/"+this->filename+"_reduced.txt";
 		FILE* dqbfFile = fopen(filename.c_str(),"w");
-
+		fprintf(dqbfFile,"%d\n",this->clauses.size());
 		for(auto clause:this->clauses){
 			for(auto lit:clause){
 				fprintf(dqbfFile,"%d ",lit);
@@ -1917,7 +1954,7 @@ bool DQCNF::cegis(){
 			fprintf(dqbfFile,"0\n");
 		}
 		fclose(dqbfFile);
-		exit(0);
+		// exit(0);
 
 
 
@@ -1927,9 +1964,10 @@ bool DQCNF::cegis(){
 	while(true){
         iter++;
         //check for sat
-        if(iter>3000) exit(1);
+        // if(iter>3000) exit(1);
         
         for(auto id:deps){
+			if(this->constAssumption.find(id)!=this->constAssumption.end()) continue;
             int h_id = exToHMapping[id];
 
             vector<int> selectors = HtoSelectorMapping[h_id];
@@ -1968,9 +2006,9 @@ bool DQCNF::cegis(){
 			FILE* ansFile=nullptr;
 
 
-			string dqbf_filename = "./solution/reduced_dqbf.dqdimacs";
+			string dqbf_filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/reduced_dqbf/"+this->filename+"_reduced.txt";
 			FILE* dqbfFile = fopen(dqbf_filename.c_str(),"w");
-			
+			fprintf(dqbfFile,"%d\n",this->clauses.size());
 			for(auto clause:this->clauses){
 				for(auto lit:clause){
 					fprintf(dqbfFile,"%d ",lit);
@@ -2004,14 +2042,14 @@ bool DQCNF::cegis(){
                         cex_aux[e] = val>0?1:0;
                         
                     }
-                    string filename = "./solution/skolem_functions_"+ to_string(asgNo) +".txt";
+                    string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
                     FILE* asgFile = fopen(filename.c_str(),"w");
 
-					int totalOutputs = this->deps.size();
+					int totalOutputs = this->get_all_edvars().size();
 					int constOutputs = this->constAssumption.size();
 
 					fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
-					auto dep_vars = this->deps;
+					auto dep_vars = this->get_all_edvars();
 
 					for(auto p:constAssumption){
 						int currOutVar = p.first;
@@ -2104,7 +2142,10 @@ bool DQCNF::cegis(){
                         }
                     }
                     constraintSolver.add(0);
+					Abc_Stop();
+					return true;
                 }
+
                 
             }
 
@@ -2167,7 +2208,7 @@ bool DQCNF::cegis(){
 
 		std::cout<<"Universal Assumptions:\n";
         for(auto e:univAssumptions){
-            std::cout<<e<<endl;
+            // std::cout<<e<<endl;
             if(e>0){
                 unsatCoreExtractor.assume(inputToVarMapping_unsatCore[e]);
 
@@ -2180,7 +2221,7 @@ bool DQCNF::cegis(){
         }
         std::cout<<"Auxiliary Assumptions:\n";
         for(auto e:currAssumptions){
-            std::cout<<e<<endl;
+            // std::cout<<e<<endl;
             if(e>0){
                 // cout<<inputToVarMapping_unsatCore[e]<<endl;
                 unsatCoreExtractor.assume(inputToVarMapping_unsatCore[e]);
@@ -2365,7 +2406,7 @@ bool DQCNF::cegis(){
             for (auto dep : depSet)
             {
                 //unsatCore Filtering for if condition
-                if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
+                // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
                 if (cex[dep - 1] == 0)
                 {
                     depVal.insert(-dep);
@@ -2377,24 +2418,24 @@ bool DQCNF::cegis(){
                 // depVal.insert(cex[dep-1]);
             }
             
-            if(depVal.empty()){
-                // cout<<"Err: depVal empty for d: "<<id<<endl;
-                // continue;
-                for (auto dep : depSet)
-                {
-                    //unsatCore Filtering for if condition
-                    // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
-                    if (cex[dep - 1] == 0)
-                    {
-                        depVal.insert(-dep);
-                    }
-                    else
-                    {
-                        depVal.insert(dep);
-                    }
-                    // depVal.insert(cex[dep-1]);
-                }
-            }
+            // if(depVal.empty()){
+            //     // cout<<"Err: depVal empty for d: "<<id<<endl;
+            //     // continue;
+            //     for (auto dep : depSet)
+            //     {
+            //         //unsatCore Filtering for if condition
+            //         // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
+            //         if (cex[dep - 1] == 0)
+            //         {
+            //             depVal.insert(-dep);
+            //         }
+            //         else
+            //         {
+            //             depVal.insert(dep);
+            //         }
+            //         // depVal.insert(cex[dep-1]);
+            //     }
+            // }
             std::cout<<"DepVal for d: "<<id<<" => ";
             for(auto u:depVal){
                 std::cout<<u<<" ";
@@ -2625,7 +2666,9 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 				bool hasShared=false;
 				for(auto lit:clause){
 					if(abs(lit)==var) continue;
-					if((this->deps).find(abs(lit))!=(this->deps).end()){
+					auto ed_vars = this->get_all_edvars();
+					bool isPresent = ed_vars.find(abs(lit))!=ed_vars.end();
+					if(isPresent){
 						set<int> depSet2 = this->get_dependencySet(abs(lit));
 						vector<int> tmpcont;
 						set_intersection(depSet.begin(),depSet.end(),
@@ -2653,7 +2696,10 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 				bool hasShared=false;
 				for(auto lit:clause){
 					if(abs(lit)==var) continue;
-					if((this->deps).find(abs(lit))!=(this->deps).end()){
+					auto ed_vars = this->get_all_edvars();
+					bool isPresent = ed_vars.find(abs(lit))!=ed_vars.end();
+					// cout<<isPresent<<endl;
+					if(isPresent){
 						set<int> depSet2 = this->get_dependencySet(abs(lit));
 						vector<int> tmpcont;
 						set_intersection(depSet.begin(),depSet.end(),
@@ -2717,7 +2763,7 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 		}
 	}
 
-	DQCNF* newObj = new DQCNF(this->universal, this->existential, this->deps,this->numInputs,newClauses.size(),newClauses, this->dependency, this->constAssumption);
+	DQCNF* newObj = new DQCNF(this->universal, this->existential, this->deps,this->numInputs,newClauses.size(),newClauses, this->dependency, this->constAssumption,this->filename);
 
 	return newObj;
 }
@@ -2752,7 +2798,7 @@ DQCNF* DQCNF::substituteConst(int var, bool setTrue){
 	}
 
 
-	DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency, this->constAssumption);
+	DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency, this->constAssumption,this->filename);
 	newObj->assumeConst(var, setTrue);
 	return newObj;
 }
@@ -2761,7 +2807,7 @@ DQCNF* DQCNF::substituteConst(int var, bool setTrue){
 Checks whether the DQCNF object contains a clause consisting only of the input variables
 */
 bool DQCNF::containsBadClause(){
-	set<int> d_vars = this->get_deps();
+	set<int> d_vars = this->get_all_edvars();
 	set<int> s1;
 	for(auto e:d_vars){
 		s1.insert(-e);
@@ -2785,7 +2831,7 @@ Finds a d-variable to perform a split on
 */
 pair<int,int> DQCNF::findSplitCandidates(){
 
-	set<int> d_vars = this->deps;
+	set<int> d_vars = this->get_all_edvars();
 	for(auto e:d_vars){
 
 		set<int> depset = this->get_dependencySet(e);
@@ -2821,7 +2867,8 @@ pair<int,int> DQCNF::findSplitCandidates(){
 					bool hasShared = false;
 					for(auto lit:clause){
 						if(abs(lit)==e) continue;
-						if(d_vars.find(abs(lit))!=d_vars.end()){
+						bool isPresent = d_vars.find(abs(lit))!=d_vars.end();
+						if(isPresent){
 							//found another d_var, check for shared dep
 							vector<int> shared_dep;
 							set<int> tmp_deps = this->get_dependencySet(abs(lit));
@@ -2846,7 +2893,8 @@ pair<int,int> DQCNF::findSplitCandidates(){
 					bool hasShared=false;
 					for(auto lit:clause){
 						if(abs(lit)==e) continue;
-						if(d_vars.find(abs(lit))!=d_vars.end()){
+						bool isPresent = d_vars.find(abs(lit))!=d_vars.end();
+						if(isPresent){
 							//found another d_var, check for shared dep
 							vector<int> shared_dep;
 							set<int> tmp_deps = this->get_dependencySet(abs(lit));

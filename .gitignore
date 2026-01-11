@@ -3,9 +3,11 @@ obj/
 .vscode/
 data/
 benchmarks/
+benchmark_tests/
 
 abc.history
 gmon.out
 unknown.ps
 *.ps
 tmp
+*.log

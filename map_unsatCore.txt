@@ -27,3 +27,6 @@ INPUT 25 , var map: 41
 INPUT 26 , var map: 42
 INPUT 27 , var map: 43
 AUXILIARIES:
+ES:
+S:
+S:

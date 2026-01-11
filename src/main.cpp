@@ -110,13 +110,13 @@ int main(int argc, char *argv[])
     cout<<inpPath<<endl;
     FS::path phiPath(inpPath);
     DQCNF *phiCNF = new DQCNF(phiPath.string());
-
+    phiCNF->filename = phiPath.stem().string();
 
     bool ansFile = driverFunction(phiCNF);
 
     if(!ansFile){
         printf("No valid assignments found\n");
-        return 0;
+        return 1;
     }
 
     // fclose(ansFile);

@@ -316,8 +316,8 @@ class DQCNF{
 	set<int> unate_1;
 	
 	map<int, bool> constAssumption;
-
 	public:
+		string filename;
 		DQCNF(string filename);
 		Aig_Man_t* genAIGMan();
 		set<int> get_existentials(){return this->existential;}
@@ -328,9 +328,11 @@ class DQCNF{
 		vector<set<int>> getClauses(){return this->clauses;}
 		int getNumInputs(){return this->numInputs;}
 		int getNumClauses(){return this->numClauses;}
+		map<int, set<int>> get_dependency(){return this->dependency;}
+		map<int, bool> get_constAssumption(){return this->constAssumption;}
 		
 		DQCNF(set<int> universal, set<int> existential, set<int> deps,
-			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency, map<int, bool> constAssumption);
+			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency, map<int, bool> constAssumption, string filename);
 		
 		
 
@@ -355,12 +357,15 @@ class DQCNF{
 			this->constAssumption.insert({var,constVal});
 		}
 
-		// int isAssumedConst(int var){
-		// 	if(this->constAssumption.find(var)==this->constAssumption.end()){
-		// 		return -1;
-		// 	}
-		// 	return this->constAssumption[var];
-		// }
+		//-------------------------------------------------------------------
+		set<int> get_all_edvars(){
+			vector<int> tmp;
+			set_union(this->deps.begin(),this->deps.end(), this->existential.begin(),this->existential.end(),back_inserter(tmp));
+
+			set<int> res(tmp.begin(),tmp.end());
+
+			return res;
+		}
 	};
 
 	Abc_Ntk_t * getNtkFromCNF(char* filename);
