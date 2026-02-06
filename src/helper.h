@@ -346,6 +346,8 @@ class DQCNF{
 		bool containsBadClause();
 		pair<int,int> findSplitCandidates();
 		DQCNF* substituteConst(int var, bool setTrue);
+		void substituteConstInplace(int var, bool setTrue);
+		void modifyClauses(vector<set<int>> clauses){this->clauses=clauses;}
 		DQCNF* removeProblemUnits(int var);
 		bool cegis();
 		void removeDepVar(int var){

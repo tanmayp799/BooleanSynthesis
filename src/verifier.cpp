@@ -43,17 +43,51 @@ int main(int argc, char* argv[]){
     FS::path phiPath(inpPath);
     DQCNF *phiCNF = new DQCNF(phiPath.string());
 
+    string reduced_dqbf_file = argv[2];
+    string skolem_file = argv[3];
+
+
+    ifstream skolem(skolem_file);
+
+
+    // ifstream reduced_dqbf(reduced_dqbf_file);
+
+    // vector<set<int>> reduced_clauses;
+    
+    // if(reduced_dqbf.is_open()){
+    //     int num_clauses;
+    //     reduced_dqbf>>num_clauses;
+        
+    //     for(int i=0;i<num_clauses;i++){
+    //         set<int> clause;
+    //         int lit;
+    //         while(true){
+    //             reduced_dqbf>>lit;
+    //             if(lit==0) break;
+    //             clause.insert(lit);
+    //         }
+    //         reduced_clauses.push_back(clause);
+    //     }
+    // }
+
+    // DQCNF* reduced_dqcnf = new DQCNF(phiCNF->get_universals(), phiCNF->get_existentials(),phiCNF->get_deps(),
+    //                                 phiCNF->getNumInputs(),reduced_clauses.size(),reduced_clauses,phiCNF->get_dependency(),phiCNF->get_constAssumption(),
+    //                             phiCNF->filename);
+
     Aig_Man_t* phiMan = phiCNF->genAIGMan();
 
 
     // Aig_ManShow(phiMan,0,NULL);
     // cin>>sig;
 
-    string reduced_dqbf_file = argv[2];
-    string skolem_file = argv[3];
+    // Aig_ManShow(phiMan,0,NULL);
+    // cin>>sig;
+
+    // string reduced_dqbf_file = argv[2];
+    // string skolem_file = argv[3];
 
 
-    ifstream skolem(skolem_file);
+    // ifstream skolem(skolem_file);
 
 
     map<int, bool> constAssignments;
@@ -108,10 +142,13 @@ int main(int argc, char* argv[]){
         }
     }
 
-
+    cout<<"Setting constant values: \n";
     for(auto p:constAssignments){
+        
         int var = p.first;
         int asg=p.second;
+
+        cout<<var<<" "<<asg<<endl;
 
         Aig_Obj_t* newOut = Aig_SubstituteConst(phiMan, Aig_ManCo(phiMan,0),Aig_ObjId(Aig_ManCi(phiMan,var-1)),asg);
 
@@ -168,7 +205,7 @@ int main(int argc, char* argv[]){
     {
 
         if(constAssignments.find(id)!=constAssignments.end()) continue;
-
+        // cout<<id<<endl;
         DQCNF *tCNF = reduced_dqcnf->getProjection(id);
         projectedPhis[id] = tCNF;
         Aig_Man_t *tMan = tCNF->genAIGMan();
@@ -431,6 +468,8 @@ int main(int argc, char* argv[]){
         Aig_Obj_t* newOut = Aig_Substitute(phiMan,Aig_ManCo(phiMan,0), Aig_ObjId(Aig_ManCi(phiMan,id-1)), defin);
         Aig_ObjCreateCo(phiMan,newOut);
 
+
+
         int numOuts = Aig_ManCoNum(phiMan);
         for (int i = 0; i < numOuts - 1; i++)
         {
@@ -448,11 +487,16 @@ int main(int argc, char* argv[]){
             Aig_ObjCreateCo(phiMan, Aig_ManConst0(phiMan));
         }
 
-        
+        //  Aig_ManShow(phiMan,0,NULL);
+        // // int q;
+        // cin>>q;
 
 
     }
 
+
+    // Aig_ManShow(phiMan,0,NULL);
+    // cin>>sig;
     //Now build the function for h_is and substitute them back in
 
     for(auto id:deps){
@@ -461,6 +505,7 @@ int main(int argc, char* argv[]){
         assert(skolemFunctions.find(id)!=skolemFunctions.end());
 
         SkolemInfo s_info = skolemFunctions[id];
+        cout<<"Building H_i for id: "<<id<<endl;
 
         Aig_Obj_t* funcH = Aig_ManConst1(phiMan);
 
@@ -470,11 +515,16 @@ int main(int argc, char* argv[]){
             Aig_Obj_t* currCaseNode = Aig_ManConst1(phiMan);
 
             for(auto lit:asgCase){
+                cout<<lit<<endl;
                 Aig_Obj_t* litNode = lit<0? Aig_Not(Aig_ManCi(phiMan,-lit-1)):Aig_ManCi(phiMan,lit-1);
                 currCaseNode = Aig_And(phiMan, currCaseNode, litNode);
+                // Aig_ManShow(phiMan,0,NULL);
+                // cin>>sig;
             }
 
             posCasesNode = Aig_Or(phiMan, posCasesNode, currCaseNode);
+            // Aig_ManShow(phiMan,0,NULL);
+            // cin>>sig;
         }
 
         if(s_info.defaultVal==true){
@@ -487,28 +537,41 @@ int main(int argc, char* argv[]){
                 Aig_Obj_t* currCaseNode = Aig_ManConst1(phiMan);
 
                 for(auto lit:asgCase){
+                    cout<<lit<<endl;
                     Aig_Obj_t* litNode = lit<0? Aig_Not(Aig_ManCi(phiMan, -lit-1)) : Aig_ManCi(phiMan, lit -1);
                     currCaseNode = Aig_And(phiMan, currCaseNode, litNode);
+                    // Aig_ManShow(phiMan,0,NULL);
+                    // cin>>sig;
                 }
 
                 conjNode = Aig_And(phiMan, conjNode, Aig_Not(currCaseNode));
+                // Aig_ManShow(phiMan,0,NULL);
+                // cin>>sig;
             }
 
             for(auto asgCase:s_info.negCases){
                 Aig_Obj_t* currCaseNode = Aig_ManConst1(phiMan);
 
                 for(auto lit:asgCase){
+                    cout<<lit<<endl;
                     Aig_Obj_t* litNode = lit<0? Aig_Not(Aig_ManCi(phiMan, -lit-1)) : Aig_ManCi(phiMan, lit -1);
                     currCaseNode = Aig_And(phiMan, currCaseNode, litNode);
+                    // Aig_ManShow(phiMan,0,NULL);
+                    // cin>>sig;
                 }
                 conjNode = Aig_And(phiMan, conjNode, Aig_Not(currCaseNode));
+                // Aig_ManShow(phiMan,0,NULL);
+                // cin>>sig;
             }
 
             posCasesNode = Aig_Or(phiMan, posCasesNode, conjNode);
+            // Aig_ManShow(phiMan,0,NULL);
+            // cin>>sig;
         }
 
         funcH = Aig_And(phiMan, funcH, posCasesNode);
-
+        // Aig_ManShow(phiMan,0,NULL);
+        // cin>>sig;
         //now, modify funcH as follows to account for negCases
         // funcH -> funcH ^ ~C4 ^ ~C5 ^ ...
 
@@ -519,8 +582,12 @@ int main(int argc, char* argv[]){
             for(auto lit:asgCase){
                 Aig_Obj_t* litNode = lit<0? Aig_Not(Aig_ManCi(phiMan, -lit-1)) : Aig_ManCi(phiMan, lit -1);
                 currCaseNode = Aig_And(phiMan, currCaseNode, litNode);
+                // Aig_ManShow(phiMan,0,NULL);
+                // cin>>sig;
             }
             funcH = Aig_And(phiMan, funcH, Aig_Not(currCaseNode));
+            // Aig_ManShow(phiMan,0,NULL);
+            // cin>>sig;
         }
 
         if(s_info.defaultVal==false){
@@ -536,9 +603,14 @@ int main(int argc, char* argv[]){
 
         //now we have funcH, we just have to plug it in place of h_i
 
-        Aig_Obj_t* newOut = Aig_Substitute(phiMan, Aig_ManCo(phiMan,0), exToHMapping[id]-1, funcH);
+        Aig_Obj_t* newOut = Aig_Substitute(phiMan, Aig_ManCo(phiMan,0), exToHMapping[id], funcH);
+
+
 
         Aig_ObjCreateCo(phiMan, newOut);
+
+        // Aig_ManShow(phiMan,0,NULL);
+        //     cin>>sig;
 
         Aig_ObjDisconnect(phiMan, Aig_ManCo(phiMan, 0));
         Aig_ObjConnect(phiMan, Aig_ManCo(phiMan, 0), Aig_ManConst0(phiMan), NULL);
@@ -549,6 +621,11 @@ int main(int argc, char* argv[]){
         {
             Aig_ObjCreateCo(phiMan, Aig_ManConst0(phiMan));
         }
+
+
+        // Aig_ManShow(phiMan,0,NULL);
+        // cin>>sig;
+
     }
 
     //now, we take the negated formula, give it to solver. It should return UNSAT (expected)

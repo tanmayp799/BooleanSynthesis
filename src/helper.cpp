@@ -276,7 +276,7 @@ void DQCNF::unateCheck(){
 	int numInputs = Aig_ManCiNum(phi_man);
 	map<int, int> y_yPrime_map;
 	map<int,int> yPrime_y_map;
-	for(auto d:this->get_all_edvars()){
+	for(auto d:this->get_deps()){
 		Aig_ObjCreateCi(phi_man);
 		numInputs++;
 		y_yPrime_map[d] = numInputs; 
@@ -378,7 +378,7 @@ void DQCNF::unateCheck(){
     }
 
 	map<int,int> d_to_selector_map;
-	for(auto d:this->get_all_edvars()){
+	for(auto d:this->get_deps()){
 		int d_prime_id = y_yPrime_map[d];
 
 		int selector = solver.vars()+1;
@@ -410,7 +410,7 @@ void DQCNF::unateCheck(){
 	}
 
 
-	for(auto d:this->get_all_edvars()){
+	for(auto d:this->get_deps()){
 		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
 		//first check if phi(d=1) => phi(d'=0)
 		int d_var = inputToVarMapping[d];
@@ -557,10 +557,10 @@ void DQCNF::preprocess(){
 	//build dependency based graph
 	// map of {id} -> ( map of {id} -> (map of {dep_var}-> (pair of clauses)))
 
-	for(auto d1:this->get_all_edvars()){
+	for(auto d1:this->get_deps()){
 		set<int> depSet1 = this->get_dependencySet(d1);
 
-		for(auto d2:this->get_all_edvars()){
+		for(auto d2:this->get_deps()){
 			set<int> depSet2 = this->get_dependencySet(d2);
 
 			set<int> commonDependencies;
@@ -595,8 +595,8 @@ void DQCNF::preprocess(){
 		}
 	}
 
-	set<int> dLits(this->get_all_edvars().begin(),this->get_all_edvars().end());
-	for(auto d:this->get_all_edvars()){
+	set<int> dLits(this->get_deps().begin(),this->get_deps().end());
+	for(auto d:this->get_deps()){
 		dLits.insert(-d);
 	}
 
@@ -745,6 +745,7 @@ DQCNF::DQCNF(string filename){
 			int var;
 			while(iss>>var && var!=0){
 				this->existential.insert(var);
+				this->dependency[var] = this->universal;
 			}
 		}
 		else{
@@ -852,10 +853,10 @@ Aig_Man_t* DQCNF::genAIGMan(){
 
 set<int> DQCNF::get_dependencySet(int id){
 	// cout<<id<<endl;
-	if(this->dependency.find(id)==this->dependency.end()){
-		// cout<<"EXIS FOUND\n";
-		return universal;
-	}
+	// if(this->dependency.find(id)==this->dependency.end()){
+	// 	// cout<<"EXIS FOUND\n";
+	// 	return universal;
+	// }
 	return dependency[id];
 }
 
@@ -1123,6 +1124,15 @@ bool DQCNF::cegis(){
 	numX = this->get_universals().size();
 	numY = this->get_all_edvars().size();
 	this->unateCheck();
+
+	for(auto id:this->get_posUnates()){
+		this->substituteConstInplace(id,true);
+	}
+
+	for(auto id:this->get_negUnates()){
+		this->substituteConstInplace(id,false);
+	}
+
 	// for(auto id: this->get_posUnates()){
 	// 	this->constAssumption[id]=true;
 	// }
@@ -1143,7 +1153,7 @@ bool DQCNF::cegis(){
 	numOrigInputs = Aig_ManCiNum(phi_Man);
 	Abc_Ntk_t *phi_Ntk = Abc_NtkFromAigPhase(phi_Man);
 
-	auto deps = this->get_all_edvars();
+	auto deps = this->get_deps();
 
 	TIME_MEASURE_START
     cout << "Generating DQCNF and Aig_Man_t Objects for Projected PHI_i" << endl;
@@ -1432,40 +1442,40 @@ bool DQCNF::cegis(){
             cout<<e<<endl;
         }
 
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        // Aig_ManShow(eDefMan,0,NULL);
+        // cin>>mySIG;
         eDefMan = remapInputs(eDefMan,ordering);
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        // Aig_ManShow(eDefMan,0,NULL);
+        // cin>>mySIG;
 
         //compose outputs of eDefMan such that inp[OutMap[i]] <=> out[i]
         
         assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
         int numOut = Aig_ManCoNum(eDefMan);
-        Aig_Obj_t* newOutput = Aig_ManConst1(eDefMan);
-        for(int i=0;i<numOut;i++){
-            Aig_Obj_t* y_i = Aig_ManCi(eDefMan, outputMapping[i]-1);
-            Aig_Obj_t* fy_i = Aig_ManCo(eDefMan,i)->pFanin0;
+        // Aig_Obj_t* newOutput = Aig_ManConst1(eDefMan);
+        // for(int i=0;i<numOut;i++){
+        //     Aig_Obj_t* y_i = Aig_ManCi(eDefMan, outputMapping[i]-1);
+        //     Aig_Obj_t* fy_i = Aig_ManCo(eDefMan,i)->pFanin0;
 
             
-            Aig_Obj_t* t1 = Aig_Or(eDefMan, Aig_Not(y_i),fy_i);
-            Aig_Obj_t* t2 = Aig_Or(eDefMan, y_i, Aig_Not(fy_i));
-            Aig_Obj_t* t3 = Aig_And(eDefMan,t1,t2);
+        //     Aig_Obj_t* t1 = Aig_Or(eDefMan, Aig_Not(y_i),fy_i);
+        //     Aig_Obj_t* t2 = Aig_Or(eDefMan, y_i, Aig_Not(fy_i));
+        //     Aig_Obj_t* t3 = Aig_And(eDefMan,t1,t2);
 
-            newOutput = Aig_And(eDefMan,newOutput,t3);
-        }
+        //     newOutput = Aig_And(eDefMan,newOutput,t3);
+        // }
 
-        Aig_ObjCreateCo(eDefMan,newOutput);
+        // Aig_ObjCreateCo(eDefMan,newOutput);
 
-        for(int i=0; i<Aig_ManCoNum(eDefMan)-1;i++){
-            Aig_ObjDisconnect(eDefMan, Aig_ManCo(eDefMan,i));
-            Aig_ObjConnect(eDefMan,Aig_ManCo(eDefMan,i),Aig_ManConst0(eDefMan),NULL);
-        }
-        Aig_ManCoCleanup(eDefMan);
-        Aig_ManCleanup(eDefMan);
+        // for(int i=0; i<Aig_ManCoNum(eDefMan)-1;i++){
+        //     Aig_ObjDisconnect(eDefMan, Aig_ManCo(eDefMan,i));
+        //     Aig_ObjConnect(eDefMan,Aig_ManCo(eDefMan,i),Aig_ManConst0(eDefMan),NULL);
+        // }
+        // Aig_ManCoCleanup(eDefMan);
+        // Aig_ManCleanup(eDefMan);
         
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        // Aig_ManShow(eDefMan,0,NULL);
+        // cin>>mySIG;
 
         Abc_Ntk_t* origFormulaNtk = Abc_NtkFromAigPhase(origFormula);
         Abc_Ntk_t* eDefNtk = Abc_NtkFromAigPhase(eDefMan);
@@ -1474,23 +1484,87 @@ bool DQCNF::cegis(){
 
         assert(Aig_ManCiNum(eDefMan) == Aig_ManCiNum(origFormula));
         // assert(Aig_ManCiNum(eDefMan) == Aig_ManCiNum(deltaAndPhi_Man));
-
+		// Aig_ManShow(eDefMan,0,NULL);
+		// cin>>mySIG;
         Abc_NtkAppend(origFormulaNtk, eDefNtk, 1);
         origFormula = Abc_NtkToDar(origFormulaNtk,0,0);
-        Aig_Obj_t* o1 = Aig_ManCo(origFormula,0)->pFanin0;
-        Aig_Obj_t* o2 = Aig_ManCo(origFormula,1)->pFanin0;
-        Aig_Obj_t* o3 = Aig_And(origFormula,o1,o2);
 
-        Aig_ObjCreateCo(origFormula,o3);
+		Aig_ManShow(origFormula,0,NULL);
+		cin>>mySIG;
 
-        Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,0));
-        Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,0),Aig_ManConst0(origFormula),NULL);
-        Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,1));
-        Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,1),Aig_ManConst0(origFormula),NULL);
+
+		// Aig_Obj_t* someObj = Aig_Substitute(origFormula, Aig_ManCo(origFormula,0), 7, Aig_ManCi(origFormula,1));
+
+		// Aig_ObjCreateCo(origFormula,someObj);
+
+
+		// Aig_ManShow(origFormula,0,NULL);
+		// cin>>mySIG;
+		// exit(1);
+
+
+		map<int, Aig_Obj_t*> existential_outputDriver_map;
+
+		for(int i=0;i<numOut;i++){
+			existential_outputDriver_map[outputMapping[i]] = Aig_ManCo(origFormula,i+1);
+		}
+
+
+		Aig_Obj_t* outObj = Aig_ManCo(origFormula,0);
+		cout<<Aig_ManCoNum(origFormula)<<endl;
+		for(int i=0;i<numOut;i++){
+			cout<<outputMapping[i]<<endl;
+			// Aig_Obj_t* y_i = Aig_ManCi(origFormula,outputMapping[i]);
+			Aig_Obj_t* fy_i = existential_outputDriver_map[outputMapping[i]];
+
+			Aig_Obj_t* newOutObj = Aig_Substitute(origFormula, outObj, outputMapping[i], fy_i);
+
+			newOutObj = Aig_ObjCreateCo(origFormula,newOutObj);
+
+
+			// outObj = Aig_ObjCreateCo(origFormula,outObj);
+
+			Aig_ObjDisconnect(origFormula, outObj);
+			Aig_ObjConnect(origFormula, outObj,Aig_ManConst0(origFormula),NULL);
+
+			Aig_ManCoCleanup(origFormula);
+			Aig_ManCleanup(origFormula);
+
+			outObj = newOutObj;
+
+			Aig_ManShow(origFormula,0,NULL);
+			cin>>mySIG;
+		}
+
+
+
+		int numOuts = Aig_ManCoNum(origFormula);
+
+		for(int i=0;i<numOuts-1;i++){
+			Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula,i));
+			Aig_ObjConnect(origFormula,Aig_ManCo(origFormula,i),Aig_ManConst0(origFormula),NULL);
+		}
+
+
+
+        // Aig_Obj_t* o1 = Aig_ManCo(origFormula,0)->pFanin0;
+        // Aig_Obj_t* o2 = Aig_ManCo(origFormula,1)->pFanin0;
+        // Aig_Obj_t* o3 = Aig_And(origFormula,o1,o2);
+
+        // Aig_ObjCreateCo(origFormula,o3);
+
+        // Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,0));
+        // Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,0),Aig_ManConst0(origFormula),NULL);
+        // Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,1));
+        // Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,1),Aig_ManConst0(origFormula),NULL);
 
         Aig_ManCoCleanup(origFormula);
         Aig_ManCleanup(origFormula);
 
+
+
+		// Aig_ManShow(origFormula,0,NULL);
+		// cin>>mySIG;
 
         // Abc_NtkAppend(deltaAndPhi_Ntk, eDefNtk, 1);
         // deltaAndPhi_Man = Abc_NtkToDar(deltaAndPhi_Ntk,0,0);
@@ -1507,7 +1581,33 @@ bool DQCNF::cegis(){
 
         // Aig_ManCoCleanup(deltaAndPhi_Man);
         // Aig_ManCleanup(deltaAndPhi_Man);
+		Aig_Obj_t* rootNode = Aig_ManCo(origFormula,0);
+		for(auto p:this->constAssumption){
+			int var = p.first;
+			bool val = p.second;
 
+			Aig_Obj_t* newOutDriver = Aig_SubstituteConst(origFormula, rootNode, var, val);
+
+			Aig_Obj_t* newRootNode = Aig_ObjCreateCo(origFormula,newOutDriver);
+
+			Aig_ObjDisconnect(origFormula,rootNode);
+			Aig_ObjConnect(origFormula, rootNode, Aig_ManConst0(origFormula), NULL);
+
+			Aig_ManCoCleanup(origFormula);
+			Aig_ManCleanup(origFormula);
+
+			rootNode = newRootNode;
+		}
+
+		numOuts = Aig_ManCoNum(origFormula);
+
+		for(int i=0;i<numOuts-1;i++){
+			Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula,i));
+			Aig_ObjConnect(origFormula,Aig_ManCo(origFormula,i),Aig_ManConst0(origFormula),NULL);
+		}
+
+		Aig_ManCoCleanup(origFormula);
+        Aig_ManCleanup(origFormula);
     }
 
 	cout << "Creating the formula DELTA (AND) !PHI\n";
@@ -1827,27 +1927,27 @@ bool DQCNF::cegis(){
         // HtoSelectorMapping_unsatCore[h_id].push_back(uc_s0);
     }
 
-	set<int> posUnates = this->get_posUnates();
-    for(auto d:posUnates){
-		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
-        solver.add(inputToVarMapping[d]);
-        solver.add(0);
+	// set<int> posUnates = this->get_posUnates();
+    // for(auto d:posUnates){
+	// 	if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
+    //     solver.add(inputToVarMapping[d]);
+    //     solver.add(0);
 
-        unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
-        unsatCoreExtractor.add(0);
-		this->constAssumption[d] = true;
-    }
+    //     unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
+    //     unsatCoreExtractor.add(0);
+	// 	this->constAssumption[d] = true;
+    // }
 
-    set<int> negUnates = this->get_negUnates();
-    for(auto d:negUnates){
-		if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
-        solver.add(-inputToVarMapping[d]);
-        solver.add(0);
+    // set<int> negUnates = this->get_negUnates();
+    // for(auto d:negUnates){
+	// 	if(this->constAssumption.find(d)!=this->constAssumption.end()) continue;
+    //     solver.add(-inputToVarMapping[d]);
+    //     solver.add(0);
 
-        unsatCoreExtractor.add(-inputToVarMapping_unsatCore[d]);
-        unsatCoreExtractor.add(0);
-		this->constAssumption[d]=false;
-    }
+    //     unsatCoreExtractor.add(-inputToVarMapping_unsatCore[d]);
+    //     unsatCoreExtractor.add(0);
+	// 	this->constAssumption[d]=false;
+    // }
 
 	solver.write_dimacs("./f1.dimacs");
     unsatCoreExtractor.write_dimacs("./f2.dimacs");
@@ -1863,103 +1963,103 @@ bool DQCNF::cegis(){
     map<int, vector<int>> exToAuxMap;
 
 	
-	int trivialityStatus = is_trivialSolver("./f1.dimacs");
-	printf("Num Clauses: %d \nNum Vars: %d\n",solver.irredundant(),solver.active());
-	if(trivialityStatus==0) {
-		if(solver.irredundant()==0){
-			cout<<"Num Clause: 0\n";
-		}
-		if(solver.active()==0){
-			cout<<"Num var: 0\n";
-		}
-		return false;
-	}
+	// int trivialityStatus = is_trivialSolver("./f1.dimacs");
+	// printf("Num Clauses: %d \nNum Vars: %d\n",solver.irredundant(),solver.active());
+	// if(trivialityStatus==0) {
+	// 	if(solver.irredundant()==0){
+	// 		cout<<"Num Clause: 0\n";
+	// 	}
+	// 	if(solver.active()==0){
+	// 		cout<<"Num var: 0\n";
+	// 	}
+	// 	return false;
+	// }
 
 	//return a file pointer if the forumula is trivially UNSAT
-	if(trivialityStatus==1){
-		cout<<"here"<<endl;
-		string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
-		cout<<filename<<endl;
-        FILE* asgFile = fopen(filename.c_str(),"w");
+	// if(trivialityStatus==1){
+	// 	cout<<"here"<<endl;
+	// 	string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
+	// 	cout<<filename<<endl;
+    //     FILE* asgFile = fopen(filename.c_str(),"w");
 		
 
-		int totalOutputs = this->get_all_edvars().size();
-		int constOutputs = this->constAssumption.size();
+	// 	int totalOutputs = this->get_all_edvars().size();
+	// 	int constOutputs = this->constAssumption.size();
 
-		fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
-		auto dep_vars = this->get_all_edvars();
+	// 	fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
+	// 	auto dep_vars = this->get_all_edvars();
 
-		for(auto p:this->constAssumption){
-			int currOutVar = p.first;
-			bool constVal = p.second;
-			dep_vars.erase(currOutVar);
+	// 	for(auto p:this->constAssumption){
+	// 		int currOutVar = p.first;
+	// 		bool constVal = p.second;
+	// 		dep_vars.erase(currOutVar);
 
-			fprintf(asgFile, "%d %d\n", currOutVar, (int)(constVal));
-		}
+	// 		fprintf(asgFile, "%d %d\n", currOutVar, (int)(constVal));
+	// 	}
 
-		map<int, int> cex_aux;
+	// 	map<int, int> cex_aux;
 
-		for(auto e:auxilaries){
-			int val = constraintSolver.val(inputToVarMapping[e]);
-			cex_aux[e]=val>0?1:0;
-		}
-		for(auto currOutVar: dep_vars){
-			vector<set<int>> positiveCases;
-			vector<set<int>> negativeCases;
+	// 	for(auto e:auxilaries){
+	// 		int val = constraintSolver.val(inputToVarMapping[e]);
+	// 		cex_aux[e]=val>0?1:0;
+	// 	}
+	// 	for(auto currOutVar: dep_vars){
+	// 		vector<set<int>> positiveCases;
+	// 		vector<set<int>> negativeCases;
 
 
-			auto cases = ex_caseToAuxMapping[currOutVar];
-			for(auto p2:cases){
-				set<int> currCase = p2.first;
-				int aux = p2.second.first;
-				if(cex_aux.find(aux)==cex_aux.end()){
-					cerr<<"Error in aux map\n";
-					exit(1);
-				}
-				if(cex_aux[aux]==1){
-					positiveCases.push_back(currCase);
-				}
-				else{
-					negativeCases.push_back(currCase);
-				}
-			}
+	// 		auto cases = ex_caseToAuxMapping[currOutVar];
+	// 		for(auto p2:cases){
+	// 			set<int> currCase = p2.first;
+	// 			int aux = p2.second.first;
+	// 			if(cex_aux.find(aux)==cex_aux.end()){
+	// 				cerr<<"Error in aux map\n";
+	// 				exit(1);
+	// 			}
+	// 			if(cex_aux[aux]==1){
+	// 				positiveCases.push_back(currCase);
+	// 			}
+	// 			else{
+	// 				negativeCases.push_back(currCase);
+	// 			}
+	// 		}
 
-			fprintf(asgFile, "%d %d %d %d\n",currOutVar,
-					 positiveCases.size(), negativeCases.size(),
-					 (int)(defaultVal[currOutVar]));
+	// 		fprintf(asgFile, "%d %d %d %d\n",currOutVar,
+	// 				 positiveCases.size(), negativeCases.size(),
+	// 				 (int)(defaultVal[currOutVar]));
 			
-			for(auto currCase:positiveCases){
-				for(auto e:currCase){
-					fprintf(asgFile, "%d ", e);
-				}
-				fprintf(asgFile,"0\n");
-			}
-			for(auto currCase:negativeCases){
-				for(auto e:currCase){
-					fprintf(asgFile,"%d ",e);
-				}
-				fprintf(asgFile,"0\n");
-			}
-		}
+	// 		for(auto currCase:positiveCases){
+	// 			for(auto e:currCase){
+	// 				fprintf(asgFile, "%d ", e);
+	// 			}
+	// 			fprintf(asgFile,"0\n");
+	// 		}
+	// 		for(auto currCase:negativeCases){
+	// 			for(auto e:currCase){
+	// 				fprintf(asgFile,"%d ",e);
+	// 			}
+	// 			fprintf(asgFile,"0\n");
+	// 		}
+	// 	}
 		
-		fclose(asgFile);
+	// 	fclose(asgFile);
 
-		filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/reduced_dqbf/"+this->filename+"_reduced.txt";
-		FILE* dqbfFile = fopen(filename.c_str(),"w");
-		fprintf(dqbfFile,"%d\n",this->clauses.size());
-		for(auto clause:this->clauses){
-			for(auto lit:clause){
-				fprintf(dqbfFile,"%d ",lit);
-			}
-			fprintf(dqbfFile,"0\n");
-		}
-		fclose(dqbfFile);
-		// exit(0);
+	// 	filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/reduced_dqbf/"+this->filename+"_reduced.txt";
+	// 	FILE* dqbfFile = fopen(filename.c_str(),"w");
+	// 	fprintf(dqbfFile,"%d\n",this->clauses.size());
+	// 	for(auto clause:this->clauses){
+	// 		for(auto lit:clause){
+	// 			fprintf(dqbfFile,"%d ",lit);
+	// 		}
+	// 		fprintf(dqbfFile,"0\n");
+	// 	}
+	// 	fclose(dqbfFile);
+	// 	// exit(0);
 
 
 
-		return true;
-	}
+	// 	return true;
+	// }
 
 	while(true){
         iter++;
@@ -1982,7 +2082,7 @@ bool DQCNF::cegis(){
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%1==0){
+        if(iter%200==0){
             freq=true;
         }
 
@@ -2045,11 +2145,11 @@ bool DQCNF::cegis(){
                     string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
                     FILE* asgFile = fopen(filename.c_str(),"w");
 
-					int totalOutputs = this->get_all_edvars().size();
+					int totalOutputs = this->get_deps().size();
 					int constOutputs = this->constAssumption.size();
 
 					fprintf(asgFile, "%d %d\n", constOutputs, totalOutputs-constOutputs);
-					auto dep_vars = this->get_all_edvars();
+					auto dep_vars = this->get_deps();
 
 					for(auto p:constAssumption){
 						int currOutVar = p.first;
@@ -2170,13 +2270,14 @@ bool DQCNF::cegis(){
         if(verbose && freq) {std::cout << "CEX : ";
 
 			for (int i = 0; i < numAigInputs; i++)
-        {
-            if(i==numX) std::cout<<"| ";
-            if(i==numX + numY) std::cout <<"| ";
-            if(i==numX + numY + numY) std::cout<<"| ";
-            std::cout << cex[i] << " ";
-        }
-        std::cout << endl;}
+			{
+				if(i==numX) std::cout<<"| ";
+				if(i==numX + numY) std::cout <<"| ";
+				if(i==numX + numY + numY) std::cout<<"| ";
+				std::cout << cex[i] << " ";
+			}
+			std::cout << endl;
+		}
 
 		vector<int> currConstraint;
 
@@ -2666,7 +2767,7 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 				bool hasShared=false;
 				for(auto lit:clause){
 					if(abs(lit)==var) continue;
-					auto ed_vars = this->get_all_edvars();
+					auto ed_vars = this->get_deps();
 					bool isPresent = ed_vars.find(abs(lit))!=ed_vars.end();
 					if(isPresent){
 						set<int> depSet2 = this->get_dependencySet(abs(lit));
@@ -2696,7 +2797,7 @@ DQCNF* DQCNF::removeProblemUnits(int var){
 				bool hasShared=false;
 				for(auto lit:clause){
 					if(abs(lit)==var) continue;
-					auto ed_vars = this->get_all_edvars();
+					auto ed_vars = this->get_deps();
 					bool isPresent = ed_vars.find(abs(lit))!=ed_vars.end();
 					// cout<<isPresent<<endl;
 					if(isPresent){
@@ -2803,6 +2904,42 @@ DQCNF* DQCNF::substituteConst(int var, bool setTrue){
 	return newObj;
 }
 
+void DQCNF::substituteConstInplace(int var, bool setTrue){
+	vector<set<int>> newClauses;
+
+
+	for(auto clause: this->clauses){
+		if(clause.find(var)!=clause.end()){
+
+			if(setTrue) continue;
+			
+			set<int> newClause(clause);
+			newClause.erase(var);
+			newClauses.push_back(newClause);
+			continue;
+		}
+		if(clause.find(-var)!=clause.end()){
+			
+			if(!setTrue) continue;
+
+			set<int> newClause(clause);
+			newClause.erase(-var);
+			newClauses.push_back(newClause);
+			continue;
+		}
+		newClauses.push_back(clause);
+
+	}
+
+	this->clauses = newClauses;
+	this->assumeConst(var,setTrue);
+	return;
+	// DQCNF* newObj = new DQCNF(this->universal,this->existential,this->deps,this->numInputs, newClauses.size(), newClauses, this->dependency, this->constAssumption,this->filename);
+	// newObj->assumeConst(var, setTrue);
+	// return newObj;
+}
+
+
 /*
 Checks whether the DQCNF object contains a clause consisting only of the input variables
 */
@@ -2831,7 +2968,7 @@ Finds a d-variable to perform a split on
 */
 pair<int,int> DQCNF::findSplitCandidates(){
 
-	set<int> d_vars = this->get_all_edvars();
+	set<int> d_vars = this->get_deps();
 	for(auto e:d_vars){
 
 		set<int> depset = this->get_dependencySet(e);

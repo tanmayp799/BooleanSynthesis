@@ -3,3 +3,10 @@ use updated formula
 
 ----------------------------------------
 1) remove projected clauses that contain only the universal variables.
+
+todo:
+manthan -> data driven
+pedant -> direct function computation, no local global indirection
+us -> local-global indirection. FIX THE BUG!!!
+
+tool to extract tseitin variables.
