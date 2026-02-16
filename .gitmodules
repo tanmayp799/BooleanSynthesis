@@ -7,3 +7,6 @@
 [submodule "dependencies/manthan"]
 	path = dependencies/manthan
 	url = https://github.com/tanmayp799/manthan
+[submodule "dependencies/kissat"]
+	path = dependencies/kissat
+	url = https://github.com/tanmayp799/kissat.git
