@@ -21,6 +21,17 @@ extern "C" {
 #include "bdd/cudd/cudd.h"
 }
 
+
+extern "C" {
+	Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t * pNtk, int fExors, int fRegisters);
+	Abc_Ntk_t * Abc_NtkFromAigPhase(Aig_Man_t * pMan);
+	Vec_Ptr_t * Io_FileReadCnf( char * pFileName, int fMulti );
+	void Aig_ManAppend( Aig_Man_t * pBase, Aig_Man_t * pNew );
+	Abc_Ntk_t * Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
+	
+}
+
+
 class AigWrapper {
 public:
     AigWrapper();
@@ -38,6 +49,8 @@ public:
 
     void addInputs(int numInputs);
     void negateOutput();
+
+    Abc_Ntk_t* getNtk();
 
 private:
     Aig_Man_t* manager;

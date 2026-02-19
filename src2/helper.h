@@ -3,9 +3,13 @@
 
 // #include "Dqbf.h"
 
-#include "AigWrapper.h"
-
+// #include "AigWrapper.h"
+#include "CadicalWrapper.h"
+// #include "cadical.hpp"
 
 std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf);
+
+
+int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCoreWrapper, CadicalWrapper* constraintWrapper);
 
 #endif // "HELPER_H"
