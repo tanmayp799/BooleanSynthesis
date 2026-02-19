@@ -1,5 +1,6 @@
 bin/
 obj/
+obj2/
 .vscode/
 data/
 benchmarks/
