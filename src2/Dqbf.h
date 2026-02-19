@@ -22,7 +22,7 @@ private:
 
 public:
     //constructor
-    Dqbf(std::set<int> universals, std::set<int> existentials, std::set<int> depVars, int numInputs, int numClauses, std::vector<std::set<int>> clauses);
+    Dqbf(std::set<int> universals, std::set<int> existentials, std::set<int> depVars, int numInputs, int numClauses, std::vector<std::set<int>> clauses, std::map<int, std::set<int>> dependencies);
 
 
     //field access
@@ -34,10 +34,8 @@ public:
     int GetNumClauses();
     std::vector<std::set<int>> GetClauses();
 
-    Dqbf* SubstituteConst(int var, bool setTrue, bool inPlace);
+    // Dqbf* SubstituteConst(int var, bool setTrue, bool inPlace);
     KissatWrapper* getLocalFormula(int var);
-
-
 };
 
 #endif // DQBF_H

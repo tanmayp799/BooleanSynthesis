@@ -3,6 +3,7 @@
 
 #include "Dqbf.h"
 
+#define clause ABC_clause
 extern "C" {
 #include "misc/util/abc_global.h"
 #include "base/abc/abc.h"
@@ -20,8 +21,12 @@ extern "C" {
 #include "bdd/cudd/cuddInt.h"
 #include "bdd/cudd/cudd.h"
 }
+#undef clause
 
 
+
+
+namespace ABC_NAMESPACE{
 extern "C" {
 	Aig_Man_t * Abc_NtkToDar(Abc_Ntk_t * pNtk, int fExors, int fRegisters);
 	Abc_Ntk_t * Abc_NtkFromAigPhase(Aig_Man_t * pMan);
@@ -30,11 +35,15 @@ extern "C" {
 	Abc_Ntk_t * Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
 	
 }
+}
 
+
+
+extern std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 
 class AigWrapper {
 public:
-    AigWrapper();
+    // AigWrapper();
     ~AigWrapper();
     AigWrapper(Dqbf* dqbf);
     AigWrapper(KissatWrapper* kw);

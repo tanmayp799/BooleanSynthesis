@@ -10,7 +10,7 @@ extern "C" {
     #include "dump.h"
 }
 
-
+#include "Logger.h"
 
 
 // Forward declaration of the Kissat solver structure
@@ -27,14 +27,14 @@ public:
     void addClause(const std::set<int>& clause);
 
     // Low-level add function (add literals, terminate clause with 0)
-    void add(int val);
+    // void add(int val);
 
     // Solve the instance
     // Returns 10 (SAT), 20 (UNSAT), or 0 (UNKNOWN)
     int solve();
 
     // Get the value of a literal (returns lit if true, -lit if false, 0 if unknown)
-    int getValue(int lit);
+    // int getValue(int lit);
 
     //field modifiers
     void setVarsToEliminate(std::vector<int> ExistentialVarsToEliminate, std::vector<int> UniversalVarsToEliminate);
@@ -53,7 +53,7 @@ public:
     int eliminateExistentialVars();
     void eliminateUniversalVars();
 
-    Dqbf* getDqbf();
+    // Dqbf* getDqbf();
 
 private:
     struct kissat* solver;
@@ -62,6 +62,7 @@ private:
     int outputVar;
     std::vector<int> dependencySet;
     int numVars;
+    std::vector<std::vector<int>> localSpec;
 };
 
 #endif // KISSAT_WRAPPER_H

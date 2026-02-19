@@ -14,6 +14,21 @@ public:
 
     void setDefaultValue(int hVar, bool defaultVal);
 
+    void assumeSelectors(int hId);
+
+    int solve();
+
+    std::vector<int> getCex();
+    void assume(std::vector<int> assumptions);
+    void assume(int lit);
+    bool failed(int lit);
+
+    int getNewVar();
+
+    void synthesize(std::set<int> depVal, int hId, int newAuxVar);
+
+    void addClause(std::vector<int> clause);
+
 private:
     CaDiCaL::Solver solver;
     // std::map<int, int> exToHMapping;

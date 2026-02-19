@@ -3,7 +3,7 @@
 
 #include "helper.h"
 
-Logger* globalLogger = new Logger();
+Logger globalLogger;
 
 
 int main(int argc, char* argv[]){
@@ -54,20 +54,11 @@ int main(int argc, char* argv[]){
         delete p.second;
     }
 
+    CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
+    CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
+    CadicalWrapper* constraintWrapper = new CadicalWrapper();
 
-
-    // delta and neg_phi solver
-    // CaDiCaL::Solver solver;
-    // solver.set("incremental",1);
-
-    // CaDiCaL::Solver constraintSolver;
-    // constraintSolver.set("incremental",1);
-
-    // CaDiCaL::Solver unsatCoreExtractor;
-    // unsatCoreExtractor.set("incremental",1);
-
-
-
+    cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
 
 
 
