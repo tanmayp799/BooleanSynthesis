@@ -4,6 +4,15 @@
 
 KissatWrapper::KissatWrapper() {
     solver = kissat_init();
+    kissat_set_option(solver, "quiet", 1);
+    // Level 3 provides the most detailed diagnostic output
+    // kissat_set_option(solver, "verbose", 3);
+
+    // // Additionally, ensure 'quiet' is disabled (set to 0)
+    // kissat_set_option(solver, "quiet", 0);
+
+    // // You can also enable 'report' for periodic status lines
+    // kissat_set_option(solver, "report", 1);
     numVars = 0;
     outputVar = 0;
 }
@@ -64,8 +73,28 @@ int KissatWrapper::getNumVars(){
 
 int KissatWrapper::eliminateExistentialVars(){
     return kissat_eliminate_variables(this->solver, this->ExistentialVarsToEliminate.data(), this->ExistentialVarsToEliminate.size());
+
+
+    // globalLogger.log(LogLevel::DEBUG, fmt::format("E-Vars to Eliminate: {}", fmt::join(this->ExistentialVarsToEliminate," ")));
+
+    // unsigned int result_size;
+    // std::unique_ptr<int[]> cnf_array(kissat_dump_cnf(solver, &result_size));
+    // for(int i=0;i<result_size;i++){
+    //     std::cout<<cnf_array[i]<<" ";
+    //     if(cnf_array[i]==0) std::cout<<std::endl;
+    // }
+    // return 0;
 }
 
+void KissatWrapper::printClauses(){
+    unsigned int result_size;
+    std::unique_ptr<int[]> cnf_array(kissat_dump_cnf(solver, &result_size));
+    for(int i=0;i<result_size;i++){
+        std::cout<<cnf_array[i]<<" ";
+        if(cnf_array[i]==0) std::cout<<std::endl;
+    }
+    // return 0;
+}
 
 void KissatWrapper::eliminateUniversalVars(){
 
@@ -74,8 +103,9 @@ void KissatWrapper::eliminateUniversalVars(){
 
 
     std::set<int> varsToElim(this->UniversalVarsToEliminate.begin(), this->UniversalVarsToEliminate.end());
-
+    std::set<int> exisVarsToElim(this->ExistentialVarsToEliminate.begin(), this->ExistentialVarsToEliminate.end());
     // std::vector<std::vector<int>> localSpec;
+    std::set<int> failedEliminations;
     std::vector<int> currClause;
     for(int i=0;i<result_size;i++){
         if(cnf_array[i]==0){
@@ -85,11 +115,32 @@ void KissatWrapper::eliminateUniversalVars(){
             }
         }
         else{
+
+            if(exisVarsToElim.find(abs(cnf_array[i]))!=exisVarsToElim.end()){
+                // globalLogger.log(LogLevel::ERROR, "Failed to eliminate e-var: "+std::to_string(abs(cnf_array[i])));
+                failedEliminations.insert(abs(cnf_array[i]));
+            }
+
             if(varsToElim.find(abs(cnf_array[i]))!=varsToElim.end()){
                 continue;
             }
             currClause.push_back(cnf_array[i]);
         }
     }
+
+    globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedEliminations," ")) );
+
+
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Printing final local matrix: {}", this->outputVar));
+
+    for(auto clause:localSpec){
+        globalLogger.log(LogLevel::DEBUG, fmt::format("{}", fmt::join(clause, " ")));
+    }
+
     return;
+}
+
+
+std::vector<std::vector<int>> KissatWrapper::getLocalSpec(){
+    return this->localSpec;
 }

@@ -36,14 +36,20 @@ Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fCha
 		Cnf_DataTranformPolarity(pCnf,0);
 	}
 
-	Abc_Print( 1, "CNF stats: Vars = %6d. Clauses = %7d. Literals = %8d.   ", pCnf->nVars, pCnf->nClauses, pCnf->nLiterals );
-    Abc_PrintTime( 1, "Time", Abc_Clock() - clk );
+	if(fVerbose) {
+		Abc_Print( 1, "CNF stats: Vars = %6d. Clauses = %7d. Literals = %8d.   ", pCnf->nVars, pCnf->nClauses, pCnf->nLiterals );
+		Abc_PrintTime( 1, "Time", Abc_Clock() - clk );
+	}
 	// Cnf_DataWriteIntoFile(pCnf,pFilename,0,NULL,NULL);
 	Aig_ManStop(pMan);
 	return pCnf;
 
 }
 
+CadicalWrapper::CadicalWrapper(){
+    this->solver.set("incremental",1);
+    this->numInputs = 0;
+}
 
 
 CadicalWrapper::CadicalWrapper(AigWrapper* aw){
@@ -56,7 +62,7 @@ CadicalWrapper::CadicalWrapper(AigWrapper* aw){
     Abc_Ntk_t* ntk = aw->getNtk();
     Cnf_Dat_t* pCnf;
 
-    pCnf = myDarToCnf(ntk,NULL,0,0,1);
+    pCnf = myDarToCnf(ntk,NULL,0,0,0);
 
     int * pLit, * pStop;
     // printf("Num Vars: %d, Num Clauses: %d\n",pCnf->nVars, pCnf->nClauses);
@@ -73,6 +79,7 @@ CadicalWrapper::CadicalWrapper(AigWrapper* aw){
         this->inputToVarMapping[i+1] = pCnf->pVarNums[Abc_ObjId(Abc_NtkCi(ntk,i))];
         assert(this->inputToVarMapping[i+1]!=0);
     }
+    Cnf_DataFree(pCnf);
 }
 
 void CadicalWrapper::setDefaultValue(int hVar, bool defaultVal){
@@ -267,4 +274,8 @@ void CadicalWrapper::addClause(std::vector<int> clause){
     this->solver.add(0);
     return;
 
+}
+
+CadicalWrapper::~CadicalWrapper(){
+    
 }

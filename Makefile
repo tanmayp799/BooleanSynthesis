@@ -32,11 +32,11 @@ LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/ -L $(KISSAT_PATH)/build/
 DIR_INCLUDES = $(ABC_INCLUDES) $(CADICAL_INCLUDES) $(KISSAT_INCLUDES) $(LIB_DIRS)
 
 LIB_ABC    = -Wl,-Bstatic  -labc
-LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz
+LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz -lfmt
 LIB_CADICAL = -Wl,-Bstatic -lcadical
 LIB_KISSAT = -Wl,-Bstatic -lkissat
 
-CPP_FLAGS += -std=c++17 -DNO_UNIGEN
+CPP_FLAGS += -std=c++20 -DNO_UNIGEN
 # LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON) # for src folder and not src2
 LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_KISSAT) $(LIB_COMMON)
 

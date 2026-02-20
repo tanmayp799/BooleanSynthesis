@@ -48,12 +48,14 @@ public:
     int getOutputVar();
     std::vector<int> getDependencySet();
     int getNumVars();
+    std::vector<std::vector<int>> getLocalSpec();
 
 
     int eliminateExistentialVars();
     void eliminateUniversalVars();
 
     // Dqbf* getDqbf();
+    void printClauses();
 
 private:
     struct kissat* solver;

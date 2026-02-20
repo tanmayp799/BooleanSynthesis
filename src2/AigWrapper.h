@@ -50,7 +50,7 @@ public:
 
     Aig_Man_t* getManager();
 
-    std::vector<Aig_Obj_t*> merge(AigWrapper* aw); //returns the outputs of new AIG
+    void merge(AigWrapper* aw); //returns the outputs of new AIG
 
     void generateDef(int outputVar, int hVar);
 

@@ -8,7 +8,10 @@ std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf){
     std::vector<KissatWrapper*> localSpecs;
     std::set<int> deps = origDqbf->GetDepVars();
     for(auto id:deps){
+        globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
         KissatWrapper* kw = origDqbf->getLocalFormula(id);
+        // auto tmp = kw->getExistentialVarsToEliminate();
+        // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
         localSpecs.push_back(kw);
     }
     return localSpecs;

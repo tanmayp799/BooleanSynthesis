@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 #include <mutex>
+#include <format>
+#include <fmt/ranges.h>
 
 enum class LogLevel {
     INFO,

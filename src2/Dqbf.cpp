@@ -43,7 +43,7 @@ Dqbf::Dqbf(std::set<int> universals, std::set<int> existentials, std::set<int> d
 KissatWrapper* Dqbf::getLocalFormula(int var){
 
     std::set<int> UniversalVarsToEliminate(this->universals.begin(), this->universals.end());
-    std::set<int> ExistentialVarsToEliminate(this->existentials.begin(), this->existentials.end());
+    std::set<int> ExistentialVarsToEliminate(this->depVars.begin(), this->depVars.end());
 
     ExistentialVarsToEliminate.erase(var);
     std::set<int> depSet = this->GetDependencySet(var);
@@ -60,7 +60,7 @@ KissatWrapper* Dqbf::getLocalFormula(int var){
     for(auto clause:this->clauses){
         kw->addClause(clause);
     }
-
+    // kw->printClauses();
     return kw;
 
 }

@@ -43,12 +43,119 @@ Aig_Man_t* compressAig(Aig_Man_t* SAig) {
 }
 
 
+AigWrapper::~AigWrapper(){
+    Aig_ManStop(this->manager);
+}
+
+AigWrapper::AigWrapper(Dqbf* dqbf){
+    // this->numInputs = origDqbf->GetNumInputs();
+    this->manager = Aig_ManStart(0);
+    
+    int numInputs = dqbf->GetNumInputs();
+
+    this->addInputs(numInputs);
+
+    Aig_Obj_t* outNode = Aig_ManConst1(this->manager);
+
+
+    for(auto clause: dqbf->GetClauses()){
+        Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
+        for(auto lit:clause){
+            if(lit>0){
+                clauseNode = Aig_Or(this->manager, clauseNode, Aig_ManCi(this->manager, lit-1));
+            }
+            else{
+                clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
+            }
+        }
+        outNode = Aig_And(this->manager, outNode, clauseNode);
+    }
+    Aig_ObjCreateCo(this->manager, outNode);
+}
+
+AigWrapper::AigWrapper(KissatWrapper* kw){
+    this->manager = Aig_ManStart(0);
+
+    int numInputs = kw->getNumVars();
+
+    this->addInputs(numInputs);
+
+    Aig_Obj_t* outNode = Aig_ManConst1(this->manager);
+
+    for(auto clause: kw->getLocalSpec()){
+        Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
+        for(auto lit:clause){
+            if(lit>0){
+                clauseNode = Aig_Or(this->manager, clauseNode, Aig_ManCi(this->manager, lit-1));
+            }
+            else{
+                clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
+            }
+        }
+        outNode = Aig_And(this->manager, outNode, clauseNode);
+    }
+    Aig_ObjCreateCo(this->manager, outNode);
+}
+
+
+
+Aig_Man_t* AigWrapper::getManager(){
+    return this->manager;
+}
+
+void AigWrapper::addInputs(int numInputs){
+    for(int i=0;i<numInputs;i++){
+        Aig_ObjCreateCi(this->manager);
+    }
+}
+
+void AigWrapper::negateOutput(){
+    Aig_ManCo(this->manager, 0)->pFanin0 = Aig_Not(Aig_ManCo(this->manager, 0)->pFanin0);
+}
+
 int AigWrapper::getNumInputs(){
     return Aig_ManCiNum(this->manager);
 }
 
 Abc_Ntk_t* AigWrapper::getNtk(){
     return ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+}
+
+
+
+
+void AigWrapper::merge(AigWrapper* aw){
+
+
+    Abc_Ntk_t* baseNtk = this->getNtk();
+    Abc_Ntk_t* srcNtk = aw->getNtk();
+
+    Abc_NtkAppend(baseNtk,srcNtk,1);
+
+    this->manager = ABC_NAMESPACE::Abc_NtkToDar(baseNtk,0,0);
+
+    Aig_Obj_t* out1 = Aig_ManCo(this->manager,0)->pFanin0;
+    Aig_Obj_t* out2 = Aig_ManCo(this->manager,1)->pFanin0;
+
+    Aig_Obj_t* newOut = Aig_And(this->manager, out1, out2);
+
+    Aig_ObjCreateCo(this->manager, newOut);
+
+    Aig_ObjDisconnect(this->manager, Aig_ManCo(this->manager, 0));
+    Aig_ObjConnect(this->manager, Aig_ManCo(this->manager, 0), Aig_ManConst0(this->manager), NULL);
+    
+    Aig_ObjDisconnect(this->manager, Aig_ManCo(this->manager, 1));
+    Aig_ObjConnect(this->manager, Aig_ManCo(this->manager, 1), Aig_ManConst0(this->manager), NULL);
+
+    Aig_ManCoCleanup(this->manager);
+    Aig_ManCleanup(this->manager);
+    
+    // Aig_ManCoCleanup(this->manager);
+    return;
+
+
+
+
 }
 
 void AigWrapper::generateDef(int outputVar, int hVar){
@@ -157,8 +264,8 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 
     Aig_Man_t* defMan = ABC_NAMESPACE::Abc_NtkToDar(ANtk2, 0, 0);
     
-    Aig_Obj_t* outA = Aig_ManCo(defMan,0);
-    Aig_Obj_t* outB = Aig_ManCo(defMan,1);
+    Aig_Obj_t* outA = Aig_ManCo(defMan,0)->pFanin0;
+    Aig_Obj_t* outB = Aig_ManCo(defMan,1)->pFanin0;
 
     Aig_Obj_t* currH = Aig_ManCi(defMan, hVar-1);
 
