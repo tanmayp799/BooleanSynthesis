@@ -61,6 +61,8 @@ public:
 
     Abc_Ntk_t* getNtk();
 
+    void ShowAig();
+
 private:
     Aig_Man_t* manager;
 };

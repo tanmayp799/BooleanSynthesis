@@ -4,15 +4,34 @@
 
 KissatWrapper::KissatWrapper() {
     solver = kissat_init();
-    kissat_set_option(solver, "quiet", 1);
+    // kissat_set_option(solver, "quiet", 1);
     // Level 3 provides the most detailed diagnostic output
-    // kissat_set_option(solver, "verbose", 3);
+    kissat_set_option(solver, "verbose", 3);
 
-    // // Additionally, ensure 'quiet' is disabled (set to 0)
-    // kissat_set_option(solver, "quiet", 0);
+    // Additionally, ensure 'quiet' is disabled (set to 0)
+    kissat_set_option(solver, "quiet", 0);
 
-    // // You can also enable 'report' for periodic status lines
-    // kissat_set_option(solver, "report", 1);
+    // You can also enable 'report' for periodic status lines
+    kissat_set_option(solver, "report", 1);
+
+    kissat_set_option(solver, "eliminaterounds",20);
+    kissat_set_option(solver,"eliminatebound", 64);
+    kissat_set_option(solver, "eliminateeffort", 400);
+
+    kissat_set_option(solver, "eliminateocclim", 10000);
+    kissat_set_option(solver, "eliminateclslim", 3000);
+
+    int er = kissat_get_option(solver, "eliminaterounds");
+    int eb = kissat_get_option(solver, "eliminatebound");
+    int ee = kissat_get_option(solver, "eliminateeffort");
+    int eo = kissat_get_option(solver, "eliminateocclim");
+    int ec = kissat_get_option(solver, "eliminateclslim");
+
+    globalLogger.log(LogLevel::DEBUG, fmt::format("er: {} eb: {} ee: {} eo: {} ec: {}", er, eb, ee, eo, ec));
+
+
+    // kissat_set_option(s, "eliminaterounds", 5);
+
     numVars = 0;
     outputVar = 0;
 }
@@ -71,8 +90,35 @@ int KissatWrapper::getNumVars(){
     return this->numVars;
 }
 
+
+
+// bool KissatWrapper::existentialsPresent(){
+
+
+//     for(auto var: this->ExistentialVarsToEliminate){
+//         if(this->solver->flags[var-1].active) return true;
+//     }
+
+//     return false;
+
+// }
+
 int KissatWrapper::eliminateExistentialVars(){
-    return kissat_eliminate_variables(this->solver, this->ExistentialVarsToEliminate.data(), this->ExistentialVarsToEliminate.size());
+
+    int maxTries = 1;
+    int attempt = 0;
+    // this->solver->bounds.eliminate.additional_clauses = 20;
+    do{
+        
+        std::cerr<<"Attempt number: "<<attempt<<std::endl;
+        kissat_eliminate_variables(this->solver, this->ExistentialVarsToEliminate.data(), this->ExistentialVarsToEliminate.size());
+        attempt++;
+
+    } while(attempt<maxTries);
+
+
+    return 0;
+    // return kissat_eliminate_variables(this->solver, this->ExistentialVarsToEliminate.data(), this->ExistentialVarsToEliminate.size());
 
 
     // globalLogger.log(LogLevel::DEBUG, fmt::format("E-Vars to Eliminate: {}", fmt::join(this->ExistentialVarsToEliminate," ")));
@@ -129,6 +175,8 @@ void KissatWrapper::eliminateUniversalVars(){
     }
 
     globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedEliminations," ")) );
+    // this->localSpec.clear();
+    // this->eliminateExistentialVars();
 
 
     globalLogger.log(LogLevel::DEBUG, fmt::format("Printing final local matrix: {}", this->outputVar));

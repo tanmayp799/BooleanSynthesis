@@ -8,6 +8,12 @@ extern "C" {
     #include "kissat.h"
     #include "eliminate.h"
     #include "dump.h"
+    // #include "internal.h"
+    // #include "flags.h"
+
+    // #define export kissat_export_var 
+    // #include "internal.h"
+    // #undef export
 }
 
 #include "Logger.h"
@@ -56,6 +62,8 @@ public:
 
     // Dqbf* getDqbf();
     void printClauses();
+
+    // bool existentialsPresent();
 
 private:
     struct kissat* solver;

@@ -69,6 +69,7 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
             }
         }
         outNode = Aig_And(this->manager, outNode, clauseNode);
+        // this->ShowAig();
     }
     Aig_ObjCreateCo(this->manager, outNode);
 }
@@ -93,10 +94,19 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
             }
         }
         outNode = Aig_And(this->manager, outNode, clauseNode);
+        // this->ShowAig();
     }
     Aig_ObjCreateCo(this->manager, outNode);
+    // this->ShowAig();
 }
 
+
+void AigWrapper::ShowAig(){
+    Aig_ManShow(this->manager,0,NULL);
+    int x;
+    std::cin>>x;
+    return;
+}
 
 
 Aig_Man_t* AigWrapper::getManager(){

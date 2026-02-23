@@ -58,6 +58,7 @@ CadicalWrapper::CadicalWrapper(AigWrapper* aw){
     this->numInputs = aw->getNumInputs();
     
     // Aig_Man_t* man = aw->getManager();
+    aw->ShowAig();
 
     Abc_Ntk_t* ntk = aw->getNtk();
     Cnf_Dat_t* pCnf;

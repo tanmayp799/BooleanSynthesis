@@ -27,15 +27,19 @@ int main(int argc, char* argv[]){
 
     std::map<int, AigWrapper*> outputToAig;
     for(auto kw:localInitializations){
+        std::cout<<"Generating AIG for id: "<<kw->getOutputVar()<<std::endl;
         outputToAig[kw->getOutputVar()] = new AigWrapper(kw);
     }
 
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
+    // finalFormula->ShowAig();
     AigWrapper* unsatCoreFormula = new AigWrapper(origDqbf);
     int numNewInputs = origDqbf->GetDepVars().size();
     finalFormula->addInputs(numNewInputs);
     unsatCoreFormula->addInputs(numNewInputs);
     finalFormula->negateOutput();
+    globalLogger.log(LogLevel::INFO, "Final Formula:");
+    // finalFormula->ShowAig();
     int hCount = 1;
 
     std::map<int, int> exToHMapping;
@@ -43,6 +47,8 @@ int main(int argc, char* argv[]){
     for(auto p:outputToAig){
         p.second->addInputs(numNewInputs);
         p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
+        globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
+        // p.second->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
         hCount++;
     }
@@ -59,6 +65,7 @@ int main(int argc, char* argv[]){
     for(auto p:outputToAig){
         delete p.second;
     }
+    finalFormula->ShowAig();
 
     CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
     CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
