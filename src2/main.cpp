@@ -22,7 +22,7 @@ int main(int argc, char* argv[]){
     for(auto kw:localInitializations){
         globalLogger.log(LogLevel::INFO, fmt::format("Performing Quantifier Elimination for id: {}", kw->getOutputVar()));
         kw->eliminateExistentialVars();
-        kw->eliminateUniversalVars();
+        // kw->eliminateUniversalVars();
     }
 
     std::map<int, AigWrapper*> outputToAig;
@@ -53,6 +53,10 @@ int main(int argc, char* argv[]){
         hCount++;
     }
 
+    for(auto p:exToHMapping){
+        globalLogger.log(LogLevel::INFO, fmt::format("Ex: {} -> H: {}", p.first, p.second));
+    }
+
     // AigWrapper* skolemFunctions = new AigWrapper();
     // skolemFunctions->addInputs(origDqbf->GetNumInputs()+numNewInputs);
 
@@ -65,7 +69,9 @@ int main(int argc, char* argv[]){
     for(auto p:outputToAig){
         delete p.second;
     }
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
+    std::cout<<finalFormula->GetNumOutputs()<<std::endl;
+    // finalFormula->ShowAig();
 
     CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
     CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);

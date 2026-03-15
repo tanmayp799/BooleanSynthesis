@@ -62,6 +62,10 @@ public:
     Abc_Ntk_t* getNtk();
 
     void ShowAig();
+    void compress();
+    int GetNumOutputs(){
+        return Aig_ManCoNum(this->manager);
+    }
 
 private:
     Aig_Man_t* manager;

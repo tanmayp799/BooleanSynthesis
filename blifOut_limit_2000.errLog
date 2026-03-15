@@ -1,0 +1,104 @@
+[ERROR] Attempting quantifier elimination for: 37
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 40 41 42 48 50 52 53 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 38
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 39
+Attempt number: 0
+[ERROR] Failed to eliminate: 41 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 40
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 41
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 42
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 43
+Attempt number: 0
+[ERROR] Failed to eliminate: 41 42 50 53 54 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 44
+Attempt number: 0
+[ERROR] Failed to eliminate: 41 42 50 52 54 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 45
+Attempt number: 0
+[ERROR] Failed to eliminate: 41 42 50 52 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 46
+Attempt number: 0
+[ERROR] Failed to eliminate: 41 42 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 47
+Attempt number: 0
+[ERROR] Failed to eliminate: 38 41 42 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 48
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 49
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 40 41 42 50 52 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 50
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 51
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 40 41 45 48 50 52 53 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 52
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 53
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 54
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 55
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 56
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 57
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 58
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 40 41 42 48 50 52 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 59
+Attempt number: 0
+[ERROR] Failed to eliminate: 38 39 40 41 42 50 52 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 60
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 61
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 62
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 55 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 63
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 56 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 64
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 55 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 65
+Attempt number: 0
+[ERROR] Failed to eliminate: 38 40 41 42 50 52 53 55 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 66
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 40 41 42 48 50 52 53 55 56 58 61 62 65 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 67
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 55 56 58
+[ERROR] Attempting quantifier elimination for: 68
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 69
+Attempt number: 0
+[ERROR] Failed to eliminate: 38 39 41 42 47 48 50 52 53 75 109 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 70
+Attempt number: 0
+[ERROR] Failed to eliminate: 39 41 42 48 50 52 53 75 117 118 119 120 121 122
+[ERROR] Attempting quantifier elimination for: 71
+Attempt number: 0

@@ -8,6 +8,7 @@
 #include <mutex>
 #include <format>
 #include <fmt/ranges.h>
+#include <vector>
 
 enum class LogLevel {
     INFO,
@@ -26,6 +27,7 @@ public:
 
     // Core logging function
     void log(LogLevel level, const std::string& message);
+    void log(LogLevel level, const std::string& prefix, const std::vector<int>& vec);
 
 private:
     std::ofstream logFile;

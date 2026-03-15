@@ -38,6 +38,10 @@ void Logger::log(LogLevel level, const std::string& message) {
     }
 }
 
+void Logger::log(LogLevel level, const std::string& prefix, const std::vector<int>& vec) {
+    log(level, fmt::format("{} {}", prefix, fmt::join(vec, " ")));
+}
+
 std::string Logger::levelToString(LogLevel level) {
     switch (level) {
         case LogLevel::INFO: return "INFO";

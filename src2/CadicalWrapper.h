@@ -28,6 +28,13 @@ public:
     void synthesize(std::set<int> depVal, int hId, int newAuxVar);
 
     void addClause(std::vector<int> clause);
+    void addRawClause(std::vector<int> clause);
+    CaDiCaL::Solver GetSolver();
+
+    std::map<int, int> GetInputToVarMapping(){
+        return this->inputToVarMapping;
+    }
+
 
 private:
     CaDiCaL::Solver solver;

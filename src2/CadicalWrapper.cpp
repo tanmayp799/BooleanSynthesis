@@ -58,7 +58,7 @@ CadicalWrapper::CadicalWrapper(AigWrapper* aw){
     this->numInputs = aw->getNumInputs();
     
     // Aig_Man_t* man = aw->getManager();
-    aw->ShowAig();
+    // aw->ShowAig();
 
     Abc_Ntk_t* ntk = aw->getNtk();
     Cnf_Dat_t* pCnf;
@@ -96,13 +96,14 @@ void CadicalWrapper::setDefaultValue(int hVar, bool defaultVal){
     }
     this->solver.add(0);
 
-    solver.add(-hVar);
+    int mappedHVar = this->inputToVarMapping[hVar];
+    solver.add(-mappedHVar);
     solver.add(zVarId);
     solver.add(sVarId);
     solver.add(0);
     
     //h or -z or s
-    solver.add(hVar);
+    solver.add(mappedHVar);
     solver.add(-zVarId);
     solver.add(sVarId);
     solver.add(0);
@@ -137,6 +138,12 @@ std::vector<int> CadicalWrapper::getCex(){
     return cex;
 
 }
+
+
+CaDiCaL::Solver CadicalWrapper::GetSolver(){
+    return this->solver;
+}
+
 
 void CadicalWrapper::assume(std::vector<int> assumptions){
 
@@ -275,6 +282,13 @@ void CadicalWrapper::addClause(std::vector<int> clause){
     this->solver.add(0);
     return;
 
+}
+
+void CadicalWrapper::addRawClause(std::vector<int> clause){
+    for(auto lit:clause){
+        this->solver.add(lit);
+    }
+    this->solver.add(0);
 }
 
 CadicalWrapper::~CadicalWrapper(){

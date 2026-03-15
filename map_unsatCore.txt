@@ -1,11 +1,34 @@
 ORIGINAL INPUTS:
-INPUT 1 , var map: 6
-INPUT 2 , var map: 7
-INPUT 3 , var map: 8
-INPUT 4 , var map: 9
-INPUT 5 , var map: 10
-INPUT 6 , var map: 11
-INPUT 7 , var map: 12
-INPUT 8 , var map: 13
-INPUT 9 , var map: 14
+INPUT 1 , var map: 5
+INPUT 2 , var map: 6
+INPUT 3 , var map: 7
+INPUT 4 , var map: 8
+INPUT 5 , var map: 9
+INPUT 6 , var map: 10
+INPUT 7 , var map: 11
+INPUT 8 , var map: 12
+INPUT 9 , var map: 13
+INPUT 10 , var map: 14
+INPUT 11 , var map: 15
+INPUT 12 , var map: 16
+INPUT 13 , var map: 17
+INPUT 14 , var map: 18
+INPUT 15 , var map: 19
+INPUT 16 , var map: 20
+INPUT 17 , var map: 21
+INPUT 18 , var map: 22
+INPUT 19 , var map: 23
+INPUT 20 , var map: 24
+INPUT 21 , var map: 25
+INPUT 22 , var map: 26
+INPUT 23 , var map: 27
+INPUT 24 , var map: 28
+INPUT 25 , var map: 29
+INPUT 26 , var map: 30
+INPUT 27 , var map: 31
 AUXILIARIES:
+IES:
+ES:
+S:
+S:
+:

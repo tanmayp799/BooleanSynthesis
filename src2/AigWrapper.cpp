@@ -60,6 +60,7 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
 
     for(auto clause: dqbf->GetClauses()){
         Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
+        // globalLogger.log(LogLevel::ERROR,fmt::format("Clause: {}",fmt::join(clause," ")));
         for(auto lit:clause){
             if(lit>0){
                 clauseNode = Aig_Or(this->manager, clauseNode, Aig_ManCi(this->manager, lit-1));
@@ -67,6 +68,7 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
             else{
                 clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
             }
+            // this->ShowAig();
         }
         outNode = Aig_And(this->manager, outNode, clauseNode);
         // this->ShowAig();
@@ -92,12 +94,38 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
             else{
                 clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
             }
+            // this->ShowAig();
         }
         outNode = Aig_And(this->manager, outNode, clauseNode);
         // this->ShowAig();
     }
     Aig_ObjCreateCo(this->manager, outNode);
     // this->ShowAig();
+
+    std::vector<int> evars = kw->getExistentialVarsToEliminate();
+    std::vector<int> uvars = kw->getUniversalVarsToEliminate();
+
+    Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+    Aig_ManStop(this->manager);
+    
+    for(int i=0;i<evars.size();i++){
+        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
+        if(newNtk==NULL) exit(2);
+        Abc_NtkDelete(ntk);
+        ntk = newNtk;
+    }
+    for(int i=0;i<uvars.size();i++){
+        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
+        if(newNtk==NULL) exit(2);
+        Abc_NtkDelete(ntk);
+        ntk = newNtk;
+    }
+
+    this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
+    Abc_NtkDelete(ntk);
+    // this->ShowAig();
+
+
 }
 
 
@@ -125,6 +153,10 @@ void AigWrapper::negateOutput(){
 
 int AigWrapper::getNumInputs(){
     return Aig_ManCiNum(this->manager);
+}
+
+void AigWrapper::compress(){
+    this->manager = compressAig(this->manager);
 }
 
 Abc_Ntk_t* AigWrapper::getNtk(){

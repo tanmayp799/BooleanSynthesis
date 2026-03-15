@@ -14,12 +14,14 @@ KissatWrapper::KissatWrapper() {
     // You can also enable 'report' for periodic status lines
     kissat_set_option(solver, "report", 1);
 
-    kissat_set_option(solver, "eliminaterounds",20);
-    kissat_set_option(solver,"eliminatebound", 64);
+    kissat_set_option(solver, "eliminaterounds",10);
+    kissat_set_option(solver,"eliminatebound", 128);
     kissat_set_option(solver, "eliminateeffort", 400);
 
     kissat_set_option(solver, "eliminateocclim", 10000);
     kissat_set_option(solver, "eliminateclslim", 3000);
+
+    // kissat_set_option(solver, "log", 1);
 
     int er = kissat_get_option(solver, "eliminaterounds");
     int eb = kissat_get_option(solver, "eliminatebound");
@@ -107,6 +109,8 @@ int KissatWrapper::eliminateExistentialVars(){
 
     int maxTries = 1;
     int attempt = 0;
+    globalLogger.log(LogLevel::ERROR, fmt::format("Attempting quantifier elimination for: {}", this->outputVar));
+    // kissat_set_option(this->solver, "log", 1);
     // this->solver->bounds.eliminate.additional_clauses = 20;
     do{
         
