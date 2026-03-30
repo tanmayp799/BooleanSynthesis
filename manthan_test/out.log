@@ -1,0 +1,296 @@
+./manthan_test/test.dqdimacs
+Found split candidate: 16 | 1
+Var: 16 | Setting to TRUE
+Found split candidate: 17 | 2
+Var: 17 | Setting to FALSE
+Found split candidate: 18 | 1
+Var: 18 | Setting to TRUE
+Found split candidate: 14 | 2
+Var: 14 | Setting to FALSE
+Found split candidate: 19 | 1
+Var: 19 | Setting to TRUE
+Found split candidate: 21 | 0
+Var: 21 | Setting to TRUE
+Found split candidate: 23 | 0
+Var: 23 | Setting to TRUE
+Found split candidate: 24 | 2
+Var: 24 | Setting to FALSE
+Found split candidate: -1 | -1
+REMAP INPUTS CREATING PIs
+41
+1 1
+2 2
+3 3
+4 4
+5 5
+6 6
+7 7
+8 8
+9 9
+10 10
+11 11
+12 12
+13 13
+14 14
+15 15
+16 16
+17 17
+18 18
+19 19
+20 20
+21 21
+22 22
+23 23
+24 24
+25 25
+26 26
+27 27
+28 28
+29 29
+30 30
+31 31
+32 32
+33 33
+34 34
+35 35
+36 36
+37 37
+38 38
+39 39
+40 40
+41 41
+REMAP INPUTS CREATING PIs
+41
+1 1
+2 2
+3 3
+4 4
+5 5
+6 6
+7 7
+8 8
+9 9
+10 10
+11 11
+12 12
+13 13
+14 28
+15 29
+16 30
+17 31
+18 32
+19 33
+20 34
+21 35
+22 36
+23 37
+24 38
+25 39
+26 40
+27 41
+28 14
+29 15
+30 16
+31 17
+32 18
+33 19
+34 20
+35 21
+36 22
+37 23
+38 24
+39 25
+40 26
+41 27
+(null)          : pi =    41  po =     1  and =      97  lev =  16
+CNF stats: Vars =     78. Clauses =     163. Literals =      437.   Time =     0.01 sec
+Unate 0 check ** SAT ** for var: 15
+CEX: 0 0 1 0 0 1 0 1 0 1 1 1 0 0 1 1 1 1 1 0 1 0 1 1 0 0 0 0 0 1 1 1 1 0 1 0 1 1 0 0 0 
+OUTPUT: 1
+Unate 1 check ** SAT ** for var: 15
+CEX: 1 0 1 0 0 1 0 1 1 1 0 1 1 0 0 1 1 1 1 0 1 0 1 1 1 0 0 0 1 1 1 1 1 0 1 0 1 1 1 0 0 
+OUTPUT: 1
+Unate 0 check ** SAT ** for var: 20
+CEX: 1 0 0 0 0 1 0 1 1 1 1 1 1 0 1 0 0 0 0 1 1 0 1 1 1 0 0 0 1 0 0 0 0 0 1 0 1 1 1 0 0 
+OUTPUT: 1
+unate 0:
+14
+16
+17
+18
+19
+21
+22
+23
+24
+25
+26
+27
+unate 1:
+20
+Generating DQCNF and Aig_Man_t Objects for Projected PHI_i
+Getting projection for var: 14
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_14
+Getting projection for var: 15
+Clauses:
+13 15 0
+-10 15 0
+-15 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_15
+Getting projection for var: 16
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_16
+Getting projection for var: 17
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_17
+Getting projection for var: 18
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_18
+Getting projection for var: 19
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_19
+Getting projection for var: 20
+Clauses:
+20 0
+2 20 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_20
+Getting projection for var: 21
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_21
+Getting projection for var: 22
+Clauses:
+-22 0
+-22 -4 0
+-22 -13 -3 0
+22 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_22
+Phi_i is const 0 for id: 22
+Getting projection for var: 23
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_23
+Getting projection for var: 24
+Clauses:
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_24
+Getting projection for var: 25
+Clauses:
+-25 -1 11 0
+-11 25 0
+13 25 0
+7 25 0
+-11 25 0
+-13 25 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_25
+Getting projection for var: 26
+Clauses:
+-26 -1 3 0
+-26 9 0
+-26 -3 0
+-26 0
+-1 26 0
+8 26 0
+-3 26 0
+26 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_26
+Phi_i is const 0 for id: 26
+Getting projection for var: 27
+Clauses:
+5 27 0
+3 27 0
+-11 -5 27 0
+Generated DQCNF and Aig_Man_t Objects for Projected PHI_27
+DONE. Time Elapsed: 0.011275
+Generating PHI_i(0) and PHI_i(1)...
+Generating Phi(1) and Phi(0) for EX_VAR: 14
+Generating Phi(1) and Phi(0) for EX_VAR: 15
+Generating Phi(1) and Phi(0) for EX_VAR: 16
+Generating Phi(1) and Phi(0) for EX_VAR: 17
+Generating Phi(1) and Phi(0) for EX_VAR: 18
+Generating Phi(1) and Phi(0) for EX_VAR: 19
+Generating Phi(1) and Phi(0) for EX_VAR: 20
+Generating Phi(1) and Phi(0) for EX_VAR: 21
+Generating Phi(1) and Phi(0) for EX_VAR: 22
+Generating Phi(1) and Phi(0) for EX_VAR: 23
+Generating Phi(1) and Phi(0) for EX_VAR: 24
+Generating Phi(1) and Phi(0) for EX_VAR: 25
+Generating Phi(1) and Phi(0) for EX_VAR: 26
+Generating Phi(1) and Phi(0) for EX_VAR: 27
+DONE. Time Elapsed: 4.5e-05
+Generating Basis Functions...
+Generating Basis for EX_VAR: 14
+A_i is const 0 for id: 14
+B_i is const 1 for id: 14
+Generating Basis for EX_VAR: 15
+A_i is const 0 for id: 15
+Generating Basis for EX_VAR: 16
+A_i is const 0 for id: 16
+B_i is const 1 for id: 16
+Generating Basis for EX_VAR: 17
+A_i is const 0 for id: 17
+B_i is const 1 for id: 17
+Generating Basis for EX_VAR: 18
+A_i is const 0 for id: 18
+B_i is const 1 for id: 18
+Generating Basis for EX_VAR: 19
+A_i is const 0 for id: 19
+B_i is const 1 for id: 19
+Generating Basis for EX_VAR: 20
+A_i is const 1 for id: 20
+B_i is const 0 for id: 20
+Generating Basis for EX_VAR: 21
+A_i is const 0 for id: 21
+B_i is const 1 for id: 21
+Generating Basis for EX_VAR: 22
+A_i is const 0 for id: 22
+B_i is const 1 for id: 22
+Generating Basis for EX_VAR: 23
+A_i is const 0 for id: 23
+B_i is const 1 for id: 23
+Generating Basis for EX_VAR: 24
+A_i is const 0 for id: 24
+B_i is const 1 for id: 24
+Generating Basis for EX_VAR: 25
+Generating Basis for EX_VAR: 26
+A_i is const 0 for id: 26
+B_i is const 1 for id: 26
+Generating Basis for EX_VAR: 27
+DONE. Time Elapsed: 0.023416
+Generating AIG Manager for negPHI...
+Creating the formula DELTA (AND) !PHI
+Appended Basis for EX_VAR: 14
+Appended Basis for EX_VAR: 15
+Appended Basis for EX_VAR: 16
+Appended Basis for EX_VAR: 17
+Appended Basis for EX_VAR: 18
+Appended Basis for EX_VAR: 19
+Appended Basis for EX_VAR: 20
+Appended Basis for EX_VAR: 21
+Appended Basis for EX_VAR: 22
+Appended Basis for EX_VAR: 23
+Appended Basis for EX_VAR: 24
+Appended Basis for EX_VAR: 25
+Appended Basis for EX_VAR: 26
+Appended Basis for EX_VAR: 27
+(null)          : pi =    41  po =     1  and =     101  lev =   8
+CNF stats: Vars =     78. Clauses =     171. Literals =      503.   Time =     0.00 sec
+(null)          : pi =    27  po =     1  and =      42  lev =   8
+CNF stats: Vars =     45. Clauses =      77. Literals =      215.   Time =     0.00 sec
+Verbose? : c opening file to write './f1.dimacs'
+c writing 'p cnf 91 16' header
+c wrote 16 clauses in 0.00 seconds process time
+c opening file to write './f2.dimacs'
+c writing 'p cnf 31 11' header
+c wrote 11 clauses in 0.00 seconds process time
+Num Clauses: 183 
+Num Vars: 15
+**************           ITER: 1        ******************
+UNSAT BUT WHY?
+Couldn't satisfy constraints, total assignments generated: 1
+Var: 24 | Return from recursion
+Var: 23 | Return from recursion
+Var: 21 | Return from recursion
+Var: 19 | Return from recursion
+Var: 14 | Return from recursion
+Var: 18 | Return from recursion
+Var: 17 | Return from recursion
+Var: 16 | Return from recursion

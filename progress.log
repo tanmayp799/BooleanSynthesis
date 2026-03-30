@@ -25,3 +25,7 @@
         c) Performed unate check on the "d" variables.
     Result:
         Reduced iterations to ~900.
+
+
+TODO:
+    1) "e" variables -> 

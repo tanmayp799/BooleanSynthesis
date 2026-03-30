@@ -1,0 +1,28 @@
+module SkolemFormula (i1, i2, i3, i4, i5, i6, o7, o8, o9);
+input i1;
+input i2;
+input i3;
+input i4;
+input i5;
+input i6;
+output o7;
+output o8;
+output o9;
+wire w7;
+wire w8;
+wire w9;
+wire utemp248;
+wire utemp349;
+wire utemp350;
+wire utemp351;
+assign w7 = i1;
+assign utemp248 = ~i2 & ~i5;
+assign w8 = ~utemp248;
+assign utemp349 = ~i3 & ~i6;
+assign utemp350 = i3 & i6;
+assign utemp351 = ~utemp349 &  ~utemp350;
+assign w9 = utemp351;
+assign o7 = w7;
+assign o8 = w8;
+assign o9 = w9;
+endmodule

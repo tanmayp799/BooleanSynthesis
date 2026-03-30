@@ -285,7 +285,10 @@ void print(vector<T> v, string delim) {
 }
 
 
-//////////////////////////////////// TANMAY's AND ANANYA's HELPERS ////////////////////////////////////////////////////////
+//////////////////////////////////// TANMAY's HELPERS ////////////////////////////////////////////////////////
+
+
+
 class DQCNF{
 
 
@@ -311,8 +314,10 @@ class DQCNF{
 
 	set<int> unate_0;
 	set<int> unate_1;
-
+	
+	map<int, bool> constAssumption;
 	public:
+		string filename;
 		DQCNF(string filename);
 		Aig_Man_t* genAIGMan();
 		set<int> get_existentials(){return this->existential;}
@@ -323,22 +328,53 @@ class DQCNF{
 		vector<set<int>> getClauses(){return this->clauses;}
 		int getNumInputs(){return this->numInputs;}
 		int getNumClauses(){return this->numClauses;}
-
-		DQCNF(set<int> universal, set<int> existential, set<int> deps,
-		 int numInputs, int numClauses, vector<set<int>> clauses);
+		map<int, set<int>> get_dependency(){return this->dependency;}
+		map<int, bool> get_constAssumption(){return this->constAssumption;}
 		
+		DQCNF(set<int> universal, set<int> existential, set<int> deps,
+			int numInputs, int numClauses, vector<set<int>> clauses, map<int, set<int>> dependency, map<int, bool> constAssumption, string filename);
+		
+		
+
 		DQCNF* getProjection(int id);
 		void preprocess();
 		void unateCheck();
 		set<int> get_posUnates(){return unate_1;}
 		set<int> get_negUnates(){return unate_0;}
-};
 
-Abc_Ntk_t * getNtkFromCNF(char* filename);
-void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
+		//-----------------------------   MODULARISATION    ----------------------------------
+		bool containsBadClause();
+		pair<int,int> findSplitCandidates();
+		DQCNF* substituteConst(int var, bool setTrue);
+		void substituteConstInplace(int var, bool setTrue);
+		void modifyClauses(vector<set<int>> clauses){this->clauses=clauses;}
+		DQCNF* removeProblemUnits(int var);
+		bool cegis();
+		void removeDepVar(int var){
+			this->deps.erase(var);
+			return;
+		}
+
+		void assumeConst(int var, bool constVal){
+			this->constAssumption.insert({var,constVal});
+		}
+
+		//-------------------------------------------------------------------
+		set<int> get_all_edvars(){
+			vector<int> tmp;
+			set_union(this->deps.begin(),this->deps.end(), this->existential.begin(),this->existential.end(),back_inserter(tmp));
+
+			set<int> res(tmp.begin(),tmp.end());
+
+			return res;
+		}
+	};
+
+	Abc_Ntk_t * getNtkFromCNF(char* filename);
+	void generateBasis(string phi_0Path, string phi_1Path, vector<Abc_Ntk_t*> &A_Ntk, vector<Abc_Ntk_t*> &B_Ntk,
 					vector<Aig_Man_t*> &A_Man, vector<Aig_Man_t*> &B_Man);
 
-
+					
 Aig_Man_t* remapInputs(Aig_Man_t* p, vector<int> remapIds);
 
 Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fChangePol, int fVerbose);
@@ -346,4 +382,7 @@ Cnf_Dat_t* myDarToCnf(Abc_Ntk_t* pNtk, char * pFilename, int fFastAlgo, int fCha
 static inline int Cnf_Lit2Var( int Lit )        { return (Lit & 1)? -(Lit >> 1)-1 : (Lit >> 1)+1;  }
 static inline int Cnf_Lit2Var2( int Lit )       { return (Lit & 1)? -(Lit >> 1)   : (Lit >> 1);    }
 
+bool driverFunction(DQCNF* obj);
+
+int is_trivialSolver(const std::string& path);
 #endif

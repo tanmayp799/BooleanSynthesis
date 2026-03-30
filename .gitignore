@@ -1,11 +1,16 @@
 bin/
 obj/
+obj2/
 .vscode/
 data/
 benchmarks/
+benchmark_tests/
+kissat_logs/
+
 
 abc.history
 gmon.out
 unknown.ps
 *.ps
 tmp
+*.log
