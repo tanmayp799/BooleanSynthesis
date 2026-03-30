@@ -18,6 +18,7 @@ extern "C" {
 #include "opt/mfs/mfs.h"
 #include "opt/mfs/mfsInt.h"
 #include "bool/kit/kit.h"
+#include "base/io/ioAbc.h"
 #include "bdd/cudd/cuddInt.h"
 #include "bdd/cudd/cudd.h"
 }
@@ -47,6 +48,8 @@ public:
     ~AigWrapper();
     AigWrapper(Dqbf* dqbf);
     AigWrapper(KissatWrapper* kw);
+    AigWrapper(const AigWrapper& other);
+    AigWrapper(AigWrapper* other);
 
     Aig_Man_t* getManager();
 
@@ -66,6 +69,8 @@ public:
     int GetNumOutputs(){
         return Aig_ManCoNum(this->manager);
     }
+
+    void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
 
 private:
     Aig_Man_t* manager;

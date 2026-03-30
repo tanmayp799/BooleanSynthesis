@@ -14,7 +14,8 @@ enum class LogLevel {
     INFO,
     WARNING,
     ERROR,
-    DEBUG
+    DEBUG,
+    STATS
 };
 
 class Logger {
@@ -24,6 +25,8 @@ public:
 
     // Redirect logs to a file (optional)
     void setOutputFile(const std::string& filename);
+
+    void closeOutputFile();
 
     // Core logging function
     void log(LogLevel level, const std::string& message);

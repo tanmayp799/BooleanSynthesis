@@ -13,11 +13,12 @@
 class Parser
 {
 private:
+public:
     int argc;
     char** argv;
-public:
     Parser(int argc, char** argv);
     Dqbf* ParseDqbf();
+    
 };
 
 #endif // PARSER_H

@@ -124,15 +124,15 @@ Aig_Man_t* remapInputs(Aig_Man_t* p, vector<int> remapIds){
 	pNew = Aig_ManStart(Aig_ManObjNumMax(p));
 
 	Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-	cout<<"REMAP INPUTS CREATING PIs\n";
-	cout<<Aig_ManCiNum(p)<<endl;
+	// cout<<"REMAP INPUTS CREATING PIs\n";
+	// cout<<Aig_ManCiNum(p)<<endl;
 
 	Aig_ManForEachCi(p,pObj,i){
 		Aig_ObjCreateCi(pNew);
 	}
 
 	Aig_ManForEachCi(p, pObj, i){
-		cout<<i+1<<" "<<remapIds[i]<<endl;	
+		// cout<<i+1<<" "<<remapIds[i]<<endl;	
 		Aig_ManCi(p, i)->pData = Aig_ManCi(pNew, remapIds[i]-1 );
 	}
 

@@ -14,6 +14,16 @@ std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf){
         // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
         localSpecs.push_back(kw);
     }
+    std::set<int> exis = origDqbf->GetExistentials();
+
+    for(auto id:exis){
+        globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
+        KissatWrapper* kw = origDqbf->getLocalFormula(id);
+        // auto tmp = kw->getExistentialVarsToEliminate();
+        // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
+        localSpecs.push_back(kw);
+    }
+
     return localSpecs;
 }
 
@@ -102,7 +112,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	std::map<int, bool> defaultVal;
     std::set<int> deps = origDqbf->GetDepVars();
-
+    for(auto e: origDqbf->GetExistentials()){
+        deps.insert(e);
+    }
 
     CaDiCaL::Solver solver = solverWrapper->GetSolver();
     CaDiCaL::Solver unsatCoreExtractor = unsatCoreWrapper->GetSolver();
@@ -316,9 +328,10 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	// 	return true;
 	// }
-    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size();
+    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
     int numX = origDqbf->GetUniversals().size();
-    int numY = origDqbf->GetDepVars().size();
+    int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    
 	while(true){
         iter++;
         //check for sat

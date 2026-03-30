@@ -51,7 +51,7 @@ Dqbf* Parser::ParseDqbf(){
             int var;
             while(infile >> var && var != 0){
                 existentials.insert(var);
-                depVars.insert(var);
+                // depVars.insert(var);
                 dependencies[var] = std::set<int>(universals);
                 // if(var > maxVar) maxVar = var;
             }

@@ -25,6 +25,21 @@ int main(int argc, char* argv[]){
         // kw->eliminateUniversalVars();
     }
 
+
+    globalLogger.setOutputFile("./statistics/eliminationStatistics.csv");
+    int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    for(auto kw:localInitializations){
+        globalLogger.log(LogLevel::STATS, fmt::format("{},{},{},{}", argv[1],kw->getOutputVar(), numY-1, kw->getEliminatedVars().size()));
+    }
+
+    globalLogger.closeOutputFile();
+
+
+    exit(1);
+
+
+
+
     std::map<int, AigWrapper*> outputToAig;
     for(auto kw:localInitializations){
         std::cout<<"Generating AIG for id: "<<kw->getOutputVar()<<std::endl;
@@ -33,14 +48,19 @@ int main(int argc, char* argv[]){
 
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
     // finalFormula->ShowAig();
-    AigWrapper* unsatCoreFormula = new AigWrapper(origDqbf);
+    // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
+    AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
     int numNewInputs = origDqbf->GetDepVars().size();
+    numNewInputs+= origDqbf->GetExistentials().size();
     finalFormula->addInputs(numNewInputs);
     unsatCoreFormula->addInputs(numNewInputs);
     finalFormula->negateOutput();
     globalLogger.log(LogLevel::INFO, "Final Formula:");
     // finalFormula->ShowAig();
     int hCount = 1;
+
+
+    exit(1);
 
     std::map<int, int> exToHMapping;
 

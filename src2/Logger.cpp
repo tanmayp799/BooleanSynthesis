@@ -12,6 +12,13 @@ Logger::~Logger() {
     }
 }
 
+void Logger::closeOutputFile() {
+    std::lock_guard<std::mutex> lock(logMutex);
+    if (logFile.is_open()) {
+        logFile.close();
+    }
+}
+
 void Logger::setOutputFile(const std::string& filename) {
     std::lock_guard<std::mutex> lock(logMutex);
     if (logFile.is_open()) {
@@ -23,8 +30,19 @@ void Logger::setOutputFile(const std::string& filename) {
 void Logger::log(LogLevel level, const std::string& message) {
     std::lock_guard<std::mutex> lock(logMutex);
     
+
+    if(level == LogLevel::STATS){
+        if(logFile.is_open()){
+            logFile<<message<<std::endl;
+        }
+
+        return;
+    }
+
     std::string levelStr = levelToString(level);
     
+
+
     // Output to console
     if (level == LogLevel::ERROR) {
         std::cerr << "[" << levelStr << "] " << message << std::endl;

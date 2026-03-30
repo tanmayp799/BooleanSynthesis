@@ -1,4 +1,7 @@
 #include "AigWrapper.h"
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 // std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 
@@ -43,6 +46,106 @@ Aig_Man_t* compressAig(Aig_Man_t* SAig) {
 }
 
 
+Aig_Man_t* remapInputs(Aig_Man_t* p, std::vector<int> remapIds){
+	
+	Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
+
+	pNew = Aig_ManStart(Aig_ManObjNumMax(p));
+
+	Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+	// cout<<"REMAP INPUTS CREATING PIs\n";
+	// cout<<Aig_ManCiNum(p)<<endl;
+
+	Aig_ManForEachCi(p,pObj,i){
+		Aig_ObjCreateCi(pNew);
+	}
+
+	Aig_ManForEachCi(p, pObj, i){
+		// cout<<i+1<<" "<<remapIds[i]<<endl;	
+		Aig_ManCi(p, i)->pData = Aig_ManCi(pNew, remapIds[i]-1 );
+	}
+
+	Aig_ManForEachNode(p, pObj, i){
+		pObj->pData = Aig_And(pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj));
+	}
+
+	Aig_ManForEachCo(p, pObj, i){
+		Aig_ObjCreateCo(pNew,Aig_ObjChild0Copy(pObj));
+	}
+
+
+	return pNew;
+}
+
+void Aig_ComposeVec_rec( Aig_Man_t * p, Aig_Obj_t * pObj, std::vector<Aig_Obj_t *>& pFuncVec,
+	std::vector<Aig_Obj_t* >& iVarObjVec ) {
+	assert( !Aig_IsComplement(pObj) );
+	if ( Aig_ObjIsMarkA(pObj) )
+		return;
+	if ( Aig_ObjIsConst1(pObj) || Aig_ObjIsCi(pObj) ) {
+		pObj->pData = pObj;
+		int i = 0;
+		for (auto iVarObj: iVarObjVec) {
+			if(pObj == iVarObj) {
+				pObj->pData = pFuncVec[i];
+				//cout << " Assigned " << pObj->Id  << ( Aig_ObjIsConst1(Aig_Regular(pFuncVec[i]))? 1 : 0) << endl;
+			}
+			i++;
+		}
+		return;
+	}
+	Aig_ComposeVec_rec( p, Aig_ObjFanin0(pObj), pFuncVec, iVarObjVec );
+	Aig_ComposeVec_rec( p, Aig_ObjFanin1(pObj), pFuncVec, iVarObjVec );
+	pObj->pData = Aig_And( p, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+	assert( !Aig_ObjIsMarkA(pObj) ); // loop detection
+	Aig_ObjSetMarkA( pObj );
+}
+
+
+
+Aig_Obj_t * Aig_ComposeVec( Aig_Man_t * p, Aig_Obj_t * pRoot, std::vector<Aig_Obj_t *>& pFuncVec,
+	std::vector<int>& iVarVec ) {
+	// quit if the PI variable is not defined
+	for(auto iVar: iVarVec) {
+		if (iVar >= Aig_ManCiNum(p)) {
+			printf( "Aig_Compose(): The PI variable %d is not defined.\n", iVar );
+			return NULL;
+		}
+	}
+	// recursively perform composition
+	std::vector<Aig_Obj_t *> iVarObjVec(iVarVec.size());
+	int i = 0;
+	for (auto iVar: iVarVec) {
+		iVarObjVec[i++] = Aig_ManCi(p, iVar);
+	}
+	Aig_ComposeVec_rec( p, Aig_Regular(pRoot), pFuncVec, iVarObjVec );
+	// clear the markings
+	Aig_ConeUnmark_rec( Aig_Regular(pRoot) );
+	return Aig_NotCond( (Aig_Obj_t *)Aig_Regular(pRoot)->pData, Aig_IsComplement(pRoot) );
+}
+
+
+
+Aig_Obj_t* Aig_SubstituteVec(Aig_Man_t* pMan, Aig_Obj_t* initAig, std::vector<int> varIdVec,
+	std::vector<Aig_Obj_t*>& funcVec) {
+	Aig_Obj_t* currFI = Aig_ObjIsCo(Aig_Regular(initAig))? initAig->pFanin0: initAig;
+	for (int i = 0; i < funcVec.size(); ++i) {
+		funcVec[i] = Aig_ObjIsCo(Aig_Regular(funcVec[i]))? funcVec[i]->pFanin0: funcVec[i];
+	}
+	for (int i = 0; i < varIdVec.size(); ++i) {
+		varIdVec[i]--;
+	}
+	Aig_Obj_t* afterCompose = Aig_ComposeVec(pMan, currFI, funcVec, varIdVec);
+
+	assert(!Aig_ObjIsCo(Aig_Regular(afterCompose)));
+	return afterCompose;
+}
+
+
+
+
 AigWrapper::~AigWrapper(){
     Aig_ManStop(this->manager);
 }
@@ -85,7 +188,7 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
 
     Aig_Obj_t* outNode = Aig_ManConst1(this->manager);
 
-    for(auto clause: kw->getLocalSpec()){
+    for(auto clause: kw->getClauses()){
         Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
         for(auto lit:clause){
             if(lit>0){
@@ -104,9 +207,103 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
 
     std::vector<int> evars = kw->getExistentialVarsToEliminate();
     std::vector<int> uvars = kw->getUniversalVarsToEliminate();
+    std::vector<int> dvars = kw->getDepVarsToEliminate();
+
+    // if(!evars.empty()){
+    //     kw->callManthan();
+
+    //     std::string manthanDir = "/home/coolboy19/Desktop/BooleanSynthesis/dependencies/manthan";
+    //     std::string baseName = "temp_var_" + std::to_string(kw->getOutputVar());
+    //     std::string verilogFile = manthanDir + "/" + baseName + "_skolem.v";
+        
+    //     Abc_Ntk_t* defNtk = Io_ReadVerilog(const_cast<char*>(verilogFile.c_str()), 0);
+    //     if (defNtk) {
+    //         Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
+    //         Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
+            
+    //         Abc_NtkDelete(defNtk);
+    //         Abc_NtkDelete(logicNtk);
+    //         defNtk = strashNtk;
+    //     } else {
+    //         std::cerr << "Error: Failed to read Verilog file from Manthan: " << verilogFile << std::endl;
+    //         exit(1);
+    //     }
+
+    //     Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
+    //     Abc_NtkDelete(defNtk);
+
+    //     int numOrigInputs = Aig_ManCiNum(this->manager);
+    //     while(Aig_ManCiNum(eDefMan)<numOrigInputs){
+    //         Aig_ObjCreateCi(eDefMan);
+    //     }
+
+    //     std::vector<int> ordering;
+    //     for(auto e:kw->getInputOrdering()){
+    //         ordering.push_back(e);
+    //     }
+
+    //     for(auto e:kw->getOutputOrdering()){
+    //         ordering.push_back(e);
+    //     }
+
+    //     for(auto e:kw->getEliminatedVars()){
+    //         ordering.push_back(e);
+    //     }
+
+    //     Aig_Man_t* newEDefMan=remapInputs(eDefMan, ordering);
+    //     Aig_ManStop(eDefMan);
+    //     eDefMan = newEDefMan;
+    //     assert(Aig_ManCoNum(eDefMan)==kw->getOutputOrdering().size());
+    //     assert(Aig_ManCiNum(eDefMan) == Aig_ManCiNum(this->manager));
+
+    //     Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+    //     defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+
+    //     Abc_NtkAppend(specNtk, defNtk, 1);
+
+    //     Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
+
+    //     std::set<int> outputOrdering = kw->getOutputOrdering();
+
+
+
+    //     std::vector<int> varIds;
+
+    //     for(auto e:outputOrdering){
+    //         varIds.push_back(e);
+    //     }
+
+    //     std::vector<Aig_Obj_t*> funcIds;
+
+    //     for(int i=1;i<Aig_ManCoNum(specMan);i++){
+    //         funcIds.push_back(Aig_ManCo(specMan,i));
+    //     }
+
+    //     Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan,Aig_ManCo(specMan,0),varIds,funcIds);
+
+    //     Aig_ObjCreateCo(specMan, newDriver);
+
+    //     for(int i=0;i<Aig_ManCoNum(specMan)-1;i++){
+    //         Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
+    //         Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+    //         // Aig_ManCoCleanup(specMan);
+    //     }
+
+    //     Aig_ManCoCleanup(specMan);
+    //     Aig_ManCleanup(specMan);
+    //     if(Aig_ManCoNum(specMan) == 0){
+    //         Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+    //     }
+
+    //     this->manager = specMan;
+    // }
+
 
     Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
     Aig_ManStop(this->manager);
+
+
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
     
     for(int i=0;i<evars.size();i++){
         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
@@ -114,6 +311,19 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
         Abc_NtkDelete(ntk);
         ntk = newNtk;
     }
+    
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-e) size: {}\n", Abc_NtkNodeNum(ntk)));
+
+
+    for(int i=0;i<dvars.size();i++){
+        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
+        if(newNtk==NULL) exit(2);
+        Abc_NtkDelete(ntk);
+        ntk = newNtk;
+    }
+
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-d) size: {}\n", Abc_NtkNodeNum(ntk)));
+
     for(int i=0;i<uvars.size();i++){
         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
         if(newNtk==NULL) exit(2);
@@ -121,11 +331,21 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
         ntk = newNtk;
     }
 
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
+
     this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
     Abc_NtkDelete(ntk);
     // this->ShowAig();
 
 
+}
+
+AigWrapper::AigWrapper(const AigWrapper& other){
+    this->manager = Aig_ManDupOrdered(other.manager);
+}
+
+AigWrapper::AigWrapper(AigWrapper* other){
+    this->manager = Aig_ManDupOrdered(other->manager);
 }
 
 
@@ -348,5 +568,95 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 
     return;
 
+
+}
+
+
+void AigWrapper::substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile){
+
+    // 1. Read the Skolem function (Verilog file) into an AIG Manager
+    Abc_Ntk_t* defNtk = Io_ReadVerilog(skolemFile, 0);
+    if (!defNtk) {
+        std::cerr << "Error: Failed to read Verilog file: " << skolemFile << std::endl;
+        exit(1);
+    }
+    
+    Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
+    Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
+    Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(strashNtk, 0, 0);
+    
+    Abc_NtkDelete(defNtk);
+    Abc_NtkDelete(logicNtk);
+    Abc_NtkDelete(strashNtk);
+
+    // 2. Read the ordering file into vectors
+    std::vector<int> inputMapping;
+    std::vector<int> outputMapping;
+    std::ifstream f(orderingFile);
+    
+    if (!f.is_open()) {
+        std::cerr << "Error: Failed to open ordering file: " << orderingFile << std::endl;
+        exit(1);
+    }
+    
+    std::string line;
+    if (std::getline(f, line)) {
+        std::stringstream ss(line);
+        int num;
+        while (ss >> num) {
+            inputMapping.push_back(num);
+        }
+    }
+    
+    if (std::getline(f, line)) {
+        std::stringstream ss(line);
+        int num;
+        while (ss >> num) {
+            outputMapping.push_back(num);
+        }
+    }
+    
+    std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
+    for (auto n : outputMapping) {
+        ordering.push_back(n);
+    }
+
+
+    Aig_Man_t* newEDefMan = remapInputs(eDefMan, ordering);
+    Aig_ManStop(eDefMan);
+    eDefMan = newEDefMan;
+
+    assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
+
+    Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+    defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+
+    Abc_NtkAppend(specNtk, defNtk, 1);
+
+    Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
+
+    std::vector<int> varIds(outputMapping.begin(), outputMapping.end());
+    std::vector<Aig_Obj_t*> funcIds;
+    for(int i=1;i<Aig_ManCoNum(specMan);i++){
+        funcIds.push_back(Aig_ManCo(specMan,i));
+    }
+
+    Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan, Aig_ManCo(specMan, 0), varIds, funcIds);
+
+    Aig_ObjCreateCo(specMan, newDriver);
+
+    for (int i = 0; i < Aig_ManCoNum(specMan) - 1; i++) {
+        Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
+        Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+    }
+
+    Aig_ManCoCleanup(specMan);
+    Aig_ManCleanup(specMan);
+    if (Aig_ManCoNum(specMan) == 0) {
+        Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+    }
+
+    Aig_ManStop(this->manager);
+    this->manager = specMan;
 
 }
