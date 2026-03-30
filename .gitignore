@@ -16,3 +16,4 @@ tmp
 *.log
 *.errlog
 *.log2
+*.errLog
