@@ -14,3 +14,5 @@ unknown.ps
 *.ps
 tmp
 *.log
+*.errlog
+*.log2
