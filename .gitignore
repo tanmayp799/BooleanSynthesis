@@ -6,6 +6,7 @@ data/
 benchmarks/
 benchmark_tests/
 kissat_logs/
+bfss_test/
 
 
 abc.history

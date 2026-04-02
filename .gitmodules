@@ -10,3 +10,6 @@
 [submodule "dependencies/kissat"]
 	path = dependencies/kissat
 	url = https://github.com/tanmayp799/kissat.git
+[submodule "dependencies/bfss"]
+	path = dependencies/bfss
+	url = https://github.com/BooleanFunctionalSynthesis/bfss.git

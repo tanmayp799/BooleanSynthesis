@@ -70,6 +70,9 @@ public:
         return Aig_ManCoNum(this->manager);
     }
 
+
+    int DumpVerilog(std::string fileName);
+
     void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
 
 private:
