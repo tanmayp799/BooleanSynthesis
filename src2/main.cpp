@@ -49,8 +49,11 @@ int main(int argc, char* argv[]){
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
     finalFormula->ShowAig();
 
-    finalFormula->DumpVerilog("final_formula.v");
+    // finalFormula->DumpVerilog("final_formula.v");
 
+    // printf("Dumped normal way, trying frame way\n");
+    // sleep(10);
+    finalFormula->DumpVerilogWithFrame("final_formula_with_frame.v");
     
 
     exit(1);

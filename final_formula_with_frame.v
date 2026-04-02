@@ -1,4 +1,4 @@
-// Benchmark "aig_wrapper_netlist" written by ABC on Thu Apr  2 12:29:50 2026
+// Benchmark "aig_wrapper_netlist" written by ABC on Thu Apr  2 12:33:54 2026
 
 module aig_wrapper_netlist ( 
     pi0, pi1, pi2, pi3, pi4,

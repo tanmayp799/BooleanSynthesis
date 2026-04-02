@@ -384,41 +384,62 @@ Abc_Ntk_t* AigWrapper::getNtk(){
 }
 
 
-int AigWrapper::DumpVerilog(std::string fileName){
-
-    // 1. Create a generic logic network from the AIG manager
+int AigWrapper::DumpVerilogWithFrame(std::string fileName) {
+    Abc_Frame_t * pAbc = Abc_FrameGetGlobalFrame();
+    
     Abc_Ntk_t* pNtkLogic = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
     if (pNtkLogic == NULL) return 0;
 
-    // --- MOVE NAMING HERE ---
-    // 2. Assign names to the LOGIC network (before it becomes a Netlist)
+    // Add this missing naming step
     if (pNtkLogic->pName == NULL) {
         pNtkLogic->pName = Extra_UtilStrsav("aig_wrapper_netlist");
     }
-    Abc_NtkShortNames(pNtkLogic); 
-    // ------------------------
+    // Ensure consistent PI/PO naming (e.g., n1, n2) like other dump functions
+    Abc_NtkShortNames(pNtkLogic);
 
-    // 3. Convert the (now named) Logic Network into a Netlist
-    Abc_Ntk_t* pNtkNetlist = Abc_NtkToNetlist(pNtkLogic);
-    if (pNtkNetlist == NULL) {
-        Abc_NtkDelete(pNtkLogic);
-        return 0;
-    }
+    Abc_FrameReplaceCurrentNetwork(pAbc, pNtkLogic);
 
-    // 4. Convert local node functions from SOP to AIG
-    if ( !Abc_NtkIsAigNetlist(pNtkNetlist) && !Abc_NtkIsMappedNetlist(pNtkNetlist) ) {
-        Abc_NtkToAig(pNtkNetlist);
-    }
-
-    // 5. Write out the Verilog safely
-    Io_WriteVerilog(pNtkNetlist, const_cast<char*>(fileName.c_str()), 0, 0);
-
-    // 6. Clean up memory
-    Abc_NtkDelete(pNtkNetlist);
-    Abc_NtkDelete(pNtkLogic);
+    std::string cmd = "write_verilog " + fileName;
+    Cmd_CommandExecute(pAbc, cmd.c_str());
 
     return 1;
 }
+
+// int AigWrapper::DumpVerilog(std::string fileName){
+
+//     // 1. Create a generic logic network from the AIG manager
+//     Abc_Ntk_t* pNtkLogic = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+//     if (pNtkLogic == NULL) return 0;
+
+//     // --- MOVE NAMING HERE ---
+//     // 2. Assign names to the LOGIC network (before it becomes a Netlist)
+//     if (pNtkLogic->pName == NULL) {
+//         pNtkLogic->pName = Extra_UtilStrsav("aig_wrapper_netlist");
+//     }
+//     Abc_NtkShortNames(pNtkLogic); 
+//     // ------------------------
+
+//     // 3. Convert the (now named) Logic Network into a Netlist
+//     Abc_Ntk_t* pNtkNetlist = Abc_NtkToNetlist(pNtkLogic);
+//     if (pNtkNetlist == NULL) {
+//         Abc_NtkDelete(pNtkLogic);
+//         return 0;
+//     }
+
+//     // 4. Convert local node functions from SOP to AIG
+//     if ( !Abc_NtkIsAigNetlist(pNtkNetlist) && !Abc_NtkIsMappedNetlist(pNtkNetlist) ) {
+//         Abc_NtkToAig(pNtkNetlist);
+//     }
+
+//     // 5. Write out the Verilog safely
+//     Io_WriteVerilog(pNtkNetlist, const_cast<char*>(fileName.c_str()), 0, 0);
+
+//     // 6. Clean up memory
+//     Abc_NtkDelete(pNtkNetlist);
+//     Abc_NtkDelete(pNtkLogic);
+
+//     return 1;
+// }
 
 
 

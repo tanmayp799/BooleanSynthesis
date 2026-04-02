@@ -71,7 +71,8 @@ public:
     }
 
 
-    int DumpVerilog(std::string fileName);
+    // int DumpVerilog(std::string fileName);
+    int DumpVerilogWithFrame(std::string fileName);
 
     void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
 
