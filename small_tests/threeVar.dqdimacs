@@ -1,0 +1,28 @@
+c This is a simple DQBF formula
+c Universally quantified variables (a): 1, 2, 3, 4, 5
+c Dependent existential variables (d): 6, 7, 8
+c
+c Dependencies:
+c Variable 6 depends only on 1 and 2
+c Variable 7 depends only on 3 and 4
+c Variable 8 depends only on 5
+c
+p cnf 8 8
+a 1 2 3 4 5 0
+d 6 1 2 0
+d 7 3 4 0
+d 8 5 0
+c
+c Clauses encoding d6 = a1 OR a2
+-6 1 2 0
+-1 6 0
+-2 6 0
+c
+c Clauses encoding d7 = a3 AND a4
+-7 3 0
+-7 4 0
+-3 -4 7 0
+c
+c Clauses encoding d8 = NOT a5
+-8 -5 0
+5 8 0

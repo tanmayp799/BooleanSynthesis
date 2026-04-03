@@ -1,7 +1,63 @@
 #include "Logger.h"
 #include "Parser.h"
-
+#include <fstream>
+#include <cstdlib>
+#include <algorithm>
 #include "helper.h"
+
+
+
+AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, int numInitInputs, bool isUniversal){
+    std::string elimFileName = "./testFolder/elim_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".txt";
+        std::ofstream outElim(elimFileName);
+        if (outElim.is_open()) {
+            for (int var : varsToEliminate) {
+                // ABC's Abc_NtkShortNames names the i-th input as "pi{i}"
+                // DIMACS variables are 1-indexed, so var 1 is pi0
+                outElim << "pi" << (var - 1) << "\n";
+            }
+            outElim.close();
+            globalLogger.log(LogLevel::INFO, fmt::format("Dumped elimination list for d_{} to {}", target_d, elimFileName));
+        } else {
+            globalLogger.log(LogLevel::ERROR, "Failed to open " + elimFileName);
+        }
+
+        // Generate paths for the output files
+        std::string orderFileName = "./testFolder/order_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".txt";
+        std::string skolemFileName = "./testFolder/skolem_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".v";
+
+        // 2. Generate the variable ordering
+        std::string genOrderCmd = "./bin/genVarOrder " + verilogFile + " " + elimFileName + " > " + orderFileName;
+        globalLogger.log(LogLevel::INFO, "Executing: " + genOrderCmd);
+        int retOrder = std::system(genOrderCmd.c_str());
+        if (retOrder != 0) {
+            globalLogger.log(LogLevel::ERROR, "genVarOrder failed for d_" + std::to_string(target_d));
+        }
+
+        // 3. Run bfss to generate the Skolem functions
+        std::string bfssCmd = "./bin/bfss -ae -b " + verilogFile + " -v " + orderFileName + " -o " + skolemFileName;
+        globalLogger.log(LogLevel::INFO, "Executing: " + bfssCmd);
+        int retBfss = std::system(bfssCmd.c_str());
+        if (retBfss != 0) {
+            globalLogger.log(LogLevel::ERROR, "bfss failed for d_" + std::to_string(target_d));
+        }
+
+        // 4. Load the generated Skolem function back into an AIG
+        AigWrapper* skolemAig = new AigWrapper(skolemFileName);
+        // skolemAig->ShowAig();
+
+        globalLogger.log(LogLevel::INFO, fmt::format("Loaded Skolem function for d_{} with {} inputs.", target_d, Aig_ManCiNum(skolemAig->getManager())));
+        
+        int numParamInputs = skolemAig->getNumInputs() - (numInitInputs-varsToEliminate.size());
+        for(int i=0;i<numParamInputs;i++){
+            skolemAig->substituteConst(skolemAig->getNumInputs() - i,0);
+        }
+        // skolemAig->ShowAig();
+
+
+        return skolemAig;
+}
+
 
 int main(int argc, char* argv[]){
 
@@ -16,7 +72,7 @@ int main(int argc, char* argv[]){
     Dqbf* origDqbf = fileParser->ParseDqbf();
 
     globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
-    std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
+    // std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
 
 
     // for(auto kw:localInitializations){
@@ -53,24 +109,133 @@ int main(int argc, char* argv[]){
 
     // printf("Dumped normal way, trying frame way\n");
     // sleep(10);
-    finalFormula->DumpVerilogWithFrame("final_formula_with_frame.v");
+    std::string verilogFile = "./testFolder/final_formula_with_frame.v";
+    finalFormula->DumpVerilogWithFrame(verilogFile);
+
+    std::set<int> existentials = origDqbf->GetExistentials();
+    std::set<int> depVars = origDqbf->GetDepVars();
+    int numInitInputs = finalFormula->getNumInputs();
+    std::set<int> universals = origDqbf->GetUniversals();
+    std::vector<AigWrapper*> finalSkolems;
+    for(int target_d : depVars) {
+        std::vector<int> varsToEliminate;
+        
+        // 1. Add all 'e' variables to elimination list
+        for(int e : existentials) {
+            varsToEliminate.push_back(e);
+        }
+        
+        // 2. Add all 'd' variables EXCEPT the target_d
+        for(int d : depVars) {
+            if(d != target_d) {
+                varsToEliminate.push_back(d);
+            }
+        }
+        std::sort(varsToEliminate.begin(), varsToEliminate.end());
+        
+        AigWrapper* skolemAig=nullptr;
+        if(!varsToEliminate.empty()){
+            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, numInitInputs,false);
+        }
+
+
+        AigWrapper* localSpec = new AigWrapper(finalFormula);
+        if(skolemAig!=nullptr) localSpec->substituteSkolem(skolemAig, varsToEliminate);
+        
+
+        localSpec->negateOutput();
+
+        std::vector<int> universalVarsToEliminate;
+
+        std::set<int> dependency_set = origDqbf->GetDependencySet(target_d);
+        for(auto e:universals){
+            if(dependency_set.find(e)==dependency_set.end()){
+                universalVarsToEliminate.push_back(e);
+            }
+        }
+        std::sort(universalVarsToEliminate.begin(), universalVarsToEliminate.end());
+        
+        std::string verilogFile2 = "./testFolder/localSpec_"+std::to_string(target_d)+".v";
+        localSpec->DumpVerilogWithFrame(verilogFile2);
+
+
+        AigWrapper* universalSkolemAig=nullptr;
+        if(!universalVarsToEliminate.empty()){
+            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, numInitInputs, true);
+        }
+
+        if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, universalVarsToEliminate);
+
+        // std
+        localSpec->negateOutput();
+
+        // printf("Final localSpec\n");
+        // localSpec->ShowAig();
+
+        // AigWrapper* const0sub= new AigWrapper(localSpec);
+        AigWrapper* const1sub = localSpec;
+
+        const1sub->substituteConst(target_d,1);
+        
+        // printf("Const1sub\n");
+        // const1sub->ShowAig();
+
+        
+        
+        // const0sub->substituteConst(target_d,0);
+        // const0sub->negateOutput();
+        // printf("Const0sub\n");
+        // const0sub->ShowAig();
+
+        // const1sub->merge(const0sub);
+
+        // printf("Final skolem\n");
+        // const1sub->ShowAig();
+        
+
+        finalSkolems.push_back(const1sub);
     
+    }
+
+    finalSub(finalFormula, finalSkolems,depVars);
+    printf("Should be true\n");
+    finalFormula->ShowAig();
+
+    // Abc_Ntk_t* finalNtk = finalFormula->getNtk();
+    // for(auto sk:finalSkolems){
+    //     Abc_Ntk_t* skNtk = sk->getNtk();
+    //     Abc_NtkAppend(finalNtk, skNtk, 1);
+    //     Abc_NtkDelete(skNtk);
+    // }
+
+    // Aig_Man_t* finalMan = ABC_NAMESPACE::Abc_NtkToDar(finalNtk, 0, 0);
+    // Abc_NtkDelete(finalNtk);
+
+    // std::vector<int> varIds(depVars.begin(), depVars.end());
+    // std::vector<Aig_Obj_t*> funcIds;
+    // int numOuts=Aig_ManCoNum(finalMan);
+    // for(int i=1;i<numOuts;i++){
+    //     funcIds.push_back(Aig_ManCo(finalMan,i));
+    // }
+
+    // Aig_Obj_t* newDriver = Aig_SubstituteVec(finalMan,Aig_ManCo(finalMan,0),varIds,funcIds);
+    // Aig_ObjCreateCo(finalMan, newDriver);
 
     exit(1);
 
-    // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
-    AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
-    int numNewInputs = origDqbf->GetDepVars().size();
-    numNewInputs+= origDqbf->GetExistentials().size();
-    finalFormula->addInputs(numNewInputs);
-    unsatCoreFormula->addInputs(numNewInputs);
-    finalFormula->negateOutput();
-    globalLogger.log(LogLevel::INFO, "Final Formula:");
-    // finalFormula->ShowAig();
-    int hCount = 1;
+    // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
+    // AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
+    // int numNewInputs = origDqbf->GetDepVars().size();
+    // numNewInputs+= origDqbf->GetExistentials().size();
+    // finalFormula->addInputs(numNewInputs);
+    // unsatCoreFormula->addInputs(numNewInputs);
+    // finalFormula->negateOutput();
+    // globalLogger.log(LogLevel::INFO, "Final Formula:");
+    // // finalFormula->ShowAig();
+    // int hCount = 1;
 
 
-    exit(1);
+    // exit(1);
 
     // std::map<int, int> exToHMapping;
 

@@ -7,6 +7,7 @@ benchmarks/
 benchmark_tests/
 kissat_logs/
 bfss_test/
+testFolder/
 
 
 abc.history
@@ -18,3 +19,5 @@ tmp
 *.errlog
 *.log2
 *.errLog
+*.txt
+*.v

@@ -43,43 +43,46 @@ extern "C" {
 extern std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 
 class AigWrapper {
-public:
+    public:
     // AigWrapper();
     ~AigWrapper();
     AigWrapper(Dqbf* dqbf);
+    AigWrapper(std::string verilogFile);
     AigWrapper(KissatWrapper* kw);
     AigWrapper(const AigWrapper& other);
     AigWrapper(AigWrapper* other);
-
+    
     Aig_Man_t* getManager();
-
+    
     void merge(AigWrapper* aw); //returns the outputs of new AIG
-
+    
     void generateDef(int outputVar, int hVar);
-
+    
     int getNumInputs();
-
+    
     void addInputs(int numInputs);
     void negateOutput();
-
+    
     Abc_Ntk_t* getNtk();
-
+    
     void ShowAig();
     void compress();
+    void substituteConst(int inputVarId, int constVal);
     int GetNumOutputs(){
         return Aig_ManCoNum(this->manager);
     }
-
-
+    
+    void substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsToEliminate);
     // int DumpVerilog(std::string fileName);
     int DumpVerilogWithFrame(std::string fileName);
-
-    void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
-
-private:
+    void SetManager(Aig_Man_t* man){this->manager = man;}
+    // void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
+    
+    private:
     Aig_Man_t* manager;
 };
 
 
 
+void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars);
 #endif // "AIG_WRAPPER_H"

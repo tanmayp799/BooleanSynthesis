@@ -150,6 +150,24 @@ AigWrapper::~AigWrapper(){
     Aig_ManStop(this->manager);
 }
 
+AigWrapper::AigWrapper(std::string verilogFile){
+    // 1. Read Verilog into a Netlist
+    Abc_Ntk_t* defNtk = Io_ReadVerilog(const_cast<char*>(verilogFile.c_str()), 0);
+    if (!defNtk) {
+        std::cerr << "Error: Failed to read Verilog file: " << verilogFile << std::endl;
+        exit(1);
+    }
+    
+    // 2. Convert to Logic Network -> Strash -> Dar Manager
+    Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
+    Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
+    this->manager = ABC_NAMESPACE::Abc_NtkToDar(strashNtk, 0, 0);
+    
+    Abc_NtkDelete(defNtk);
+    Abc_NtkDelete(logicNtk);
+    Abc_NtkDelete(strashNtk);
+}
+
 AigWrapper::AigWrapper(Dqbf* dqbf){
     // this->numInputs = origDqbf->GetNumInputs();
     this->manager = Aig_ManStart(0);
@@ -469,6 +487,13 @@ void AigWrapper::merge(AigWrapper* aw){
     Aig_ManCoCleanup(this->manager);
     Aig_ManCleanup(this->manager);
     
+    if (Aig_ManCoNum(this->manager) == 0)
+    {
+        Aig_ObjCreateCo(this->manager, Aig_ManConst0(this->manager));
+    }
+    
+
+
     // Aig_ManCoCleanup(this->manager);
     return;
 
@@ -476,6 +501,121 @@ void AigWrapper::merge(AigWrapper* aw){
 
 
 }
+
+
+
+void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars){
+    Abc_Ntk_t* finalNtk = finalFormula->getNtk();
+    for(auto sk:finalSkolems){
+        // printf("hi\n");
+        Abc_Ntk_t* skNtk = sk->getNtk();
+        // sk->ShowAig();
+        Abc_NtkAppend(finalNtk, skNtk, 1);
+        // Abc_NtkDelete(skNtk);
+    }
+
+    Aig_Man_t* finalMan = ABC_NAMESPACE::Abc_NtkToDar(finalNtk, 0, 0);
+    Abc_NtkDelete(finalNtk);
+
+    finalFormula->SetManager(finalMan);
+    printf("After appending final skolems\n");
+    finalFormula->ShowAig();
+
+    std::vector<int> varIds(depVars.begin(), depVars.end());
+    std::vector<Aig_Obj_t*> funcIds;
+    int numOuts=Aig_ManCoNum(finalMan);
+    for(int i=1;i<numOuts;i++){
+        funcIds.push_back(Aig_ManCo(finalMan,i));
+    }
+
+    Aig_Obj_t* newDriver = Aig_SubstituteVec(finalMan,Aig_ManCo(finalMan,0),varIds,funcIds);
+    Aig_ObjCreateCo(finalMan, newDriver);
+    numOuts=Aig_ManCoNum(finalMan);
+    for(int i=0;i<numOuts-1;i++){
+        Aig_ObjDisconnect(finalMan, Aig_ManCo(finalMan, i));
+        Aig_ObjConnect(finalMan, Aig_ManCo(finalMan, i), Aig_ManConst0(finalMan), NULL);
+        // Aig_ManCoCleanup(specMan);
+    }
+
+    Aig_ManCoCleanup(finalMan);
+    Aig_ManCleanup(finalMan);
+    if(Aig_ManCoNum(finalMan) == 0){
+        Aig_ObjCreateCo(finalMan, Aig_ManConst0(finalMan));
+    }
+    finalMan=compressAig(finalMan);
+    finalFormula->SetManager(finalMan);
+    return;
+
+}
+
+void AigWrapper::substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsToEliminate){
+    
+
+    std::set<int> varsToElim_set(varsToEliminate.begin(), varsToEliminate.end());
+
+    int numInputs= skolemAig->getNumInputs();
+    std::vector<int> remapIds;
+    for(int i=1;i<=numInputs;i++){
+        if(varsToElim_set.find(i)==varsToElim_set.end()){
+            remapIds.push_back(i);
+        }
+    }
+    for(auto e:varsToElim_set){
+        remapIds.push_back(e);
+    }
+    globalLogger.log(LogLevel::INFO, fmt::format("Remapping Skolem AIG with ordering: {}", fmt::join(remapIds, " ")));
+    Aig_Man_t* skolemMan = remapInputs(skolemAig->getManager(), remapIds);
+    skolemAig->SetManager(skolemMan);
+    // printf("Remapped skolemAIG\n");
+    // skolemAig->ShowAig();
+
+    Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+    Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
+
+    Abc_NtkAppend(specNtk, skolemNtk, 1);
+
+    Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
+
+    Abc_NtkDelete(specNtk);
+    Abc_NtkDelete(skolemNtk);
+    std::vector<Aig_Obj_t*> skolemNodeVec;
+
+    int numAigOuts = Aig_ManCoNum(specMan);
+    for(int i=1;i<numAigOuts;i++){
+        skolemNodeVec.push_back(Aig_ManCo(specMan,i));
+    }
+
+    this->manager=specMan;
+    // printf("Before skolem function substitution\n");
+    // this->ShowAig();
+    Aig_Obj_t* newDriver=  Aig_SubstituteVec(specMan, Aig_ManCo(specMan, 0), varsToEliminate, skolemNodeVec);
+    Aig_ObjCreateCo(specMan, newDriver);
+
+    numAigOuts = Aig_ManCoNum(specMan);
+    for(int i=0;i<numAigOuts-1;i++){
+        Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
+        Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+        // Aig_ManCoCleanup(specMan);
+    }
+
+    Aig_ManCoCleanup(specMan);
+    Aig_ManCleanup(specMan);
+    if(Aig_ManCoNum(specMan) == 0){
+        Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+    }
+
+    this->manager = specMan;
+
+    // printf("Printing localSpec after substitution\n");
+    // this->ShowAig();
+
+    
+
+
+
+
+}
+
 
 void AigWrapper::generateDef(int outputVar, int hVar){
 
@@ -629,91 +769,117 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 }
 
 
-void AigWrapper::substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile){
+// void AigWrapper::substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile){
 
-    // 1. Read the Skolem function (Verilog file) into an AIG Manager
-    Abc_Ntk_t* defNtk = Io_ReadVerilog(skolemFile, 0);
-    if (!defNtk) {
-        std::cerr << "Error: Failed to read Verilog file: " << skolemFile << std::endl;
-        exit(1);
-    }
+//     // 1. Read the Skolem function (Verilog file) into an AIG Manager
+//     Abc_Ntk_t* defNtk = Io_ReadVerilog(skolemFile, 0);
+//     if (!defNtk) {
+//         std::cerr << "Error: Failed to read Verilog file: " << skolemFile << std::endl;
+//         exit(1);
+//     }
     
-    Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
-    Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
-    Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(strashNtk, 0, 0);
+//     Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
+//     Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
+//     Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(strashNtk, 0, 0);
     
-    Abc_NtkDelete(defNtk);
-    Abc_NtkDelete(logicNtk);
-    Abc_NtkDelete(strashNtk);
+//     Abc_NtkDelete(defNtk);
+//     Abc_NtkDelete(logicNtk);
+//     Abc_NtkDelete(strashNtk);
 
-    // 2. Read the ordering file into vectors
-    std::vector<int> inputMapping;
-    std::vector<int> outputMapping;
-    std::ifstream f(orderingFile);
+//     // 2. Read the ordering file into vectors
+//     std::vector<int> inputMapping;
+//     std::vector<int> outputMapping;
+//     std::ifstream f(orderingFile);
     
-    if (!f.is_open()) {
-        std::cerr << "Error: Failed to open ordering file: " << orderingFile << std::endl;
-        exit(1);
-    }
+//     if (!f.is_open()) {
+//         std::cerr << "Error: Failed to open ordering file: " << orderingFile << std::endl;
+//         exit(1);
+//     }
     
-    std::string line;
-    if (std::getline(f, line)) {
-        std::stringstream ss(line);
-        int num;
-        while (ss >> num) {
-            inputMapping.push_back(num);
-        }
-    }
+//     std::string line;
+//     if (std::getline(f, line)) {
+//         std::stringstream ss(line);
+//         int num;
+//         while (ss >> num) {
+//             inputMapping.push_back(num);
+//         }
+//     }
     
-    if (std::getline(f, line)) {
-        std::stringstream ss(line);
-        int num;
-        while (ss >> num) {
-            outputMapping.push_back(num);
-        }
-    }
+//     if (std::getline(f, line)) {
+//         std::stringstream ss(line);
+//         int num;
+//         while (ss >> num) {
+//             outputMapping.push_back(num);
+//         }
+//     }
     
-    std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
-    for (auto n : outputMapping) {
-        ordering.push_back(n);
+//     std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
+//     for (auto n : outputMapping) {
+//         ordering.push_back(n);
+//     }
+
+
+//     Aig_Man_t* newEDefMan = remapInputs(eDefMan, ordering);
+//     Aig_ManStop(eDefMan);
+//     eDefMan = newEDefMan;
+
+//     assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
+
+//     Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+//     defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+
+//     Abc_NtkAppend(specNtk, defNtk, 1);
+
+//     Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
+
+//     std::vector<int> varIds(outputMapping.begin(), outputMapping.end());
+//     std::vector<Aig_Obj_t*> funcIds;
+//     for(int i=1;i<Aig_ManCoNum(specMan);i++){
+//         funcIds.push_back(Aig_ManCo(specMan,i));
+//     }
+
+//     Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan, Aig_ManCo(specMan, 0), varIds, funcIds);
+
+//     Aig_ObjCreateCo(specMan, newDriver);
+
+//     for (int i = 0; i < Aig_ManCoNum(specMan) - 1; i++) {
+//         Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
+//         Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+//     }
+
+//     Aig_ManCoCleanup(specMan);
+//     Aig_ManCleanup(specMan);
+//     if (Aig_ManCoNum(specMan) == 0) {
+//         Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+//     }
+
+//     Aig_ManStop(this->manager);
+//     this->manager = specMan;
+
+// }
+
+void AigWrapper::substituteConst(int inputVarId, int constVal) {
+    int numOuts = Aig_ManCoNum(this->manager);
+    std::vector<Aig_Obj_t*> newOuts;
+
+    for (int i = 0; i < numOuts; ++i) {
+        Aig_Obj_t* newOut = Aig_SubstituteConst(this->manager, Aig_ManCo(this->manager, i), inputVarId, constVal);
+        newOuts.push_back(newOut);
     }
 
-
-    Aig_Man_t* newEDefMan = remapInputs(eDefMan, ordering);
-    Aig_ManStop(eDefMan);
-    eDefMan = newEDefMan;
-
-    assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
-
-    Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
-    defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
-
-    Abc_NtkAppend(specNtk, defNtk, 1);
-
-    Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
-
-    std::vector<int> varIds(outputMapping.begin(), outputMapping.end());
-    std::vector<Aig_Obj_t*> funcIds;
-    for(int i=1;i<Aig_ManCoNum(specMan);i++){
-        funcIds.push_back(Aig_ManCo(specMan,i));
+    for (int i = 0; i < numOuts; ++i) {
+        Aig_ObjCreateCo(this->manager, newOuts[i]);
     }
 
-    Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan, Aig_ManCo(specMan, 0), varIds, funcIds);
-
-    Aig_ObjCreateCo(specMan, newDriver);
-
-    for (int i = 0; i < Aig_ManCoNum(specMan) - 1; i++) {
-        Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
-        Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+    for (int i = 0; i < numOuts; ++i) {
+        Aig_ObjDisconnect(this->manager, Aig_ManCo(this->manager, i));
+        Aig_ObjConnect(this->manager, Aig_ManCo(this->manager, i), Aig_ManConst0(this->manager), NULL);
     }
 
-    Aig_ManCoCleanup(specMan);
-    Aig_ManCleanup(specMan);
-    if (Aig_ManCoNum(specMan) == 0) {
-        Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+    Aig_ManCoCleanup(this->manager);
+    Aig_ManCleanup(this->manager);
+
+    if (Aig_ManCoNum(this->manager) == 0) {
+        Aig_ObjCreateCo(this->manager, Aig_ManConst0(this->manager));
     }
-
-    Aig_ManStop(this->manager);
-    this->manager = specMan;
-
 }
