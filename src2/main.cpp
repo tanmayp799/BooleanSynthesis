@@ -4,11 +4,14 @@
 #include <cstdlib>
 #include <algorithm>
 #include "helper.h"
+#include "ScopedTimer.h"
 
 
 
-AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, int numInitInputs, bool isUniversal){
-    std::string elimFileName = "./testFolder/elim_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".txt";
+AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, int numInitInputs, std::string suffix){
+    MEASURE_TIME(fmt::format("callBFSS execution for target_d={} (suffix: {})", target_d, suffix),LogLevel::ERROR);
+
+    std::string elimFileName = "./testFolder/elim_target_d" + std::to_string(target_d) + suffix + ".txt";
         std::ofstream outElim(elimFileName);
         if (outElim.is_open()) {
             for (int var : varsToEliminate) {
@@ -23,8 +26,8 @@ AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::strin
         }
 
         // Generate paths for the output files
-        std::string orderFileName = "./testFolder/order_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".txt";
-        std::string skolemFileName = "./testFolder/skolem_target_d" + std::to_string(target_d) + (isUniversal?"_u":"_e") + ".v";
+        std::string orderFileName = "./testFolder/order_target_d" + std::to_string(target_d) + suffix + ".txt";
+        std::string skolemFileName = "./testFolder/skolem_target_d" + std::to_string(target_d) + suffix + ".v";
 
         // 2. Generate the variable ordering
         std::string genOrderCmd = "./bin/genVarOrder " + verilogFile + " " + elimFileName + " > " + orderFileName;
@@ -103,7 +106,7 @@ int main(int argc, char* argv[]){
     // }
 
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
 
     // finalFormula->DumpVerilog("final_formula.v");
 
@@ -113,7 +116,7 @@ int main(int argc, char* argv[]){
     finalFormula->DumpVerilogWithFrame(verilogFile);
 
 
-    
+
 
 
 
@@ -140,7 +143,7 @@ int main(int argc, char* argv[]){
         
         AigWrapper* skolemAig=nullptr;
         if(!varsToEliminate.empty()){
-            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, numInitInputs,false);
+            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, numInitInputs,"_d");
         }
 
 
@@ -166,7 +169,7 @@ int main(int argc, char* argv[]){
 
         AigWrapper* universalSkolemAig=nullptr;
         if(!universalVarsToEliminate.empty()){
-            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, numInitInputs, true);
+            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, numInitInputs, "_u");
         }
 
         if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, universalVarsToEliminate);
@@ -194,8 +197,8 @@ int main(int argc, char* argv[]){
 
         // const1sub->merge(const0sub);
 
-        printf("Final skolem\n");
-        localSpec->ShowAig();
+        // printf("Final skolem\n");
+        // localSpec->ShowAig();
         
         outputToAig[target_d] = localSpec;
 
@@ -237,7 +240,7 @@ int main(int argc, char* argv[]){
     unsatCoreFormula->addInputs(numNewInputs);
     finalFormula->negateOutput();
     // globalLogger.log(LogLevel::INFO, "Final Formula:");
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
     int hCount = 1;
 
 
@@ -249,7 +252,7 @@ int main(int argc, char* argv[]){
         p.second->addInputs(numNewInputs);
         p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
-        p.second->ShowAig();
+        // p.second->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
         hCount++;
     }
@@ -270,7 +273,7 @@ int main(int argc, char* argv[]){
     // for(auto p:outputToAig){
     //     delete p.second;
     // }
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
     // std::cout<<finalFormula->GetNumOutputs()<<std::endl;
     // // finalFormula->ShowAig();
 

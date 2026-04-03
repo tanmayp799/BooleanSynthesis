@@ -84,6 +84,19 @@ Dqbf* Parser::ParseDqbf(){
         }
     }
 
+    std::vector<int> varsToMove;
+    for(int e : existentials) {
+        if(dependencies[e].size() < universals.size()) {
+            varsToMove.push_back(e);
+        }
+    }
+    for(int e : varsToMove) {
+        existentials.erase(e);
+        depVars.insert(e);
+    }
+    // globalLogger.log(LogLevel::ERROR, fmt::format("Existentials: {}", fmt::join(existentials, " ")));
+    // globalLogger.log(LogLevel::ERROR, fmt::format("DepVars: {}", fmt::join(depVars, " ")));
+
     // if(numInputs < maxVar) numInputs = maxVar;
 
     // for(int i=1; i<=numInputs; i++){
