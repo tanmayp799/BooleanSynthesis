@@ -154,9 +154,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 		// 	defaultVal[id] = true;
 
 		// }
-		solver.add(-z_0);
+		solver.add(z_0);
 		solver.add(0);
-		defaultVal[id]=false;
+		defaultVal[id]=true;
 
 
         // -h or z or s
@@ -353,7 +353,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%500==0){
+        if(iter%1==0){
             freq=true;
         }
 

@@ -96,7 +96,7 @@ int main(int argc, char* argv[]){
 
 
 
-    // std::map<int, AigWrapper*> outputToAig;
+    std::map<int, AigWrapper*> outputToAig;
     // for(auto kw:localInitializations){
     //     std::cout<<"Generating AIG for id: "<<kw->getOutputVar()<<std::endl;
     //     outputToAig[kw->getOutputVar()] = new AigWrapper(kw);
@@ -111,6 +111,11 @@ int main(int argc, char* argv[]){
     // sleep(10);
     std::string verilogFile = "./testFolder/final_formula_with_frame.v";
     finalFormula->DumpVerilogWithFrame(verilogFile);
+
+
+    
+
+
 
     std::set<int> existentials = origDqbf->GetExistentials();
     std::set<int> depVars = origDqbf->GetDepVars();
@@ -173,9 +178,9 @@ int main(int argc, char* argv[]){
         // localSpec->ShowAig();
 
         // AigWrapper* const0sub= new AigWrapper(localSpec);
-        AigWrapper* const1sub = localSpec;
+        // AigWrapper* const1sub = localSpec;
 
-        const1sub->substituteConst(target_d,1);
+        // const1sub->substituteConst(target_d,1);
         
         // printf("Const1sub\n");
         // const1sub->ShowAig();
@@ -189,17 +194,18 @@ int main(int argc, char* argv[]){
 
         // const1sub->merge(const0sub);
 
-        // printf("Final skolem\n");
-        // const1sub->ShowAig();
+        printf("Final skolem\n");
+        localSpec->ShowAig();
         
+        outputToAig[target_d] = localSpec;
 
-        finalSkolems.push_back(const1sub);
+        finalSkolems.push_back(localSpec);
     
     }
 
-    finalSub(finalFormula, finalSkolems,depVars);
-    printf("Should be true\n");
-    finalFormula->ShowAig();
+    // finalSub(finalFormula, finalSkolems,depVars);
+    // printf("Should be true\n");
+    // finalFormula->ShowAig();
 
     // Abc_Ntk_t* finalNtk = finalFormula->getNtk();
     // for(auto sk:finalSkolems){
@@ -221,32 +227,32 @@ int main(int argc, char* argv[]){
     // Aig_Obj_t* newDriver = Aig_SubstituteVec(finalMan,Aig_ManCo(finalMan,0),varIds,funcIds);
     // Aig_ObjCreateCo(finalMan, newDriver);
 
-    exit(1);
+    // exit(1);
 
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
-    // AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
-    // int numNewInputs = origDqbf->GetDepVars().size();
+    AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
+    int numNewInputs = origDqbf->GetDepVars().size();
     // numNewInputs+= origDqbf->GetExistentials().size();
-    // finalFormula->addInputs(numNewInputs);
-    // unsatCoreFormula->addInputs(numNewInputs);
-    // finalFormula->negateOutput();
+    finalFormula->addInputs(numNewInputs);
+    unsatCoreFormula->addInputs(numNewInputs);
+    finalFormula->negateOutput();
     // globalLogger.log(LogLevel::INFO, "Final Formula:");
-    // // finalFormula->ShowAig();
-    // int hCount = 1;
+    finalFormula->ShowAig();
+    int hCount = 1;
 
 
     // exit(1);
 
-    // std::map<int, int> exToHMapping;
+    std::map<int, int> exToHMapping;
 
-    // for(auto p:outputToAig){
-    //     p.second->addInputs(numNewInputs);
-    //     p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
-    //     globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
-    //     // p.second->ShowAig();
-    //     exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
-    //     hCount++;
-    // }
+    for(auto p:outputToAig){
+        p.second->addInputs(numNewInputs);
+        p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
+        globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
+        p.second->ShowAig();
+        exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
+        hCount++;
+    }
 
     // for(auto p:exToHMapping){
     //     globalLogger.log(LogLevel::INFO, fmt::format("Ex: {} -> H: {}", p.first, p.second));
@@ -255,33 +261,33 @@ int main(int argc, char* argv[]){
     // // AigWrapper* skolemFunctions = new AigWrapper();
     // // skolemFunctions->addInputs(origDqbf->GetNumInputs()+numNewInputs);
 
-    // for(auto p:outputToAig){
-    //     finalFormula->merge(p.second);
-    //     // skolemFunctions->merge(p.second);
-    //     unsatCoreFormula->merge(p.second);
-    // }
+    for(auto p:outputToAig){
+        finalFormula->merge(p.second);
+        // skolemFunctions->merge(p.second);
+        unsatCoreFormula->merge(p.second);
+    }
 
     // for(auto p:outputToAig){
     //     delete p.second;
     // }
-    // // finalFormula->ShowAig();
+    finalFormula->ShowAig();
     // std::cout<<finalFormula->GetNumOutputs()<<std::endl;
     // // finalFormula->ShowAig();
 
-    // CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
-    // CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
-    // CadicalWrapper* constraintWrapper = new CadicalWrapper();
+    CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
+    CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
+    CadicalWrapper* constraintWrapper = new CadicalWrapper();
 
-    // int res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
+    int res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
 
-    // if(res==1){
-    //     globalLogger.log(LogLevel::INFO, "No Solution Exists.");
-    // }
-    // else{
-    //     globalLogger.log(LogLevel::INFO, "Solution Exists.");
-    // }
+    if(res==1){
+        globalLogger.log(LogLevel::INFO, "No Solution Exists.");
+    }
+    else{
+        globalLogger.log(LogLevel::INFO, "Solution Exists.");
+    }
 
-    // Abc_Stop();
+    Abc_Stop();
 
 
 
