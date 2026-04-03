@@ -8,17 +8,21 @@
 
 
 
-AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, int numInitInputs, std::string suffix){
+AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, AigWrapper* wrapper, std::string suffix){
     MEASURE_TIME(fmt::format("callBFSS execution for target_d={} (suffix: {})", target_d, suffix),LogLevel::ERROR);
-
+    globalLogger.log(LogLevel::ERROR,fmt::format("VarsToEliminate: {}",fmt::join(varsToEliminate," ")));
     std::string elimFileName = "./testFolder/elim_target_d" + std::to_string(target_d) + suffix + ".txt";
         std::ofstream outElim(elimFileName);
         if (outElim.is_open()) {
+            Abc_Ntk_t* pNtkLogic = ABC_NAMESPACE::Abc_NtkFromAigPhase(wrapper->getManager());
+            Abc_NtkShortNames(pNtkLogic);
+            
             for (int var : varsToEliminate) {
-                // ABC's Abc_NtkShortNames names the i-th input as "pi{i}"
-                // DIMACS variables are 1-indexed, so var 1 is pi0
-                outElim << "pi" << (var - 1) << "\n";
+                Abc_Obj_t* pPi = Abc_NtkPi(pNtkLogic, var - 1);
+                outElim << Abc_ObjName(pPi) << "\n";
             }
+            Abc_NtkDelete(pNtkLogic);
+            
             outElim.close();
             globalLogger.log(LogLevel::INFO, fmt::format("Dumped elimination list for d_{} to {}", target_d, elimFileName));
         } else {
@@ -51,6 +55,7 @@ AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::strin
 
         globalLogger.log(LogLevel::INFO, fmt::format("Loaded Skolem function for d_{} with {} inputs.", target_d, Aig_ManCiNum(skolemAig->getManager())));
         
+        int numInitInputs = wrapper->getNumInputs();
         int numParamInputs = skolemAig->getNumInputs() - (numInitInputs-varsToEliminate.size());
         for(int i=0;i<numParamInputs;i++){
             skolemAig->substituteConst(skolemAig->getNumInputs() - i,0);
@@ -118,11 +123,25 @@ int main(int argc, char* argv[]){
 
 
 
-
-
     std::set<int> existentials = origDqbf->GetExistentials();
+
+    if(!existentials.empty()){
+
+        std::vector<int> existentialsToEliminate(existentials.begin(),existentials.end());
+        std::sort(existentialsToEliminate.begin(), existentialsToEliminate.end());
+        printf("Calling bfss on existentials\n");
+        AigWrapper* exisSkolem = callBFSS(existentialsToEliminate, 0, verilogFile, finalFormula, "_e");
+
+        finalFormula->substituteSkolem(exisSkolem, existentialsToEliminate);
+        finalFormula->compress();
+        // finalFormula->compress();
+        // finalFormula->ShowAig();
+
+        finalFormula->DumpVerilogWithFrame(verilogFile);
+
+    }
+
     std::set<int> depVars = origDqbf->GetDepVars();
-    int numInitInputs = finalFormula->getNumInputs();
     std::set<int> universals = origDqbf->GetUniversals();
     std::vector<AigWrapper*> finalSkolems;
     for(int target_d : depVars) {
@@ -143,7 +162,7 @@ int main(int argc, char* argv[]){
         
         AigWrapper* skolemAig=nullptr;
         if(!varsToEliminate.empty()){
-            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, numInitInputs,"_d");
+            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, finalFormula,"_d");
         }
 
 
@@ -169,7 +188,7 @@ int main(int argc, char* argv[]){
 
         AigWrapper* universalSkolemAig=nullptr;
         if(!universalVarsToEliminate.empty()){
-            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, numInitInputs, "_u");
+            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, localSpec, "_u");
         }
 
         if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, universalVarsToEliminate);
