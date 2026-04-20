@@ -72,7 +72,7 @@ class AigWrapper {
         return Aig_ManCoNum(this->manager);
     }
     
-    void substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsToEliminate);
+    void substituteSkolem(AigWrapper* skolemAig, int target_d, std::string flag);
     // int DumpVerilog(std::string fileName);
     int DumpVerilogWithFrame(std::string fileName);
     void SetManager(Aig_Man_t* man){this->manager = man;}

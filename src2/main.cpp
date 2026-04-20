@@ -132,11 +132,11 @@ int main(int argc, char* argv[]){
         printf("Calling bfss on existentials\n");
         AigWrapper* exisSkolem = callBFSS(existentialsToEliminate, 0, verilogFile, finalFormula, "_e");
 
-        finalFormula->substituteSkolem(exisSkolem, existentialsToEliminate);
+        finalFormula->substituteSkolem(exisSkolem, 0, "_e");
         finalFormula->compress();
         // finalFormula->compress();
         // finalFormula->ShowAig();
-
+        verilogFile = "./testFolder/final_formula_with_frame_modified.v";
         finalFormula->DumpVerilogWithFrame(verilogFile);
 
     }
@@ -148,9 +148,9 @@ int main(int argc, char* argv[]){
         std::vector<int> varsToEliminate;
         
         // 1. Add all 'e' variables to elimination list
-        for(int e : existentials) {
-            varsToEliminate.push_back(e);
-        }
+        // for(int e : existentials) {
+        //     varsToEliminate.push_back(e);
+        // }
         
         // 2. Add all 'd' variables EXCEPT the target_d
         for(int d : depVars) {
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]){
 
 
         AigWrapper* localSpec = new AigWrapper(finalFormula);
-        if(skolemAig!=nullptr) localSpec->substituteSkolem(skolemAig, varsToEliminate);
+        if(skolemAig!=nullptr) localSpec->substituteSkolem(skolemAig, target_d, "_d");
         
 
         localSpec->negateOutput();
@@ -191,13 +191,15 @@ int main(int argc, char* argv[]){
             universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, localSpec, "_u");
         }
 
-        if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, universalVarsToEliminate);
+        if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, target_d, "_u");
 
         // std
         localSpec->negateOutput();
 
-        // printf("Final localSpec\n");
-        // localSpec->ShowAig();
+        localSpec->compress();
+
+        printf("Final localSpec\n");
+        localSpec->ShowAig();
 
         // AigWrapper* const0sub= new AigWrapper(localSpec);
         // AigWrapper* const1sub = localSpec;
@@ -295,6 +297,7 @@ int main(int argc, char* argv[]){
     // finalFormula->ShowAig();
     // std::cout<<finalFormula->GetNumOutputs()<<std::endl;
     // // finalFormula->ShowAig();
+    // finalFormula->ShowAig();
 
     CadicalWrapper* solverWrapper = new CadicalWrapper(finalFormula);
     CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
@@ -304,6 +307,7 @@ int main(int argc, char* argv[]){
 
     if(res==1){
         globalLogger.log(LogLevel::INFO, "No Solution Exists.");
+
     }
     else{
         globalLogger.log(LogLevel::INFO, "Solution Exists.");
@@ -312,6 +316,6 @@ int main(int argc, char* argv[]){
     Abc_Stop();
 
 
-
+    if(res) return 1;
     return 0;
 }

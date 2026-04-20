@@ -8,6 +8,7 @@ benchmark_tests/
 kissat_logs/
 bfss_test/
 testFolder/
+benchmarkInfo/
 
 
 abc.history

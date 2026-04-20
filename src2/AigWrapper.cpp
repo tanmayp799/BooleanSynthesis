@@ -548,8 +548,28 @@ void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, 
 
 }
 
-void AigWrapper::substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsToEliminate){
-    
+void AigWrapper::substituteSkolem(AigWrapper* skolemAig, int target_d, std::string flag){
+    std::string orderingFile = "./testFolder/order_target_d"+std::to_string(target_d)+ flag+".txt";
+
+    std::vector<int> varsToEliminate;
+    std::ifstream orderIn(orderingFile);
+    if (orderIn.is_open()) {
+        std::string line;
+        while (std::getline(orderIn, line)) {
+            if (line.length() > 2 && line.substr(0, 2) == "pi") {
+                try {
+                    varsToEliminate.push_back(std::stoi(line.substr(2))+1);
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Could not parse integer from line: " << line << std::endl;
+                }
+            }
+        }
+        orderIn.close();
+    } else {
+        std::cerr << "Error: Unable to open ordering file: " << orderingFile << std::endl;
+    }
+
+    // skolemAig->ShowAig();
 
     std::set<int> varsToElim_set(varsToEliminate.begin(), varsToEliminate.end());
 
@@ -560,11 +580,17 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsT
             remapIds.push_back(i);
         }
     }
-    for(auto e:varsToElim_set){
+    for(auto e:varsToEliminate){
         remapIds.push_back(e);
     }
     globalLogger.log(LogLevel::INFO, fmt::format("Remapping Skolem AIG with ordering: {}", fmt::join(remapIds, " ")));
     Aig_Man_t* skolemMan = remapInputs(skolemAig->getManager(), remapIds);
+
+    while(Aig_ManCoNum(skolemMan)<varsToEliminate.size()){
+        Aig_ObjCreateCo(skolemMan, Aig_ManConst0(skolemMan));
+        // Aig_ObjCreateCo(skolemMan, falseDriver);
+    }
+
     skolemAig->SetManager(skolemMan);
     // printf("Remapped skolemAIG\n");
     // skolemAig->ShowAig();
@@ -586,6 +612,8 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsT
     }
 
     this->manager=specMan;
+    // Aig_ManCleanMarkA(specMan);
+    // Aig_ManCleanData(specMan);
     // printf("Before skolem function substitution\n");
     // this->ShowAig();
     Aig_Obj_t* newDriver=  Aig_SubstituteVec(specMan, Aig_ManCo(specMan, 0), varsToEliminate, skolemNodeVec);
@@ -604,7 +632,8 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, std::vector<int>& varsT
         Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
     }
 
-    this->manager = specMan;
+    this->manager = Aig_ManDupOrdered(specMan);
+    Aig_ManStop(specMan);
 
     // printf("Printing localSpec after substitution\n");
     // this->ShowAig();
