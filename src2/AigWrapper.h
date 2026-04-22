@@ -72,6 +72,9 @@ class AigWrapper {
         return Aig_ManCoNum(this->manager);
     }
     
+
+    AigWrapper* getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate);
+
     void substituteSkolem(AigWrapper* skolemAig, int target_d, std::string flag);
     // int DumpVerilog(std::string fileName);
     int DumpVerilogWithFrame(std::string fileName);

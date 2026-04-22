@@ -17,7 +17,7 @@ extern "C" {
 }
 
 #include "Logger.h"
-
+#include "ScopedTimer.h"
 
 // Forward declaration of the Kissat solver structure
 struct kissat;

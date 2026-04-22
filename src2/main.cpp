@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include "helper.h"
-#include "ScopedTimer.h"
+// #include "ScopedTimer.h"
 
 
 
@@ -70,7 +70,7 @@ AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::strin
 int main(int argc, char* argv[]){
 
     Abc_Start();
-    globalLogger.setOutputFile("./main2_test.log");
+    // globalLogger.setOutputFile("./main2_test.log");
     globalLogger.log(LogLevel::INFO, "Starting the program...");
     Parser* fileParser = new Parser(argc, argv);
 
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]){
     std::set<int> universals = origDqbf->GetUniversals();
     std::vector<AigWrapper*> finalSkolems;
     for(int target_d : depVars) {
-        std::vector<int> varsToEliminate;
+        std::vector<int> existentialVarsToEliminate;
         
         // 1. Add all 'e' variables to elimination list
         // for(int e : existentials) {
@@ -155,48 +155,59 @@ int main(int argc, char* argv[]){
         // 2. Add all 'd' variables EXCEPT the target_d
         for(int d : depVars) {
             if(d != target_d) {
-                varsToEliminate.push_back(d);
+                existentialVarsToEliminate.push_back(d-1);
             }
         }
-        std::sort(varsToEliminate.begin(), varsToEliminate.end());
+        std::sort(existentialVarsToEliminate.begin(), existentialVarsToEliminate.end());
         
-        AigWrapper* skolemAig=nullptr;
-        if(!varsToEliminate.empty()){
-            skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, finalFormula,"_d");
-        }
+        // AigWrapper* skolemAig=nullptr;
+        // if(!varsToEliminate.empty()){
+        //     skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, finalFormula,"_d");
+        // }
 
 
-        AigWrapper* localSpec = new AigWrapper(finalFormula);
-        if(skolemAig!=nullptr) localSpec->substituteSkolem(skolemAig, target_d, "_d");
+        // AigWrapper* localSpec = new AigWrapper(finalFormula);
+        // if(skolemAig!=nullptr) localSpec->substituteSkolem(skolemAig, target_d, "_d");
         
 
-        localSpec->negateOutput();
+        // localSpec->negateOutput();
 
         std::vector<int> universalVarsToEliminate;
 
         std::set<int> dependency_set = origDqbf->GetDependencySet(target_d);
         for(auto e:universals){
             if(dependency_set.find(e)==dependency_set.end()){
-                universalVarsToEliminate.push_back(e);
+                universalVarsToEliminate.push_back(e-1);
             }
         }
         std::sort(universalVarsToEliminate.begin(), universalVarsToEliminate.end());
+
+        std::vector<int> printExistential;
+        for (int e : existentialVarsToEliminate) printExistential.push_back(e + 1);
+        std::vector<int> printUniversal;
+        for (int e : universalVarsToEliminate) printUniversal.push_back(e + 1);
+
+        globalLogger.log(LogLevel::INFO,fmt::format("Generating localSpec for target_d={}: eliminating existentials [{}] and universals [{}]", 
+            target_d, fmt::join(printExistential, " "), fmt::join(printUniversal, " ")));
+        AigWrapper* localSpec = finalFormula->getLocalSpec(target_d, existentialVarsToEliminate, universalVarsToEliminate);
+
+
         
-        std::string verilogFile2 = "./testFolder/localSpec_"+std::to_string(target_d)+".v";
-        localSpec->DumpVerilogWithFrame(verilogFile2);
+        // std::string verilogFile2 = "./testFolder/localSpec_"+std::to_string(target_d)+".v";
+        // localSpec->DumpVerilogWithFrame(verilogFile2);
 
 
-        AigWrapper* universalSkolemAig=nullptr;
-        if(!universalVarsToEliminate.empty()){
-            universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, localSpec, "_u");
-        }
+        // AigWrapper* universalSkolemAig=nullptr;
+        // if(!universalVarsToEliminate.empty()){
+        //     universalSkolemAig = callBFSS(universalVarsToEliminate, target_d, verilogFile2, localSpec, "_u");
+        // }
 
-        if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, target_d, "_u");
+        // if(universalSkolemAig!=nullptr) localSpec->substituteSkolem(universalSkolemAig, target_d, "_u");
 
-        // std
-        localSpec->negateOutput();
+        // // std
+        // localSpec->negateOutput();
 
-        localSpec->compress();
+        // localSpec->compress();
 
         printf("Final localSpec\n");
         localSpec->ShowAig();
@@ -273,7 +284,7 @@ int main(int argc, char* argv[]){
         p.second->addInputs(numNewInputs);
         p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
-        // p.second->ShowAig();
+        p.second->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
         hCount++;
     }
