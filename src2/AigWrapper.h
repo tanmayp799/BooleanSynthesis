@@ -44,7 +44,7 @@ extern std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 
 class AigWrapper {
     public:
-    // AigWrapper();
+    AigWrapper();
     ~AigWrapper();
     AigWrapper(Dqbf* dqbf);
     AigWrapper(std::string verilogFile);
@@ -86,6 +86,10 @@ class AigWrapper {
 };
 
 
+Aig_Man_t* remapInputs(Aig_Man_t* p, std::vector<int> remapIds);
+Aig_Obj_t* Aig_SubstituteVec(Aig_Man_t* pMan, Aig_Obj_t* initAig, std::vector<int> varIdVec,
+	std::vector<Aig_Obj_t*>& funcVec);
 
+Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Obj_t* func);
 void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars);
 #endif // "AIG_WRAPPER_H"

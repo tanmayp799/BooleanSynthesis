@@ -2,6 +2,7 @@
 
 
 std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
+AigWrapper* skolemAig = nullptr;
 
 
 std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf){
@@ -154,9 +155,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 		// 	defaultVal[id] = true;
 
 		// }
-		solver.add(z_0);
+		solver.add(-z_0);
 		solver.add(0);
-		defaultVal[id]=true;
+		defaultVal[id]=false;
 
 
         // -h or z or s
@@ -367,7 +368,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         if(status == 0){
             // std::cerr<<"Dunno what happened\n";
             globalLogger.log(LogLevel::ERROR, "Dunno what happened");
-			Abc_Stop();
+			// Abc_Stop();
             return 1;
         }
 
@@ -391,13 +392,13 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 
 
-            for(int asgNo=0;asgNo<3;asgNo++){
+            for(int asgNo=0;asgNo<1;asgNo++){
                 int constrStatus = constraintSolver.solve();
 
                 if(constrStatus == CaDiCaL::UNSATISFIABLE){
                     globalLogger.log(LogLevel::INFO, "Constraint Unsatisfiable, no solution exists.");
                     // printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
-					Abc_Stop();
+					// Abc_Stop();
 					// if(asgNo>0) exit(0);
                     // if(asgNo==0) return false;
 					return 1;
@@ -408,14 +409,17 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
                 if(constrStatus == CaDiCaL::SATISFIABLE){
                     globalLogger.log(LogLevel::INFO,fmt::format("Constraint Satisfiable"));
-                    return 0;
-                    // map<int, int> cex_aux;
+                    // return 0;
+                    std::map<int, int> cex_aux;
 
-                    // for(auto e:auxilaries){
-                    //     int val = constraintSolver.val(inputToVarMapping[e]);
-                    //     cex_aux[e] = val>0?1:0;
+                    for(auto e:auxilaries){
+                        int val = constraintSolver.val(inputToVarMapping[e]);
+                        cex_aux[e] = val>0?1:0;
                         
-                    // }
+                    }
+
+
+                    
                     // string filename = "/home/coolboy19/Desktop/BooleanSynthesis/benchmark_tests/solution/skolem_functions/"+this->filename+".txt";
                     // FILE* asgFile = fopen(filename.c_str(),"w");
 
@@ -432,8 +436,129 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 					// 	fprintf(asgFile, "%d %d\n", currOutVar, (int)(constVal));
 					// }
 
+                    std::set<int> depVars = origDqbf->GetDepVars();
+
+                    int hCount=1;
+
+                    for(auto currOutVar:depVars){
+                        std::vector<std::set<int>> positiveCases;
+
+                        auto cases = ex_caseToAuxMapping[currOutVar];
+                        for(auto p2:cases){
+                            std::set<int> currCase = p2.first;
+                            int aux = p2.second.first;
+                            if(cex_aux.find(aux)==cex_aux.end()){
+                                globalLogger.log(LogLevel::ERROR, "Error in aux map");
+                                exit(1);
+                            }
+                            if(cex_aux[aux]==1){
+                                positiveCases.push_back(currCase);
+                            }
+                        }
+
+                        Abc_Ntk_t* ANtk = varToBasisMap[currOutVar].first;
+                        Abc_Ntk_t* BNtk = varToBasisMap[currOutVar].second;
+                        
+                        Abc_NtkAppend(ANtk, BNtk,1);
+                        Aig_Man_t* skolemMan = ABC_NAMESPACE::Abc_NtkToDar(ANtk,0,0);
+
+                        // Aig_ManShow(skolemMan,0,NULL);
+                        // int yy;
+                        // std::cin>>yy;
+
+                        Aig_Obj_t* outA = Aig_ManCo(skolemMan, 0)->pFanin0;
+                        Aig_Obj_t* outB = Aig_ManCo(skolemMan, 1)->pFanin0;
+                        Aig_Obj_t* currH = Aig_ManCi(skolemMan, origDqbf->GetNumInputs()+hCount -1);
+                        
+                        Aig_Obj_t *HAndB = Aig_And(skolemMan, currH, outB);
+                        Aig_Obj_t *defin = Aig_Or(skolemMan, outA, HAndB);
+                        
+                        Aig_ObjCreateCo(skolemMan, defin);
+                        // Aig_ManShow(skolemMan,0,NULL);
+                        // std::cin>>yy;
+
+                        int numAigOuts = Aig_ManCoNum(skolemMan);
+                        
+                        for(int i=0;i<numAigOuts-1;i++){
+                            Aig_ObjDisconnect(skolemMan, Aig_ManCo(skolemMan, i));
+                            Aig_ObjConnect(skolemMan, Aig_ManCo(skolemMan, i), Aig_ManConst0(skolemMan), NULL);
+                            // Aig_ManCoCleanup(defMan);
+                        }
+
+                        Aig_ManCoCleanup(skolemMan);
+                        Aig_ManCleanup(skolemMan);
+                        
+                        if(Aig_ManCoNum(skolemMan) == 0){
+                            Aig_ObjCreateCo(skolemMan, Aig_ManConst0(skolemMan));
+                        }
+                        
+                        Aig_Obj_t* funcH = Aig_ManConst0(skolemMan);
+                        for(auto c:positiveCases){
+                            Aig_Obj_t* caseNode = Aig_ManConst1(skolemMan);
+                            for(auto e:c){
+                                if(e>0){
+                                    caseNode = Aig_And(skolemMan, caseNode, Aig_ManCi(skolemMan,e-1));
+                                }
+                                else{
+                                    caseNode = Aig_And(skolemMan, caseNode, Aig_Not(Aig_ManCi(skolemMan,-e-1)));
+                                }
+                            }
+                            funcH = Aig_Or(skolemMan, funcH, caseNode);
+                        }
+                        std::vector<Aig_Obj_t*> funcIds = {funcH};
+
+                        
+                        globalLogger.log(LogLevel::ERROR,fmt::format("Num inputs: {}. hid: {} ",Aig_ManCiNum(skolemMan), origDqbf->GetNumInputs()+hCount));
+                        // int yy;
+                        // Aig_ManShow(skolemMan,0,NULL);
+                        // std::cin>>yy;
+
+                        Aig_Obj_t* newDriver = Aig_Substitute(skolemMan, Aig_ManCo(skolemMan,0), origDqbf->GetNumInputs()+hCount, funcH);
+
+                        Aig_ObjCreateCo(skolemMan,newDriver);
+
+                        numAigOuts = Aig_ManCoNum(skolemMan);
+                        for(int i=0;i<numAigOuts-1;i++){
+                            Aig_ObjDisconnect(skolemMan, Aig_ManCo(skolemMan, i));
+                            Aig_ObjConnect(skolemMan, Aig_ManCo(skolemMan, i), Aig_ManConst0(skolemMan), NULL);
+                            // Aig_ManCoCleanup(defMan);
+                        }
+
+                        Aig_ManCoCleanup(skolemMan);
+                        Aig_ManCleanup(skolemMan);
+                        
+                        if(Aig_ManCoNum(skolemMan) == 0){ 
+                            Aig_ObjCreateCo(skolemMan, Aig_ManConst0(skolemMan));
+                        }
+
+                        if(skolemAig == nullptr){
+                            skolemAig = new AigWrapper();
+                            skolemAig->SetManager(skolemMan);
+                        }
+                        else{
+                            Aig_Man_t* newMan = skolemAig->getManager();
+                            Abc_Ntk_t* newManNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(newMan);
+                            Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
+                            Aig_ManStop(newMan);
+                            Aig_ManStop(skolemMan);
+
+                            
+                            Abc_NtkAppend(newManNtk, skolemNtk, 1);
+                            newMan = ABC_NAMESPACE::Abc_NtkToDar(newManNtk,0,0);
+                            skolemAig->SetManager(newMan);
+                            
+                            Abc_NtkDelete(newManNtk);
+                            Abc_NtkDelete(skolemNtk);
+
+                        }
+                        
+                        hCount++;
+                    }
+
+                    // skolemAig->ShowAig();
+
 					// for(auto currOutVar:dep_vars){
-					// 	vector<set<int>> positiveCases;
+                        // 	vector<set<int>> positiveCases;
 					// 	vector<set<int>> negativeCases;
 
 					// 	auto cases = ex_caseToAuxMapping[currOutVar];
@@ -526,7 +651,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
             
 
 			// std::cout<<"HURRAY\n";
-			Abc_Stop();
+			// Abc_Stop();
 			return 0;
             
         }
@@ -968,7 +1093,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         }
 		if(!changeFlag){
             std::cout<<"No change occured...."<<std::endl;
-			Abc_Stop();
+			// Abc_Stop();
             return 1;
         }
         std::cout<<"adding constraint clause...\n";
@@ -1184,4 +1309,197 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
     // }
     // // return 1;
     return 0;
+}
+
+int verify(Dqbf* origDqbf, char* argv[]){
+
+
+    AigWrapper* finalFormula = new AigWrapper(origDqbf);
+
+
+    Aig_Man_t* origFormula = finalFormula->getManager();
+
+
+    // CadicalWrapper* testwrap = new CadicalWrapper(finalFormula);
+    // testwrap->dump("./testf.txt");
+    // exit(1);
+    if(didManthan){
+        globalLogger.log(LogLevel::INFO, "Plugging in Skolem functions generated by Manthan.");
+        Abc_Ntk_t* defNtk = Io_ReadVerilog(argv[2],0);
+        Abc_Ntk_t* defLogicNtk = Abc_NtkToLogic(defNtk);
+        Abc_Ntk_t* defStrashNtk = Abc_NtkStrash(defLogicNtk,0,1,0);
+        Abc_NtkDelete(defNtk);
+        Abc_NtkDelete(defLogicNtk);
+
+        defNtk = defStrashNtk;
+        Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
+        Abc_NtkDelete(defNtk);
+        while(Aig_ManCiNum(eDefMan) < Aig_ManCiNum(origFormula)){
+            Aig_ObjCreateCi(eDefMan);
+        }
+
+        std::ifstream f(argv[3]);
+        std::vector<int> inputMapping;
+        std::vector<int> outputMapping;
+        std::string str;
+
+        if(!f){
+            globalLogger.log(LogLevel::ERROR, "Failed to open Manthan mapping file.");
+            exit(1);
+        }
+
+        if(getline(f,str)){
+            std::stringstream ss(str);
+            int num;
+            while(ss>>num){
+                inputMapping.push_back(num);
+            }  
+        }
+
+        if(getline(f,str)){
+            std::stringstream ss(str);
+            int num;
+            while(ss>>num){
+                outputMapping.push_back(num);
+            }  
+        }
+
+        std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
+        for(auto n:outputMapping){
+            ordering.push_back(n);
+        }
+
+        eDefMan = remapInputs(eDefMan, ordering);
+        assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
+        int numOut = Aig_ManCoNum(eDefMan);
+
+        Abc_Ntk_t* origFormulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(origFormula);
+        Abc_Ntk_t* eDefNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+        Aig_ManStop(origFormula);
+        Aig_ManStop(eDefMan);
+        
+        Abc_NtkAppend(origFormulaNtk, eDefNtk, 1);
+        origFormula = ABC_NAMESPACE::Abc_NtkToDar(origFormulaNtk, 0, 0);
+        Abc_NtkDelete(origFormulaNtk);
+        Abc_NtkDelete(eDefNtk);
+
+        // std::map<int, Aig_Obj_t*> existential_outputDriver_map;
+        // for(int i=0;i<numOut;i++){
+        //     existential_outputDriver_map[outputMapping[i]] = Aig_ManCo(origFormula,i+1);
+        // }
+
+
+        std::vector<int> varIds = outputMapping;
+        std::vector<Aig_Obj_t*> funcIds;
+        for(int i=0;i<numOut;i++){
+            funcIds.push_back(Aig_ManCo(origFormula,i+1));
+        }
+
+        Aig_Obj_t* newDriver = Aig_SubstituteVec(origFormula,Aig_ManCo(origFormula,0),varIds,funcIds);
+        Aig_ObjCreateCo(origFormula, newDriver);
+
+        int numOutToDelete = Aig_ManCoNum(origFormula);
+        for(int i=0;i<numOutToDelete-1;i++){
+            Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,i));
+            Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,i),Aig_ManConst0(origFormula), NULL);
+        }
+
+        Aig_ManCoCleanup(origFormula);
+        Aig_ManCleanup(origFormula);
+        if(Aig_ManCoNum(origFormula)==0){
+            Aig_ObjCreateCo(origFormula, Aig_ManConst0(origFormula));
+        }
+
+
+        finalFormula->SetManager(origFormula);
+        finalFormula->compress();
+        // Aig_Obj_t* outObj = Aig_ManCo(origFormula,0);
+    }
+
+    Aig_Man_t* formulaAfterTseitin = finalFormula->getManager();
+
+    Aig_Man_t* skolemMan = skolemAig->getManager();
+
+    while(Aig_ManCiNum(formulaAfterTseitin) < Aig_ManCiNum(skolemMan)){
+        Aig_ObjCreateCi(formulaAfterTseitin);
+    }
+
+    assert(Aig_ManCoNum(skolemMan)== origDqbf->GetDepVars().size());
+    
+    Abc_Ntk_t* formulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(formulaAfterTseitin);
+    Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
+    Aig_ManStop(formulaAfterTseitin);
+    Aig_ManStop(skolemMan);
+    
+    Abc_NtkAppend(formulaNtk, skolemNtk, 1);
+    Aig_Man_t* finalCheck = ABC_NAMESPACE::Abc_NtkToDar(formulaNtk, 0, 0);
+    Abc_NtkDelete(formulaNtk);
+    Abc_NtkDelete(skolemNtk);
+
+    std::set<int> depVars = origDqbf->GetDepVars();
+    std::vector<int> varIds(depVars.begin(), depVars.end());
+    std::vector<Aig_Obj_t*> funcIds;
+
+    for(int i=0;i<varIds.size();i++){
+        funcIds.push_back(Aig_ManCo(finalCheck,i+1));
+    }
+
+    Aig_Obj_t* newDriver = Aig_SubstituteVec(finalCheck,Aig_ManCo(finalCheck,0),varIds,funcIds);
+    Aig_ObjCreateCo(finalCheck, newDriver);
+
+    int numOutToDelete = Aig_ManCoNum(finalCheck);
+    for(int i=0;i<numOutToDelete-1;i++){
+        Aig_ObjDisconnect(finalCheck,Aig_ManCo(finalCheck,i));
+        Aig_ObjConnect(finalCheck, Aig_ManCo(finalCheck,i),Aig_ManConst0(finalCheck), NULL);
+    }
+
+    Aig_ManCoCleanup(finalCheck);
+    Aig_ManCleanup(finalCheck);
+    if(Aig_ManCoNum(finalCheck)==0){
+        Aig_ObjCreateCo(finalCheck, Aig_ManConst0(finalCheck));
+    }
+
+    AigWrapper* tmpwrap = new AigWrapper();
+    tmpwrap->SetManager(finalCheck);
+
+    // tmpwrap->ShowAig();
+
+    tmpwrap->compress();
+
+    // tmpwrap->ShowAig();
+
+    finalCheck = tmpwrap->getManager();
+    
+    tmpwrap->negateOutput();
+
+    CadicalWrapper* cadwrap= new CadicalWrapper(tmpwrap);
+    
+
+    int status = cadwrap->solve();
+
+    globalLogger.log(LogLevel::ERROR, fmt::format("verify cadical Status: {}", status));
+
+    
+
+    assert(Aig_ManCoNum(finalCheck) == 1);
+
+    // Aig_ObjChild0 safely extracts the driving edge (node pointer + complement bit)
+    Aig_Obj_t* pDriverEdge = Aig_ObjChild0(Aig_ManCo(finalCheck, 0));
+
+    // Compare the exact edge against the manager's Constant 1 node
+    if (pDriverEdge == Aig_ManConst1(finalCheck)) {
+        return 1;
+    } else {
+        return 0;
+    }
+
+
+    // Aig_ManShow(finalCheck,0,NULL);
+    // int x;
+    // std::cin>>x;
+
+    // exit(1);
+
+
+
 }

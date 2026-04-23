@@ -75,7 +75,7 @@ Aig_Man_t* remapInputs(Aig_Man_t* p, std::vector<int> remapIds){
 		Aig_ObjCreateCo(pNew,Aig_ObjChild0Copy(pObj));
 	}
 
-
+    Aig_ManStop(p);
 	return pNew;
 }
 
@@ -143,7 +143,20 @@ Aig_Obj_t* Aig_SubstituteVec(Aig_Man_t* pMan, Aig_Obj_t* initAig, std::vector<in
 	return afterCompose;
 }
 
-
+/** Function
+ * Composes input variable in initiAig with @param func, returns resulting Aig_Obj
+ * @param pMan      [in out]    Aig Manager
+ * @param initAig   [in]        Specifies the head of function tree
+ * @param varId     [in]        (>=1) Specifies the variable to be substituted
+ * @param func      [in]        Specifies the function that supplants the input
+ */
+Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Obj_t* func) {
+	Aig_Obj_t* currFI = Aig_ObjIsCo(Aig_Regular(initAig))? initAig->pFanin0: initAig;
+	func = Aig_ObjIsCo(Aig_Regular(func))? func->pFanin0: func;
+	Aig_Obj_t* afterCompose = Aig_Compose(pMan, currFI, func, varId-1);
+	assert(!Aig_ObjIsCo(Aig_Regular(afterCompose)));
+	return afterCompose;
+}
 
 
 AigWrapper::~AigWrapper(){
@@ -645,6 +658,9 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, int target_d, std::stri
 
 }
 
+AigWrapper::AigWrapper(){
+    this->manager=nullptr;
+}
 
 void AigWrapper::generateDef(int outputVar, int hVar){
 
@@ -705,6 +721,11 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     tMan = compressAig(tMan);
     Aig_Man_t* AMan = tMan;
 
+
+    // Aig_ManShow(AMan,0,NULL);
+    // int xx;
+    // std::cin>>xx;
+
     Abc_Ntk_t* ANtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(AMan);
 
 
@@ -739,6 +760,9 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     tMan = compressAig(tMan);
 
     Aig_Man_t* BMan = tMan;
+    // Aig_ManShow(BMan,0,NULL);
+    // std::cin>>xx;
+
     Abc_Ntk_t* BNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(BMan);
 
 

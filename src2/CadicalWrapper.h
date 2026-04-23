@@ -35,6 +35,7 @@ public:
         return this->inputToVarMapping;
     }
 
+    void dump(std::string filename){solver.write_dimacs(filename.c_str());}
 
 private:
     CaDiCaL::Solver solver;

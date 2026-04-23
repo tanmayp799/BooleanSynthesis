@@ -19,6 +19,7 @@ public:
     Parser(int argc, char** argv);
     Dqbf* ParseDqbf();
     
+    
 };
 
 #endif // PARSER_H
