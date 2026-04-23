@@ -125,25 +125,30 @@ int main(int argc, char* argv[]){
 
     std::set<int> existentials = origDqbf->GetExistentials();
 
-    if(!existentials.empty()){
+    // if(!existentials.empty()){
 
-        std::vector<int> existentialsToEliminate(existentials.begin(),existentials.end());
-        std::sort(existentialsToEliminate.begin(), existentialsToEliminate.end());
-        printf("Calling bfss on existentials\n");
-        AigWrapper* exisSkolem = callBFSS(existentialsToEliminate, 0, verilogFile, finalFormula, "_e");
+    //     std::vector<int> existentialsToEliminate(existentials.begin(),existentials.end());
+    //     std::sort(existentialsToEliminate.begin(), existentialsToEliminate.end());
+    //     printf("Calling bfss on existentials\n");
+    //     AigWrapper* exisSkolem = callBFSS(existentialsToEliminate, 0, verilogFile, finalFormula, "_e");
 
-        finalFormula->substituteSkolem(exisSkolem, 0, "_e");
-        finalFormula->compress();
-        // finalFormula->compress();
-        // finalFormula->ShowAig();
-        verilogFile = "./testFolder/final_formula_with_frame_modified.v";
-        finalFormula->DumpVerilogWithFrame(verilogFile);
+    //     finalFormula->substituteSkolem(exisSkolem, 0, "_e");
+    //     finalFormula->compress();
+    //     // finalFormula->compress();
+    //     // finalFormula->ShowAig();
+    //     verilogFile = "./testFolder/final_formula_with_frame_modified.v";
+    //     finalFormula->DumpVerilogWithFrame(verilogFile);
 
-    }
+    // }
 
     std::set<int> depVars = origDqbf->GetDepVars();
     std::set<int> universals = origDqbf->GetUniversals();
     std::vector<AigWrapper*> finalSkolems;
+    
+    for(auto e:existentials){
+        depVars.insert(e);
+    }
+    
     for(int target_d : depVars) {
         std::vector<int> existentialVarsToEliminate;
         
@@ -158,6 +163,9 @@ int main(int argc, char* argv[]){
                 existentialVarsToEliminate.push_back(d-1);
             }
         }
+
+
+
         std::sort(existentialVarsToEliminate.begin(), existentialVarsToEliminate.end());
         
         // AigWrapper* skolemAig=nullptr;
@@ -210,7 +218,7 @@ int main(int argc, char* argv[]){
         // localSpec->compress();
 
         printf("Final localSpec\n");
-        localSpec->ShowAig();
+        // localSpec->ShowAig();
 
         // AigWrapper* const0sub= new AigWrapper(localSpec);
         // AigWrapper* const1sub = localSpec;
@@ -266,7 +274,7 @@ int main(int argc, char* argv[]){
 
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
     AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
-    int numNewInputs = origDqbf->GetDepVars().size();
+    int numNewInputs = depVars.size();
     // numNewInputs+= origDqbf->GetExistentials().size();
     finalFormula->addInputs(numNewInputs);
     unsatCoreFormula->addInputs(numNewInputs);
@@ -284,7 +292,7 @@ int main(int argc, char* argv[]){
         p.second->addInputs(numNewInputs);
         p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
-        p.second->ShowAig();
+        // p.second->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
         hCount++;
     }
