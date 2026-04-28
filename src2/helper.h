@@ -17,6 +17,6 @@ std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf);
 
 int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCoreWrapper, CadicalWrapper* constraintWrapper, std::map<int,int> exToHMapping);
 
-int verify(Dqbf* origDqbf, char* argv[]);
+int verify(AigWrapper* finalFormula, Dqbf* origDqbf, char* argv[]);
 
 #endif // "HELPER_H"

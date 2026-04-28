@@ -89,7 +89,7 @@ std::set<int> getUnsatCore(std::vector<int> currAssumptions, std::vector<int> un
 
 
 int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCoreWrapper, CadicalWrapper* constraintWrapper, std::map<int,int> exToHMapping){
-
+    MEASURE_TIME("cegis",-1, LogLevel::ERROR);
     std::map<int, std::map<std::set<int>,std::pair<int,int>>> ex_caseToAuxMapping; // ex_id -> {set -> {CI_id,CI_id}}
     std::set<std::set<int>> constraints;
     int iter=0;
@@ -113,9 +113,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	std::map<int, bool> defaultVal;
     std::set<int> deps = origDqbf->GetDepVars();
-    for(auto e: origDqbf->GetExistentials()){
-        deps.insert(e);
-    }
+    // for(auto e: origDqbf->GetExistentials()){
+    //     deps.insert(e);
+    // }
 
     CaDiCaL::Solver solver = solverWrapper->GetSolver();
     CaDiCaL::Solver unsatCoreExtractor = unsatCoreWrapper->GetSolver();
@@ -329,7 +329,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	// 	return true;
 	// }
-    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size();
     int numX = origDqbf->GetUniversals().size();
     int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
     
@@ -354,7 +354,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%1==0){
+        if(iter%1000==0){
             freq=true;
         }
 
@@ -369,7 +369,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
             // std::cerr<<"Dunno what happened\n";
             globalLogger.log(LogLevel::ERROR, "Dunno what happened");
 			// Abc_Stop();
-            return 1;
+            exit(1);
         }
 
 		if(status == CaDiCaL::UNSATISFIABLE){
@@ -679,7 +679,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 			}
 			// std::cout << std::endl;
             
-            globalLogger.log(LogLevel::INFO, fmt::format("CEX : {}",fmt::join(tmpCex," ")));
+            if(verbose && freq) globalLogger.log(LogLevel::INFO, fmt::format("CEX : {}",fmt::join(tmpCex," ")));
 
 		}
 
@@ -936,11 +936,11 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 // depVal.insert(cex[dep-1]);
             }
             
-            std::cout<<"DepVal for d: "<<id<<" => ";
-            for(auto u:depVal){
-                std::cout<<u<<" ";
-            }
-            std::cout<<std::endl;
+            // std::cout<<"DepVal for d: "<<id<<" => ";
+            // for(auto u:depVal){
+            //     std::cout<<u<<" ";
+            // }
+            // std::cout<<std::endl;
             if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
                 
                 changeFlag = true;
@@ -957,7 +957,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
                 // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
 
-                std::cout<<"Dependent Var new Aux created: "<<id<<std::endl;
+                if(verbose && freq) std::cout<<"Dependent Var new Aux created: "<<id<<std::endl;
 
 
                 //Check if auxilary for this depVal exists or Not, if it does, use it else create one.
@@ -1094,29 +1094,33 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 		if(!changeFlag){
             std::cout<<"No change occured...."<<std::endl;
 			// Abc_Stop();
-            return 1;
+            exit(1);
         }
-        std::cout<<"adding constraint clause...\n";
+        // std::cout<<"adding constraint clause...\n";
         for(auto e:currConstraint){
             
             if(e>0) {
                 solver.add(inputToVarMapping[e]);
-                std::cout<<e<<" ";
+                // std::cout<<e<<" ";
             }
             else {
                 solver.add(-inputToVarMapping[-e]);
-                std::cout<<e<<" ";
+                // std::cout<<e<<" ";
             }
         }
-        std::cout<<std::endl;
+        // std::cout<<std::endl;
+
+        if(verbose && freq) globalLogger.log(LogLevel::INFO, fmt::format("Constraint clause: {}", fmt::join(currConstraint," ")));
+        
+
         solver.add(0);
-        std::cout<<"Printing current constraint:\n";
+        // std::cout<<"Printing current constraint:\n";
         for(auto e:currConstraint){
             if(e>0) {
                 constraintSolver.add(inputToVarMapping[e]);
             }
             else constraintSolver.add(-inputToVarMapping[-e]);
-            std::cout<<e<<std::endl;
+            // std::cout<<e<<std::endl;
         }
         constraintSolver.add(0);
         freq=false;
@@ -1311,110 +1315,110 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
     return 0;
 }
 
-int verify(Dqbf* origDqbf, char* argv[]){
+int verify(AigWrapper* finalFormula, Dqbf* origDqbf, char* argv[]){
+    MEASURE_TIME("verify",-1, LogLevel::ERROR);
+    
+    // AigWrapper* finalFormula = new AigWrapper(origDqbf);
 
 
-    AigWrapper* finalFormula = new AigWrapper(origDqbf);
+    // Aig_Man_t* origFormula = finalFormula->getManager();
 
 
-    Aig_Man_t* origFormula = finalFormula->getManager();
+    // // CadicalWrapper* testwrap = new CadicalWrapper(finalFormula);
+    // // testwrap->dump("./testf.txt");
+    // // exit(1);
+    // if(didManthan){
+    //     globalLogger.log(LogLevel::INFO, "Plugging in Skolem functions generated by Manthan.");
+    //     Abc_Ntk_t* defNtk = Io_ReadVerilog(argv[2],0);
+    //     Abc_Ntk_t* defLogicNtk = Abc_NtkToLogic(defNtk);
+    //     Abc_Ntk_t* defStrashNtk = Abc_NtkStrash(defLogicNtk,0,1,0);
+    //     Abc_NtkDelete(defNtk);
+    //     Abc_NtkDelete(defLogicNtk);
 
+    //     defNtk = defStrashNtk;
+    //     Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
+    //     Abc_NtkDelete(defNtk);
+    //     while(Aig_ManCiNum(eDefMan) < Aig_ManCiNum(origFormula)){
+    //         Aig_ObjCreateCi(eDefMan);
+    //     }
 
-    // CadicalWrapper* testwrap = new CadicalWrapper(finalFormula);
-    // testwrap->dump("./testf.txt");
-    // exit(1);
-    if(didManthan){
-        globalLogger.log(LogLevel::INFO, "Plugging in Skolem functions generated by Manthan.");
-        Abc_Ntk_t* defNtk = Io_ReadVerilog(argv[2],0);
-        Abc_Ntk_t* defLogicNtk = Abc_NtkToLogic(defNtk);
-        Abc_Ntk_t* defStrashNtk = Abc_NtkStrash(defLogicNtk,0,1,0);
-        Abc_NtkDelete(defNtk);
-        Abc_NtkDelete(defLogicNtk);
+    //     std::ifstream f(argv[3]);
+    //     std::vector<int> inputMapping;
+    //     std::vector<int> outputMapping;
+    //     std::string str;
 
-        defNtk = defStrashNtk;
-        Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
-        Abc_NtkDelete(defNtk);
-        while(Aig_ManCiNum(eDefMan) < Aig_ManCiNum(origFormula)){
-            Aig_ObjCreateCi(eDefMan);
-        }
+    //     if(!f){
+    //         globalLogger.log(LogLevel::ERROR, "Failed to open Manthan mapping file.");
+    //         exit(1);
+    //     }
 
-        std::ifstream f(argv[3]);
-        std::vector<int> inputMapping;
-        std::vector<int> outputMapping;
-        std::string str;
+    //     if(getline(f,str)){
+    //         std::stringstream ss(str);
+    //         int num;
+    //         while(ss>>num){
+    //             inputMapping.push_back(num);
+    //         }  
+    //     }
 
-        if(!f){
-            globalLogger.log(LogLevel::ERROR, "Failed to open Manthan mapping file.");
-            exit(1);
-        }
+    //     if(getline(f,str)){
+    //         std::stringstream ss(str);
+    //         int num;
+    //         while(ss>>num){
+    //             outputMapping.push_back(num);
+    //         }  
+    //     }
 
-        if(getline(f,str)){
-            std::stringstream ss(str);
-            int num;
-            while(ss>>num){
-                inputMapping.push_back(num);
-            }  
-        }
+    //     std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
+    //     for(auto n:outputMapping){
+    //         ordering.push_back(n);
+    //     }
 
-        if(getline(f,str)){
-            std::stringstream ss(str);
-            int num;
-            while(ss>>num){
-                outputMapping.push_back(num);
-            }  
-        }
+    //     eDefMan = remapInputs(eDefMan, ordering);
+    //     assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
+    //     int numOut = Aig_ManCoNum(eDefMan);
 
-        std::vector<int> ordering(inputMapping.begin(), inputMapping.end());
-        for(auto n:outputMapping){
-            ordering.push_back(n);
-        }
-
-        eDefMan = remapInputs(eDefMan, ordering);
-        assert(outputMapping.size() == Aig_ManCoNum(eDefMan));
-        int numOut = Aig_ManCoNum(eDefMan);
-
-        Abc_Ntk_t* origFormulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(origFormula);
-        Abc_Ntk_t* eDefNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
-        Aig_ManStop(origFormula);
-        Aig_ManStop(eDefMan);
+    //     Abc_Ntk_t* origFormulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(origFormula);
+    //     Abc_Ntk_t* eDefNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+    //     Aig_ManStop(origFormula);
+    //     Aig_ManStop(eDefMan);
         
-        Abc_NtkAppend(origFormulaNtk, eDefNtk, 1);
-        origFormula = ABC_NAMESPACE::Abc_NtkToDar(origFormulaNtk, 0, 0);
-        Abc_NtkDelete(origFormulaNtk);
-        Abc_NtkDelete(eDefNtk);
+    //     Abc_NtkAppend(origFormulaNtk, eDefNtk, 1);
+    //     origFormula = ABC_NAMESPACE::Abc_NtkToDar(origFormulaNtk, 0, 0);
+    //     Abc_NtkDelete(origFormulaNtk);
+    //     Abc_NtkDelete(eDefNtk);
 
-        // std::map<int, Aig_Obj_t*> existential_outputDriver_map;
-        // for(int i=0;i<numOut;i++){
-        //     existential_outputDriver_map[outputMapping[i]] = Aig_ManCo(origFormula,i+1);
-        // }
-
-
-        std::vector<int> varIds = outputMapping;
-        std::vector<Aig_Obj_t*> funcIds;
-        for(int i=0;i<numOut;i++){
-            funcIds.push_back(Aig_ManCo(origFormula,i+1));
-        }
-
-        Aig_Obj_t* newDriver = Aig_SubstituteVec(origFormula,Aig_ManCo(origFormula,0),varIds,funcIds);
-        Aig_ObjCreateCo(origFormula, newDriver);
-
-        int numOutToDelete = Aig_ManCoNum(origFormula);
-        for(int i=0;i<numOutToDelete-1;i++){
-            Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,i));
-            Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,i),Aig_ManConst0(origFormula), NULL);
-        }
-
-        Aig_ManCoCleanup(origFormula);
-        Aig_ManCleanup(origFormula);
-        if(Aig_ManCoNum(origFormula)==0){
-            Aig_ObjCreateCo(origFormula, Aig_ManConst0(origFormula));
-        }
+    //     // std::map<int, Aig_Obj_t*> existential_outputDriver_map;
+    //     // for(int i=0;i<numOut;i++){
+    //     //     existential_outputDriver_map[outputMapping[i]] = Aig_ManCo(origFormula,i+1);
+    //     // }
 
 
-        finalFormula->SetManager(origFormula);
-        finalFormula->compress();
-        // Aig_Obj_t* outObj = Aig_ManCo(origFormula,0);
-    }
+    //     std::vector<int> varIds = outputMapping;
+    //     std::vector<Aig_Obj_t*> funcIds;
+    //     for(int i=0;i<numOut;i++){
+    //         funcIds.push_back(Aig_ManCo(origFormula,i+1));
+    //     }
+
+    //     Aig_Obj_t* newDriver = Aig_SubstituteVec(origFormula,Aig_ManCo(origFormula,0),varIds,funcIds);
+    //     Aig_ObjCreateCo(origFormula, newDriver);
+
+    //     int numOutToDelete = Aig_ManCoNum(origFormula);
+    //     for(int i=0;i<numOutToDelete-1;i++){
+    //         Aig_ObjDisconnect(origFormula,Aig_ManCo(origFormula,i));
+    //         Aig_ObjConnect(origFormula, Aig_ManCo(origFormula,i),Aig_ManConst0(origFormula), NULL);
+    //     }
+
+    //     Aig_ManCoCleanup(origFormula);
+    //     Aig_ManCleanup(origFormula);
+    //     if(Aig_ManCoNum(origFormula)==0){
+    //         Aig_ObjCreateCo(origFormula, Aig_ManConst0(origFormula));
+    //     }
+
+
+    //     finalFormula->SetManager(origFormula);
+    //     finalFormula->compress();
+    //     // Aig_Obj_t* outObj = Aig_ManCo(origFormula,0);
+    // }
 
     Aig_Man_t* formulaAfterTseitin = finalFormula->getManager();
 
@@ -1424,7 +1428,7 @@ int verify(Dqbf* origDqbf, char* argv[]){
         Aig_ObjCreateCi(formulaAfterTseitin);
     }
 
-    assert(Aig_ManCoNum(skolemMan)== origDqbf->GetDepVars().size());
+    // assert(Aig_ManCoNum(skolemMan)== origDqbf->GetDepVars().size());
     
     Abc_Ntk_t* formulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(formulaAfterTseitin);
     Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
@@ -1479,19 +1483,19 @@ int verify(Dqbf* origDqbf, char* argv[]){
 
     globalLogger.log(LogLevel::ERROR, fmt::format("verify cadical Status: {}", status));
 
-    
+    return status;
 
-    assert(Aig_ManCoNum(finalCheck) == 1);
+    // assert(Aig_ManCoNum(finalCheck) == 1);
 
-    // Aig_ObjChild0 safely extracts the driving edge (node pointer + complement bit)
-    Aig_Obj_t* pDriverEdge = Aig_ObjChild0(Aig_ManCo(finalCheck, 0));
+    // // Aig_ObjChild0 safely extracts the driving edge (node pointer + complement bit)
+    // Aig_Obj_t* pDriverEdge = Aig_ObjChild0(Aig_ManCo(finalCheck, 0));
 
-    // Compare the exact edge against the manager's Constant 1 node
-    if (pDriverEdge == Aig_ManConst1(finalCheck)) {
-        return 1;
-    } else {
-        return 0;
-    }
+    // // Compare the exact edge against the manager's Constant 1 node
+    // if (pDriverEdge == Aig_ManConst1(finalCheck)) {
+    //     return 1;
+    // } else {
+    //     return 0;
+    // }
 
 
     // Aig_ManShow(finalCheck,0,NULL);

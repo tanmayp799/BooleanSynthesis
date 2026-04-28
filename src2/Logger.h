@@ -40,5 +40,6 @@ private:
 
 // Declare the global logger instance
 extern Logger globalLogger;
+extern Logger statisticsLogger;
 
 #endif // LOGGER_H

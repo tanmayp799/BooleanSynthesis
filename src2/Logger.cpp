@@ -2,6 +2,7 @@
 
 // Global logger instance definition
 Logger globalLogger;
+Logger statisticsLogger;
 
 Logger::Logger() {
 }

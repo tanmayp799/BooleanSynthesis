@@ -79,6 +79,10 @@ class AigWrapper {
     // int DumpVerilog(std::string fileName);
     int DumpVerilogWithFrame(std::string fileName);
     void SetManager(Aig_Man_t* man){this->manager = man;}
+
+
+    AigWrapper* quantify(std::vector<int>& varsToEliminate, int fExist);
+
     // void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
     
     private:

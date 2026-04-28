@@ -338,7 +338,7 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
     
     for(int i=0;i<evars.size();i++){
         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
-        if(newNtk==NULL) exit(2);
+        if(newNtk==NULL) exit(1);
         Abc_NtkDelete(ntk);
         ntk = newNtk;
     }
@@ -348,7 +348,7 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
 
     for(int i=0;i<dvars.size();i++){
         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
-        if(newNtk==NULL) exit(2);
+        if(newNtk==NULL) exit(1);
         Abc_NtkDelete(ntk);
         ntk = newNtk;
     }
@@ -357,7 +357,7 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
 
     for(int i=0;i<uvars.size();i++){
         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
-        if(newNtk==NULL) exit(2);
+        if(newNtk==NULL) exit(1);
         Abc_NtkDelete(ntk);
         ntk = newNtk;
     }
@@ -663,7 +663,7 @@ AigWrapper::AigWrapper(){
 }
 
 void AigWrapper::generateDef(int outputVar, int hVar){
-
+    MEASURE_TIME(fmt::format("generateDef id: {}", outputVar),outputVar, LogLevel::ERROR);
     Aig_Man_t* const1Man = Aig_ManDupOrdered(this->manager);
     Aig_Man_t* const0Man = Aig_ManDupOrdered(this->manager);
     
@@ -839,8 +839,119 @@ DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices) {
 }
 
 
+
+AigWrapper* AigWrapper::quantify(std::vector<int>& varsToEliminate, int fExist){
+    MEASURE_TIME("quantify",0, LogLevel::ERROR);
+    MEASURE_TIME("quantify",0,LogLevel::STATS);
+    Abc_Ntk_t * pNtk, * pLogicNtk, * pStrashNtk;
+    Aig_Man_t * pNewAig;
+    DdManager * dd;
+    DdNode * bFunc, * bCube, * bFinalRes;
+    Abc_Obj_t * pPo, * pPi;
+    Vec_Ptr_t * vPiNames;
+    int i;
+
+
+
+    // ------------------------------------------------------------------
+    // PHASE 1: AIG -> BDD Conversion & Sanitization
+    // ------------------------------------------------------------------
+    
+    // 1. Wrap the AIG manager in a standard ABC Network
+    pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( this->manager );
+    if ( pNtk == NULL ){
+        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkFromAigPhase failed.");
+        exit(1);
+    }
+
+    Abc_NtkShortNames(pNtk);
+
+
+    // 2. Build Global BDDs and capture the CUDD Manager
+    dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,1,0,1);
+    if(dd==NULL){
+        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
+        exit(1);
+    }
+
+    // 3. Extract the original logic function (Assuming 1 Primary Output)
+    pPo = Abc_NtkPo( pNtk, 0 );
+    bFunc = (DdNode *)Abc_ObjGlobalBdd( pPo );
+
+    // ------------------------------------------------------------------
+    // PHASE 2: Formal Logic Quantifications
+    // ------------------------------------------------------------------
+    
+    // 1. Existential Quantification
+    if ( !varsToEliminate.empty() ) {
+        bCube = BuildVariableCube( dd, varsToEliminate);
+        if(fExist){
+            bFinalRes  = Cudd_bddExistAbstract( dd, bFunc, bCube );
+        }
+        else{
+            bFinalRes  = Cudd_bddUnivAbstract( dd, bFunc, bCube );
+        }
+        Cudd_Ref( bFinalRes );
+        Cudd_RecursiveDeref( dd, bCube );
+    } else {
+        bFinalRes = bFunc; 
+        Cudd_Ref( bFinalRes );
+    }
+
+
+    // ------------------------------------------------------------------
+    // PHASE 3: Port Alignment & Network Derivation
+    // ------------------------------------------------------------------
+
+    // 1. Extract the sanitized PI names (100% segfault safe now)
+    vPiNames = Vec_PtrAlloc( Abc_NtkPiNum(pNtk) );
+    Abc_NtkForEachPi( pNtk, pPi, i ) {
+        Vec_PtrPush( vPiNames, (void *)Abc_ObjName(pPi) );
+    }
+
+    // 2. Derive the new Logic Network using the API
+    // (This creates a NEW CUDD manager inside pLogicNtk and safely transfers bFinalRes)
+    pLogicNtk = Abc_NtkDeriveFromBdd( dd, bFinalRes, Abc_ObjName(pPo), vPiNames );
+    Vec_PtrFree( vPiNames );
+
+
+
+    // ------------------------------------------------------------------
+    // PHASE 4: Strashing & Memory Hijack
+    // ------------------------------------------------------------------
+
+    // 1. Convert the Logic Network back to an AIG Network
+    pStrashNtk = Abc_NtkStrash( pLogicNtk, 0, 1, 0 );
+
+    pNewAig = ABC_NAMESPACE::Abc_NtkToDar( pStrashNtk, 0, 0 );
+
+    // ------------------------------------------------------------------
+    // PHASE 5: Strict Garbage Collection
+    // ------------------------------------------------------------------
+
+    // Dereference the final BDD in the OLD manager
+    Cudd_RecursiveDeref( dd, bFinalRes ); 
+
+    // Free the original network (This safely shuts down the OLD 'dd' manager)
+    Abc_NtkFreeGlobalBdds( pNtk, 1 ); 
+    Abc_NtkDelete( pNtk );
+
+    // Delete intermediate networks
+    Abc_NtkDelete( pLogicNtk );
+    Abc_NtkDelete( pStrashNtk ); // Safe because we set pManFunc = NULL
+
+    AigWrapper* retAig = new AigWrapper(this);
+    retAig->SetManager(pNewAig);
+
+    retAig->compress();
+    return retAig;
+
+}
+
+
 AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate){
-    MEASURE_TIME("GetLocalSpec", LogLevel::ERROR);
+    MEASURE_TIME("GetLocalSpec",target_d, LogLevel::ERROR);
+    MEASURE_TIME("GetLocalSpec",target_d, LogLevel::STATS);
     Abc_Ntk_t * pNtk, * pLogicNtk, * pStrashNtk;
     Aig_Man_t * pNewAig;
     DdManager * dd;

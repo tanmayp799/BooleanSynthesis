@@ -28,6 +28,8 @@ Dqbf* Parser::ParseDqbf(){
     int numInputs = 0;
     // int maxVar = 0;
 
+    std::vector<std::set<int>> existentialBlocks;
+
     std::string token;
     while(infile >> token){
         if(token == "c"){
@@ -49,12 +51,14 @@ Dqbf* Parser::ParseDqbf(){
         }
         else if(token == "e"){
             int var;
+            std::set<int> tmp;
             while(infile >> var && var != 0){
-                existentials.insert(var);
+                tmp.insert(var);
                 // depVars.insert(var);
                 dependencies[var] = std::set<int>(universals);
                 // if(var > maxVar) maxVar = var;
             }
+            existentialBlocks.push_back(tmp);
         }
         else if(token == "d"){
             int var;
@@ -84,16 +88,29 @@ Dqbf* Parser::ParseDqbf(){
         }
     }
 
-    std::vector<int> varsToMove;
-    for(int e : existentials) {
-        if(dependencies[e].size() < universals.size()) {
-            varsToMove.push_back(e);
+    // std::vector<int> varsToMove;
+    // for(int e : existentials) {
+    //     if(dependencies[e].size() < universals.size()) {
+    //         varsToMove.push_back(e);
+    //     }
+    // }
+    // for(int e : varsToMove) {
+    //     existentials.erase(e);
+    //     depVars.insert(e);
+    // }
+
+    if(!existentialBlocks.empty()) {
+        existentials = existentialBlocks.back();
+        existentialBlocks.pop_back();
+    }
+    for(auto block:existentialBlocks){
+        for(auto v:block){
+            depVars.insert(v);
         }
     }
-    for(int e : varsToMove) {
-        existentials.erase(e);
-        depVars.insert(e);
-    }
+
+
+
     // globalLogger.log(LogLevel::ERROR, fmt::format("Existentials: {}", fmt::join(existentials, " ")));
     // globalLogger.log(LogLevel::ERROR, fmt::format("DepVars: {}", fmt::join(depVars, " ")));
 
@@ -114,7 +131,10 @@ Dqbf* Parser::ParseDqbf(){
     // for(auto clause:clauses){
     //     globalLogger.log(LogLevel::DEBUG, fmt::format("{}", fmt::join(clause, " ")));
     // }
-
+    // std::cerr<<depVars.size()<<std::endl;
+    // std::cerr<<fmt::format("{}", fmt::join(depVars, " "))<<std::endl;
+    // int nn;
+    // std::cin>>nn;
     
     return new Dqbf(universals, existentials, depVars, numInputs, clauses.size(), clauses, dependencies);
 }
