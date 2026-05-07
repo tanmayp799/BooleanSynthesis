@@ -6,7 +6,10 @@
 #include <map>
 #include <set>
 
-#include "KissatWrapper.h"
+// #include "KissatWrapper.h"
+
+#include "Logger.h"
+#include "ScopedTimer.h"
 
 class Dqbf
 {
@@ -35,7 +38,7 @@ public:
     std::vector<std::set<int>> GetClauses();
 
     // Dqbf* SubstituteConst(int var, bool setTrue, bool inPlace);
-    KissatWrapper* getLocalFormula(int var);
+    // KissatWrapper* getLocalFormula(int var);
 };
 
 #endif // DQBF_H

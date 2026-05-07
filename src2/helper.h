@@ -12,7 +12,7 @@
 extern bool didManthan;
 extern int numOrigInputs;
 
-std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf);
+// std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf);
 
 
 // extern AigWrapper* skolemAig;

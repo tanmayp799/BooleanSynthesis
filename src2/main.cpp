@@ -624,7 +624,7 @@ int main(int argc, char* argv[]){
 
     if(res2==20){
         globalLogger.log(LogLevel::INFO, "Verification complete: Check Passed!");
-        dumpAigerSkolems(tseitinSkolems);
+        // dumpAigerSkolems(tseitinSkolems);
     }
     else{
         globalLogger.log(LogLevel::INFO, "Verification complete: Check Failed!");

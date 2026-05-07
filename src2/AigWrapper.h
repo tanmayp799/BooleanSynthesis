@@ -49,7 +49,7 @@ class AigWrapper {
     ~AigWrapper();
     AigWrapper(Dqbf* dqbf);
     AigWrapper(std::string verilogFile);
-    AigWrapper(KissatWrapper* kw);
+    // AigWrapper(KissatWrapper* kw);
     AigWrapper(const AigWrapper& other);
     AigWrapper(AigWrapper* other);
     

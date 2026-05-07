@@ -210,166 +210,166 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
     Aig_ObjCreateCo(this->manager, outNode);
 }
 
-AigWrapper::AigWrapper(KissatWrapper* kw){
-    this->manager = Aig_ManStart(0);
+// AigWrapper::AigWrapper(KissatWrapper* kw){
+//     this->manager = Aig_ManStart(0);
 
-    int numInputs = kw->getNumVars();
+//     int numInputs = kw->getNumVars();
 
-    this->addInputs(numInputs);
+//     this->addInputs(numInputs);
 
-    Aig_Obj_t* outNode = Aig_ManConst1(this->manager);
+//     Aig_Obj_t* outNode = Aig_ManConst1(this->manager);
 
-    for(auto clause: kw->getClauses()){
-        Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
-        for(auto lit:clause){
-            if(lit>0){
-                clauseNode = Aig_Or(this->manager, clauseNode, Aig_ManCi(this->manager, lit-1));
-            }
-            else{
-                clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
-            }
-            // this->ShowAig();
-        }
-        outNode = Aig_And(this->manager, outNode, clauseNode);
-        // this->ShowAig();
-    }
-    Aig_ObjCreateCo(this->manager, outNode);
-    // this->ShowAig();
+//     for(auto clause: kw->getClauses()){
+//         Aig_Obj_t* clauseNode = Aig_ManConst0(this->manager);
+//         for(auto lit:clause){
+//             if(lit>0){
+//                 clauseNode = Aig_Or(this->manager, clauseNode, Aig_ManCi(this->manager, lit-1));
+//             }
+//             else{
+//                 clauseNode = Aig_Or(this->manager, clauseNode, Aig_Not(Aig_ManCi(this->manager, -lit-1)));
+//             }
+//             // this->ShowAig();
+//         }
+//         outNode = Aig_And(this->manager, outNode, clauseNode);
+//         // this->ShowAig();
+//     }
+//     Aig_ObjCreateCo(this->manager, outNode);
+//     // this->ShowAig();
 
-    std::vector<int> evars = kw->getExistentialVarsToEliminate();
-    std::vector<int> uvars = kw->getUniversalVarsToEliminate();
-    std::vector<int> dvars = kw->getDepVarsToEliminate();
+//     std::vector<int> evars = kw->getExistentialVarsToEliminate();
+//     std::vector<int> uvars = kw->getUniversalVarsToEliminate();
+//     std::vector<int> dvars = kw->getDepVarsToEliminate();
 
-    // if(!evars.empty()){
-    //     kw->callManthan();
+//     // if(!evars.empty()){
+//     //     kw->callManthan();
 
-    //     std::string manthanDir = "/home/coolboy19/Desktop/BooleanSynthesis/dependencies/manthan";
-    //     std::string baseName = "temp_var_" + std::to_string(kw->getOutputVar());
-    //     std::string verilogFile = manthanDir + "/" + baseName + "_skolem.v";
+//     //     std::string manthanDir = "/home/coolboy19/Desktop/BooleanSynthesis/dependencies/manthan";
+//     //     std::string baseName = "temp_var_" + std::to_string(kw->getOutputVar());
+//     //     std::string verilogFile = manthanDir + "/" + baseName + "_skolem.v";
         
-    //     Abc_Ntk_t* defNtk = Io_ReadVerilog(const_cast<char*>(verilogFile.c_str()), 0);
-    //     if (defNtk) {
-    //         Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
-    //         Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
+//     //     Abc_Ntk_t* defNtk = Io_ReadVerilog(const_cast<char*>(verilogFile.c_str()), 0);
+//     //     if (defNtk) {
+//     //         Abc_Ntk_t* logicNtk = Abc_NtkToLogic(defNtk);
+//     //         Abc_Ntk_t* strashNtk = Abc_NtkStrash(logicNtk, 0, 1, 0);
             
-    //         Abc_NtkDelete(defNtk);
-    //         Abc_NtkDelete(logicNtk);
-    //         defNtk = strashNtk;
-    //     } else {
-    //         std::cerr << "Error: Failed to read Verilog file from Manthan: " << verilogFile << std::endl;
-    //         exit(1);
-    //     }
+//     //         Abc_NtkDelete(defNtk);
+//     //         Abc_NtkDelete(logicNtk);
+//     //         defNtk = strashNtk;
+//     //     } else {
+//     //         std::cerr << "Error: Failed to read Verilog file from Manthan: " << verilogFile << std::endl;
+//     //         exit(1);
+//     //     }
 
-    //     Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
-    //     Abc_NtkDelete(defNtk);
+//     //     Aig_Man_t* eDefMan = ABC_NAMESPACE::Abc_NtkToDar(defNtk, 0, 0);
+//     //     Abc_NtkDelete(defNtk);
 
-    //     int numOrigInputs = Aig_ManCiNum(this->manager);
-    //     while(Aig_ManCiNum(eDefMan)<numOrigInputs){
-    //         Aig_ObjCreateCi(eDefMan);
-    //     }
+//     //     int numOrigInputs = Aig_ManCiNum(this->manager);
+//     //     while(Aig_ManCiNum(eDefMan)<numOrigInputs){
+//     //         Aig_ObjCreateCi(eDefMan);
+//     //     }
 
-    //     std::vector<int> ordering;
-    //     for(auto e:kw->getInputOrdering()){
-    //         ordering.push_back(e);
-    //     }
+//     //     std::vector<int> ordering;
+//     //     for(auto e:kw->getInputOrdering()){
+//     //         ordering.push_back(e);
+//     //     }
 
-    //     for(auto e:kw->getOutputOrdering()){
-    //         ordering.push_back(e);
-    //     }
+//     //     for(auto e:kw->getOutputOrdering()){
+//     //         ordering.push_back(e);
+//     //     }
 
-    //     for(auto e:kw->getEliminatedVars()){
-    //         ordering.push_back(e);
-    //     }
+//     //     for(auto e:kw->getEliminatedVars()){
+//     //         ordering.push_back(e);
+//     //     }
 
-    //     Aig_Man_t* newEDefMan=remapInputs(eDefMan, ordering);
-    //     Aig_ManStop(eDefMan);
-    //     eDefMan = newEDefMan;
-    //     assert(Aig_ManCoNum(eDefMan)==kw->getOutputOrdering().size());
-    //     assert(Aig_ManCiNum(eDefMan) == Aig_ManCiNum(this->manager));
+//     //     Aig_Man_t* newEDefMan=remapInputs(eDefMan, ordering);
+//     //     Aig_ManStop(eDefMan);
+//     //     eDefMan = newEDefMan;
+//     //     assert(Aig_ManCoNum(eDefMan)==kw->getOutputOrdering().size());
+//     //     assert(Aig_ManCiNum(eDefMan) == Aig_ManCiNum(this->manager));
 
-    //     Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
-    //     defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
+//     //     Abc_Ntk_t* specNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+//     //     defNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(eDefMan);
 
-    //     Abc_NtkAppend(specNtk, defNtk, 1);
+//     //     Abc_NtkAppend(specNtk, defNtk, 1);
 
-    //     Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
+//     //     Aig_Man_t* specMan = ABC_NAMESPACE::Abc_NtkToDar(specNtk, 0, 0);
 
-    //     std::set<int> outputOrdering = kw->getOutputOrdering();
-
-
-
-    //     std::vector<int> varIds;
-
-    //     for(auto e:outputOrdering){
-    //         varIds.push_back(e);
-    //     }
-
-    //     std::vector<Aig_Obj_t*> funcIds;
-
-    //     for(int i=1;i<Aig_ManCoNum(specMan);i++){
-    //         funcIds.push_back(Aig_ManCo(specMan,i));
-    //     }
-
-    //     Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan,Aig_ManCo(specMan,0),varIds,funcIds);
-
-    //     Aig_ObjCreateCo(specMan, newDriver);
-
-    //     for(int i=0;i<Aig_ManCoNum(specMan)-1;i++){
-    //         Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
-    //         Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
-    //         // Aig_ManCoCleanup(specMan);
-    //     }
-
-    //     Aig_ManCoCleanup(specMan);
-    //     Aig_ManCleanup(specMan);
-    //     if(Aig_ManCoNum(specMan) == 0){
-    //         Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
-    //     }
-
-    //     this->manager = specMan;
-    // }
+//     //     std::set<int> outputOrdering = kw->getOutputOrdering();
 
 
-    Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
-    Aig_ManStop(this->manager);
+
+//     //     std::vector<int> varIds;
+
+//     //     for(auto e:outputOrdering){
+//     //         varIds.push_back(e);
+//     //     }
+
+//     //     std::vector<Aig_Obj_t*> funcIds;
+
+//     //     for(int i=1;i<Aig_ManCoNum(specMan);i++){
+//     //         funcIds.push_back(Aig_ManCo(specMan,i));
+//     //     }
+
+//     //     Aig_Obj_t* newDriver = Aig_SubstituteVec(specMan,Aig_ManCo(specMan,0),varIds,funcIds);
+
+//     //     Aig_ObjCreateCo(specMan, newDriver);
+
+//     //     for(int i=0;i<Aig_ManCoNum(specMan)-1;i++){
+//     //         Aig_ObjDisconnect(specMan, Aig_ManCo(specMan, i));
+//     //         Aig_ObjConnect(specMan, Aig_ManCo(specMan, i), Aig_ManConst0(specMan), NULL);
+//     //         // Aig_ManCoCleanup(specMan);
+//     //     }
+
+//     //     Aig_ManCoCleanup(specMan);
+//     //     Aig_ManCleanup(specMan);
+//     //     if(Aig_ManCoNum(specMan) == 0){
+//     //         Aig_ObjCreateCo(specMan, Aig_ManConst0(specMan));
+//     //     }
+
+//     //     this->manager = specMan;
+//     // }
 
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
+//     Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+//     Aig_ManStop(this->manager);
+
+
+//     globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
     
-    for(int i=0;i<evars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
-        if(newNtk==NULL) exit(1);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+//     for(int i=0;i<evars.size();i++){
+//         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
+//         if(newNtk==NULL) exit(1);
+//         Abc_NtkDelete(ntk);
+//         ntk = newNtk;
+//     }
     
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-e) size: {}\n", Abc_NtkNodeNum(ntk)));
+//     globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-e) size: {}\n", Abc_NtkNodeNum(ntk)));
 
 
-    for(int i=0;i<dvars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
-        if(newNtk==NULL) exit(1);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+//     for(int i=0;i<dvars.size();i++){
+//         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
+//         if(newNtk==NULL) exit(1);
+//         Abc_NtkDelete(ntk);
+//         ntk = newNtk;
+//     }
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-d) size: {}\n", Abc_NtkNodeNum(ntk)));
+//     globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-d) size: {}\n", Abc_NtkNodeNum(ntk)));
 
-    for(int i=0;i<uvars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
-        if(newNtk==NULL) exit(1);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+//     for(int i=0;i<uvars.size();i++){
+//         Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
+//         if(newNtk==NULL) exit(1);
+//         Abc_NtkDelete(ntk);
+//         ntk = newNtk;
+//     }
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
+//     globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
 
-    this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
-    Abc_NtkDelete(ntk);
-    // this->ShowAig();
+//     this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
+//     Abc_NtkDelete(ntk);
+//     // this->ShowAig();
 
 
-}
+// }
 
 AigWrapper::AigWrapper(const AigWrapper& other){
     this->manager = Aig_ManDupOrdered(other.manager);

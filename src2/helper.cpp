@@ -5,28 +5,28 @@ std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 AigWrapper* skolemAig = nullptr;
 
 
-std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf){
-    std::vector<KissatWrapper*> localSpecs;
-    std::set<int> deps = origDqbf->GetDepVars();
-    for(auto id:deps){
-        globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
-        KissatWrapper* kw = origDqbf->getLocalFormula(id);
-        // auto tmp = kw->getExistentialVarsToEliminate();
-        // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
-        localSpecs.push_back(kw);
-    }
-    std::set<int> exis = origDqbf->GetExistentials();
+// std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf){
+//     std::vector<KissatWrapper*> localSpecs;
+//     std::set<int> deps = origDqbf->GetDepVars();
+//     for(auto id:deps){
+//         globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
+//         KissatWrapper* kw = origDqbf->getLocalFormula(id);
+//         // auto tmp = kw->getExistentialVarsToEliminate();
+//         // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
+//         localSpecs.push_back(kw);
+//     }
+//     std::set<int> exis = origDqbf->GetExistentials();
 
-    for(auto id:exis){
-        globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
-        KissatWrapper* kw = origDqbf->getLocalFormula(id);
-        // auto tmp = kw->getExistentialVarsToEliminate();
-        // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
-        localSpecs.push_back(kw);
-    }
+//     for(auto id:exis){
+//         globalLogger.log(LogLevel::INFO, fmt::format("Generating localFormula for id: {}",id));
+//         KissatWrapper* kw = origDqbf->getLocalFormula(id);
+//         // auto tmp = kw->getExistentialVarsToEliminate();
+//         // globalLogger.log(LogLevel::DEBUG, fmt::format("tmp: {}",fmt::join(tmp," ")));
+//         localSpecs.push_back(kw);
+//     }
 
-    return localSpecs;
-}
+//     return localSpecs;
+// }
 
 
 std::set<int> getUnsatCore(std::vector<int> currAssumptions, std::vector<int> univAssumptions, CadicalWrapper* unsatCoreWrapper){
@@ -1320,7 +1320,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 void dumpAigerSkolems(std::vector<std::pair<int, AigWrapper*>>& tseitinSkolems){
 
 
-    
+
 
 
 }

@@ -40,31 +40,31 @@ Dqbf::Dqbf(std::set<int> universals, std::set<int> existentials, std::set<int> d
 }
 
 
-KissatWrapper* Dqbf::getLocalFormula(int var){
+// KissatWrapper* Dqbf::getLocalFormula(int var){
 
-    std::set<int> UniversalVarsToEliminate(this->universals.begin(), this->universals.end());
-    std::set<int> DepVarsToEliminate(this->depVars.begin(), this->depVars.end());
-    DepVarsToEliminate.erase(var);
-    // for(auto v:this->existentials){
-    //     ExistentialVarsToEliminate.insert(v);
-    // }
-    std::set<int> ExistentialVarsToEliminate(this->existentials.begin(), this->existentials.end());
-    // ExistentialVarsToEliminate.erase(var);
-    std::set<int> depSet = this->GetDependencySet(var);
-    for(auto e:depSet){
-        UniversalVarsToEliminate.erase(e);
-    }
+//     std::set<int> UniversalVarsToEliminate(this->universals.begin(), this->universals.end());
+//     std::set<int> DepVarsToEliminate(this->depVars.begin(), this->depVars.end());
+//     DepVarsToEliminate.erase(var);
+//     // for(auto v:this->existentials){
+//     //     ExistentialVarsToEliminate.insert(v);
+//     // }
+//     std::set<int> ExistentialVarsToEliminate(this->existentials.begin(), this->existentials.end());
+//     // ExistentialVarsToEliminate.erase(var);
+//     std::set<int> depSet = this->GetDependencySet(var);
+//     for(auto e:depSet){
+//         UniversalVarsToEliminate.erase(e);
+//     }
 
-    KissatWrapper* kw = new KissatWrapper();
-    kw->setVarsToEliminate(std::vector<int>(ExistentialVarsToEliminate.begin(), ExistentialVarsToEliminate.end()), std::vector<int>(UniversalVarsToEliminate.begin(), UniversalVarsToEliminate.end()), std::vector<int>(DepVarsToEliminate.begin(), DepVarsToEliminate.end()));
-    kw->setOutputVar(var);
-    kw->setDependencySet(std::vector<int>(depSet.begin(), depSet.end()));
-    kw->setNumVars(this->numInputs);
+//     KissatWrapper* kw = new KissatWrapper();
+//     kw->setVarsToEliminate(std::vector<int>(ExistentialVarsToEliminate.begin(), ExistentialVarsToEliminate.end()), std::vector<int>(UniversalVarsToEliminate.begin(), UniversalVarsToEliminate.end()), std::vector<int>(DepVarsToEliminate.begin(), DepVarsToEliminate.end()));
+//     kw->setOutputVar(var);
+//     kw->setDependencySet(std::vector<int>(depSet.begin(), depSet.end()));
+//     kw->setNumVars(this->numInputs);
 
-    for(auto clause:this->clauses){
-        kw->addClause(clause);
-    }
-    // kw->printClauses();
-    return kw;
+//     for(auto clause:this->clauses){
+//         kw->addClause(clause);
+//     }
+//     // kw->printClauses();
+//     return kw;
 
-}
+// }
