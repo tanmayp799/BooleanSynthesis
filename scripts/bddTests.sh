@@ -29,8 +29,9 @@ run_benchmark() {
     nice -n 19 timeout "$TIMEOUT_LIMIT" ./bin/main "$file" "$job_bdd_csv" > "$LOG_DIR/${filename}.log" 2> "$LOG_DIR/${filename}.errlog"
     exit_code=$?
     
-    end_ts=$(date +%s.%N)
-    elapsed_time=$(echo "$end_ts - start_ts" | bc)
+    local end_ts=$(date +%s.%N)
+    # elapsed_time=$(echo "$end_ts - start_ts" | bc)
+    local elapsed_time=$(echo "$end_ts - start_ts" | bc)
     
     case $exit_code in
         0)   result="sat" ;;
