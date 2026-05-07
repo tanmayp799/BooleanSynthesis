@@ -1754,7 +1754,7 @@ AigWrapper* quantify(Abc_Ntk_t* pNtk, DdManager* ddMan, DdNode* FddNode, std::ve
     pNewAig = ABC_NAMESPACE::Abc_NtkToDar(pStrashNtk,0,0);
 
     Cudd_RecursiveDeref(ddMan,bFinalRes);
-    Cudd_Quit(ddMan);
+    // Cudd_Quit(ddMan);
     Abc_NtkFreeGlobalBdds(pNtk,1);
     Abc_NtkDelete(pNtk);
 
