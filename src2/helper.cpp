@@ -218,8 +218,8 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 	// 	this->constAssumption[d]=false;
     // }
 
-	solver.write_dimacs("./f1.dimacs");
-    unsatCoreExtractor.write_dimacs("./f2.dimacs");
+	// solver.write_dimacs("./f1.dimacs");
+    // unsatCoreExtractor.write_dimacs("./f2.dimacs");
 	// exit(1);
 
 	// FILE* solver_dimacs =fopen("./f1.dimacs","r");

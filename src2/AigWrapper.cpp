@@ -728,6 +728,7 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 
     Abc_Ntk_t* ANtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(AMan);
 
+    globalLogger.log(LogLevel::INFO, fmt::format("Generated A_i for id: {}", outputVar));
 
 
     tMan = ABC_NAMESPACE::Abc_NtkToDar(phi_0_Ntk, 0, 0);
@@ -764,6 +765,7 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     // std::cin>>xx;
 
     Abc_Ntk_t* BNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(BMan);
+    globalLogger.log(LogLevel::INFO, fmt::format("Generated B_i for id: {}", outputVar));
 
 
     varToBasisMap[outputVar] = std::make_pair(ANtk, BNtk);
@@ -1249,6 +1251,8 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     pPo = Abc_NtkPo( pNtk, 0 );
     bFunc = (DdNode *)Abc_ObjGlobalBdd( pPo );
 
+    globalLogger.log(LogLevel::INFO, fmt::format("Generated BDD for id: {}", target_d));
+
     // ------------------------------------------------------------------
     // PHASE 2: Formal Logic Quantifications
     // ------------------------------------------------------------------
@@ -1262,7 +1266,9 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     } else {
         bExistRes = bFunc; 
         Cudd_Ref( bExistRes );
-    }
+    }   
+
+    globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {}", target_d));
     
     // 2. Universal Quantification
     if ( !universalVarsToEliminate.empty() ) {
@@ -1277,6 +1283,8 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
 
     // Dereference intermediate existential result
     Cudd_RecursiveDeref( dd, bExistRes );
+
+    globalLogger.log(LogLevel::INFO, fmt::format("Completed Univ Quant for id: {}", target_d));
 
     // ------------------------------------------------------------------
     // PHASE 3: Port Alignment & Network Derivation
@@ -1302,6 +1310,8 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
 
     pNewAig = ABC_NAMESPACE::Abc_NtkToDar( pStrashNtk, 0, 0 );
 
+
+    globalLogger.log(LogLevel::INFO, fmt::format("Generated AIG Local Spec for id: {}", target_d));
     // ------------------------------------------------------------------
     // PHASE 5: Strict Garbage Collection
     // ------------------------------------------------------------------

@@ -189,11 +189,12 @@ int main(int argc, char* argv[]){
     // exit(1);
 
     std::map<int, int> exToHMapping;
+    globalLogger.log(LogLevel::INFO, fmt::format("Generating definitions"));
 
     for(auto p:outputToAig){
         p.second->addInputs(numNewInputs);
-        p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
+        p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
         // p.second->ShowAig();
         // finalFormula->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
@@ -206,6 +207,7 @@ int main(int argc, char* argv[]){
 
     // // AigWrapper* skolemFunctions = new AigWrapper();
     // // skolemFunctions->addInputs(origDqbf->GetNumInputs()+numNewInputs);
+    globalLogger.log(LogLevel::INFO, fmt::format("Creating DELTA AND NEG_PHI"));
 
     for(auto p:outputToAig){
         // globalLogger.log(LogLevel::INFO, fmt::format("Merging AIG for id: {}", p.first));
@@ -236,6 +238,9 @@ int main(int argc, char* argv[]){
     CadicalWrapper* constraintWrapper = new CadicalWrapper();
 
     int res;
+    globalLogger.log(LogLevel::INFO, fmt::format("Starting CEGIS..."));
+
+
     if(!depVars.empty()) res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
     else res = 0;
     if(res==1){
