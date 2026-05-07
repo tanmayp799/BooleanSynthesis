@@ -13,3 +13,6 @@
 [submodule "dependencies/bfss"]
 	path = dependencies/bfss
 	url = https://github.com/BooleanFunctionalSynthesis/bfss.git
+[submodule "dependencies/fmt"]
+	path = dependencies/fmt
+	url = https://github.com/fmtlib/fmt.git
