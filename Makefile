@@ -6,6 +6,7 @@ MAIN 	= main
 
 ABC_PATH = ./dependencies/abc
 CADICAL_PATH = ./dependencies/cadical
+FMT_PATH = ./dependencies/fmt
 # KISSAT_PATH = ./dependencies/kissat
 
 ifndef CXX
@@ -27,18 +28,25 @@ CADICAL_INCLUDES = -I $(CADICAL_PATH)/src
 # LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/ # for src folder and not src2
 # DIR_INCLUDES = $(ABC_INCLUDES) $(LIB_DIRS) $(CADICAL_INCLUDES) # for src folder and not src2
 # KISSAT_INCLUDES = -I $(KISSAT_PATH)/src
+FMT_INCLUDES = -I $(FMT_PATH)/include
 
-LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/ 
-DIR_INCLUDES = $(ABC_INCLUDES) $(CADICAL_INCLUDES) $(LIB_DIRS)
+LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/
+DIR_INCLUDES = $(ABC_INCLUDES) $(CADICAL_INCLUDES) $(FMT_INCLUDES) $(LIB_DIRS)
 
 LIB_ABC    = -Wl,-Bstatic  -labc
-LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz
+# LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz
+LIB_COMMON = -Wl,-Bdynamic -lm -ldl -ltermcap -lpthread -fopenmp -lrt -lboost_program_options -lz 
 LIB_CADICAL = -Wl,-Bstatic -lcadical
 # LIB_KISSAT = -Wl,-Bstatic -lkissat
 
 CPP_FLAGS += -std=c++20 -DNO_UNIGEN -DFMT_HEADER_ONLY
 # LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON) # for src folder and not src2
-LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
+# LFLAGS    = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
+
+# Remove -lfmt and -lkissat from here
+
+# Ensure LFLAGS only uses the updated variables
+LFLAGS = $(DIR_INCLUDES) $(LIB_ABC) $(LIB_CADICAL) $(LIB_COMMON)
 
 # CPP_FLAGS += -O3 -g -pg
 CPP_FLAGS += -O0 -g
