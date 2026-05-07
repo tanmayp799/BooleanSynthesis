@@ -532,7 +532,7 @@ void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, 
 
     finalFormula->SetManager(finalMan);
     printf("After appending final skolems\n");
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
 
     std::vector<int> varIds(depVars.begin(), depVars.end());
     std::vector<Aig_Obj_t*> funcIds;
@@ -840,113 +840,377 @@ DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices) {
 
 
 
-AigWrapper* AigWrapper::quantify(std::vector<int>& varsToEliminate, int fExist){
-    MEASURE_TIME("quantify",0, LogLevel::ERROR);
-    MEASURE_TIME("quantify",0,LogLevel::STATS);
-    Abc_Ntk_t * pNtk, * pLogicNtk, * pStrashNtk;
-    Aig_Man_t * pNewAig;
-    DdManager * dd;
-    DdNode * bFunc, * bCube, * bFinalRes;
-    Abc_Obj_t * pPo, * pPi;
-    Vec_Ptr_t * vPiNames;
+
+#include "aig/aig/aig.h"
+#include "bdd/cudd/cudd.h"
+#include "misc/st/st.h"
+
+// --------------------------------------------------------------------------
+// Recursive DFS to map BDD nodes to Safe Dual-Rail AIG nodes
+// --------------------------------------------------------------------------
+static Aig_Obj_t * Bdd_To_SafeDualRail_Rec( DdManager * dd, DdNode * bdd, Aig_Man_t * pNew, 
+                                            Aig_Obj_t ** pMapPos, Aig_Obj_t ** pMapNeg, st__table * visited ) 
+{
+    // 1. Base Cases
+    if ( bdd == Cudd_ReadOne(dd) ) return Aig_ManConst1(pNew);
+    if ( bdd == Cudd_ReadLogicZero(dd) ) return Aig_ManConst0(pNew);
+
+    // 2. Handle CUDD complemented edges
+    int isComp = Cudd_IsComplement(bdd);
+    DdNode * bddReg = Cudd_Regular(bdd);
+
+    // 3. Memoization Check: Have we visited this node already?
+    Aig_Obj_t * pRes;
+    if ( st__lookup(visited, (char*)bddReg, (char**)&pRes) ) {
+        return isComp ? Aig_Not(pRes) : pRes;
+    }
+
+    // 4. Recurse down the High (Then) and Low (Else) branches
+    DdNode * childT = Cudd_T(bddReg);
+    DdNode * childE = Cudd_E(bddReg);
+
+    Aig_Obj_t * c_high = Bdd_To_SafeDualRail_Rec(dd, childT, pNew, pMapPos, pMapNeg, visited);
+    Aig_Obj_t * c_low  = Bdd_To_SafeDualRail_Rec(dd, childE, pNew, pMapPos, pMapNeg, visited);
+
+    // 5. Look up the positive and negative AIG inputs for this BDD variable index
+    int varIdx = bddReg->index; 
+    Aig_Obj_t * x_pos = pMapPos[varIdx];
+    Aig_Obj_t * x_neg = pMapNeg[varIdx];
+
+    // 6. Build the safe MUX: (x_pos AND c_high) OR (x_neg AND c_low)
+    Aig_Obj_t * and_high = Aig_And( pNew, x_pos, c_high );
+    Aig_Obj_t * and_low  = Aig_And( pNew, x_neg, c_low );
+    pRes = Aig_Or( pNew, and_high, and_low );
+
+    // 7. Cache the result for future DAG reconvergence
+    st__insert( visited, (char*)bddReg, (char*)pRes );
+
+    // 8. Return applying the complement if necessary
+    return isComp ? Aig_Not(pRes) : pRes;
+}
+
+// --------------------------------------------------------------------------
+// Top-Level API: Converts the BDD root into a Safe Dual-Rail AIG
+// --------------------------------------------------------------------------
+Aig_Man_t * Aig_ManCreateSafeDualRail( DdManager * dd, DdNode * bFunc ) 
+{
+    // Cudd_ReadSize gives the total number of variables currently in the manager
+    int nVars = Cudd_ReadSize(dd);
+
+    // Initialize the new AIG manager (estimate 3 nodes per BDD node)
+    Aig_Man_t * pNew = Aig_ManStart( Cudd_DagSize(bFunc) * 3 );
+    // pNew->pName = Abc_UtilStrsav( "safe_dual_rail_ckt" );
+
+    // Allocate arrays to map CUDD var index -> AIG Primary Inputs
+    Aig_Obj_t ** pMapPos = ABC_ALLOC( Aig_Obj_t *, nVars );
+    Aig_Obj_t ** pMapNeg = ABC_ALLOC( Aig_Obj_t *, nVars );
+    
+    // Create the Dual-Rail inputs (interleaved: var0_pos, var0_neg, var1_pos...)
+    for ( int i = 0; i < nVars; i++ ) {
+        pMapPos[i] = Aig_ObjCreateCi( pNew );
+        pMapNeg[i] = Aig_ObjCreateCi( pNew );
+    }
+
+    // Initialize ABC's hash table for memoization
+    st__table * visited = st__init_table( st__ptrcmp, st__ptrhash );
+
+    // Build the internal logic
+    Aig_Obj_t * pRoot = Bdd_To_SafeDualRail_Rec( dd, bFunc, pNew, pMapPos, pMapNeg, visited );
+
+    // Cap it off with a Primary Output
+    Aig_ObjCreateCo( pNew, pRoot );
+
+    // Clean up memory
+    st__free_table( visited );
+    ABC_FREE( pMapPos );
+    ABC_FREE( pMapNeg );
+    Aig_ManCleanup( pNew );
+
+    return pNew;
+}
+
+
+std::vector<int> Get_Bdd_Order( DdManager * dd ) {
+    int nVars = Cudd_ReadSize(dd);
+    int level, index;
+
+    std::vector<int> retVal;
+
+    // printf("\nRecommended Skolem Extraction Order (Bottom to Top):\n");
+    for ( level = nVars - 1; level >= 0; level-- ) {
+        index = Cudd_ReadInvPerm(dd, level);
+        // printf("Extracting Index %d first...\n", index);
+        // Add index to your extraction queue/list here
+        retVal.push_back(index);
+    }
+
+    return retVal;
+}
+
+// 1. The Recursive Helper: Builds the logic strictly by dependency
+Aig_Obj_t* GetSingleSkolem_rec(Aig_Man_t* pNew, Aig_Obj_t* pObj) {
+    // ABC safety check: Ensure we are working with raw pointers, not complemented ones
+    assert(!Aig_IsComplement(pObj));
+    
+    // If this node was already mapped (or if it's a pre-mapped CI/Const), return its new counterpart
+    if (pObj->pData) {
+        return (Aig_Obj_t*)pObj->pData;
+    }
+
+    // If we reach here and it's not mapped, it MUST be an internal AND node.
+    assert(Aig_ObjIsNode(pObj));
+
+    // Recursively dig down and get the mapped fanins
+    Aig_Obj_t* pFan0 = GetSingleSkolem_rec(pNew, Aig_ObjFanin0(pObj));
+    Aig_Obj_t* pFan1 = GetSingleSkolem_rec(pNew, Aig_ObjFanin1(pObj));
+
+    // Apply the original complement bits to the newly mapped fanins
+    pFan0 = Aig_NotCond(pFan0, Aig_ObjFaninC0(pObj));
+    pFan1 = Aig_NotCond(pFan1, Aig_ObjFaninC1(pObj));
+
+    // Create the new AND gate in the single-rail manager
+    Aig_Obj_t* pNewNode = Aig_And(pNew, pFan0, pFan1);
+    
+    // Cache it so we don't process it again
+    pObj->pData = pNewNode;
+    
+    return pNewNode;
+}
+
+
+// 2. The Updated Folding Function
+Aig_Man_t* GetSingleSkolemAig(Aig_Man_t* pDual) {
+    // Scrub all leftover garbage from Aig_SubstituteVec
+    Aig_ManCleanData(pDual); 
+
+    int nTotalVars = Aig_ManCiNum(pDual) / 2;
+    Aig_Man_t* pNew = Aig_ManStart(Aig_ManObjNumMax(pDual));
+    Aig_Obj_t *pNewPi;
     int i;
 
+    // A. Map Constants
+    Aig_ManConst0(pDual)->pData = Aig_ManConst0(pNew);
 
+    // B. Create the single-rail Primary Inputs
+    for (i = 0; i < nTotalVars; i++) {
+        Aig_ObjCreateCi(pNew);
+    }
 
-    // ------------------------------------------------------------------
-    // PHASE 1: AIG -> BDD Conversion & Sanitization
-    // ------------------------------------------------------------------
+    // C. Map the dual-rail PIs to the single-rail PIs
+    for (i = 0; i < nTotalVars; i++) {
+        Aig_Obj_t* pOldPos = Aig_ManCi(pDual, 2 * i);
+        Aig_Obj_t* pOldNeg = Aig_ManCi(pDual, 2 * i + 1);
+        pNewPi = Aig_ManCi(pNew, i);
+
+        pOldPos->pData = pNewPi;
+        pOldNeg->pData = Aig_Not(pNewPi);
+    }
+
+    // D. RECURSIVE MAPPING: Start at the PO and pull the logic backward
+    Aig_Obj_t* pOut = Aig_ManCo(pDual, 0);
     
-    // 1. Wrap the AIG manager in a standard ABC Network
-    pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( this->manager );
-    if ( pNtk == NULL ){
-        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkFromAigPhase failed.");
-        exit(1);
-    }
-
-    Abc_NtkShortNames(pNtk);
-
-
-    // 2. Build Global BDDs and capture the CUDD Manager
-    dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,1,0,1);
-    if(dd==NULL){
-        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
-        exit(1);
-    }
-
-    // 3. Extract the original logic function (Assuming 1 Primary Output)
-    pPo = Abc_NtkPo( pNtk, 0 );
-    bFunc = (DdNode *)Abc_ObjGlobalBdd( pPo );
-
-    // ------------------------------------------------------------------
-    // PHASE 2: Formal Logic Quantifications
-    // ------------------------------------------------------------------
+    // Get the mapped fanin
+    Aig_Obj_t* pNewOutFanin = GetSingleSkolem_rec(pNew, Aig_ObjFanin0(pOut));
     
-    // 1. Existential Quantification
-    if ( !varsToEliminate.empty() ) {
-        bCube = BuildVariableCube( dd, varsToEliminate);
-        if(fExist){
-            bFinalRes  = Cudd_bddExistAbstract( dd, bFunc, bCube );
+    // Apply the PO's complement bit
+    pNewOutFanin = Aig_NotCond(pNewOutFanin, Aig_ObjFaninC0(pOut));
+    
+    // E. Connect the final output
+    Aig_ObjCreateCo(pNew, pNewOutFanin);
+
+    // Clean up any unreachable nodes
+    Aig_ManCleanup(pNew); 
+
+    return pNew;
+}
+
+
+void generateTseitinSkolem(Aig_Man_t* ckt, std::vector<int> &ordering, 
+    std::vector<std::pair<int, AigWrapper*>> &tseitinSkolems){
+        ckt = compressAig(ckt);
+        // Aig_ManCo(ckt,0)->pFanin0 = Aig_Not(Aig_ManCo(ckt,0)->pFanin0);
+
+    // Aig_ManShow(ckt,0,NULL);
+    int xxx;
+    // std::cin>>xxx;
+    int sz = ordering.size();
+    for(int i=0;i<sz;i++){
+        Aig_Man_t* currSkolem  = Aig_ManDupOrdered(ckt);
+        int idx = ordering[i];
+        globalLogger.log(LogLevel::ERROR, fmt::format("Generating skolem for id: {}", idx));
+        std::vector<int> varIds;
+        std::vector<Aig_Obj_t*> funcIds;
+
+        varIds.push_back(2*idx+1);
+        varIds.push_back(2*idx+2);
+
+        funcIds.push_back(Aig_ManConst1(currSkolem));
+        funcIds.push_back(Aig_ManConst0(currSkolem));
+
+
+        for(int j = i+1; j<sz;j++){
+            int idx2 = ordering[j];
+            varIds.push_back(2*idx2+1);
+            varIds.push_back(2*idx2+2);
+
+            funcIds.push_back(Aig_ManConst1(currSkolem));
+            funcIds.push_back(Aig_ManConst1(currSkolem));
+
         }
-        else{
-            bFinalRes  = Cudd_bddUnivAbstract( dd, bFunc, bCube );
+
+        Aig_ManShow(currSkolem,0,NULL);
+        std::cin>>xxx;
+
+
+        Aig_Obj_t* newDriver = Aig_SubstituteVec(currSkolem, Aig_ManCo(currSkolem, 0), varIds, funcIds);
+        Aig_ObjCreateCo(currSkolem, newDriver);
+
+        int numOuts=Aig_ManCoNum(currSkolem);
+        for(int j=0;j<numOuts-1;j++){
+            Aig_ObjDisconnect(currSkolem, Aig_ManCo(currSkolem, j));
+            Aig_ObjConnect(currSkolem, Aig_ManCo(currSkolem, j), Aig_ManConst0(currSkolem), NULL);
+            // Aig_ManCoCleanup(specMan);
         }
-        Cudd_Ref( bFinalRes );
-        Cudd_RecursiveDeref( dd, bCube );
-    } else {
-        bFinalRes = bFunc; 
-        Cudd_Ref( bFinalRes );
+
+        Aig_ManCoCleanup(currSkolem);
+        Aig_ManCleanup(currSkolem);
+        if(Aig_ManCoNum(currSkolem) == 0){
+            Aig_ObjCreateCo(currSkolem, Aig_ManConst0(currSkolem));
+        }
+        currSkolem = compressAig(currSkolem);
+        Aig_ManShow(currSkolem,0,NULL);
+        std::cin>>xxx;
+
+        Aig_Man_t* singleSkolem = GetSingleSkolemAig(currSkolem);
+        Aig_ManStop(currSkolem);
+
+
+        // currSkolem=compressAig(currSkolem);
+        AigWrapper* skolemAig = new AigWrapper();
+        skolemAig->SetManager(singleSkolem);
+        tseitinSkolems.push_back(std::make_pair(idx, skolemAig));
+        skolemAig->compress();
+        globalLogger.log(LogLevel::ERROR, fmt::format("Skolem function for var: {}", idx));
+        // skolemAig->ShowAig();
+
     }
-
-
-    // ------------------------------------------------------------------
-    // PHASE 3: Port Alignment & Network Derivation
-    // ------------------------------------------------------------------
-
-    // 1. Extract the sanitized PI names (100% segfault safe now)
-    vPiNames = Vec_PtrAlloc( Abc_NtkPiNum(pNtk) );
-    Abc_NtkForEachPi( pNtk, pPi, i ) {
-        Vec_PtrPush( vPiNames, (void *)Abc_ObjName(pPi) );
-    }
-
-    // 2. Derive the new Logic Network using the API
-    // (This creates a NEW CUDD manager inside pLogicNtk and safely transfers bFinalRes)
-    pLogicNtk = Abc_NtkDeriveFromBdd( dd, bFinalRes, Abc_ObjName(pPo), vPiNames );
-    Vec_PtrFree( vPiNames );
-
-
-
-    // ------------------------------------------------------------------
-    // PHASE 4: Strashing & Memory Hijack
-    // ------------------------------------------------------------------
-
-    // 1. Convert the Logic Network back to an AIG Network
-    pStrashNtk = Abc_NtkStrash( pLogicNtk, 0, 1, 0 );
-
-    pNewAig = ABC_NAMESPACE::Abc_NtkToDar( pStrashNtk, 0, 0 );
-
-    // ------------------------------------------------------------------
-    // PHASE 5: Strict Garbage Collection
-    // ------------------------------------------------------------------
-
-    // Dereference the final BDD in the OLD manager
-    Cudd_RecursiveDeref( dd, bFinalRes ); 
-
-    // Free the original network (This safely shuts down the OLD 'dd' manager)
-    Abc_NtkFreeGlobalBdds( pNtk, 1 ); 
-    Abc_NtkDelete( pNtk );
-
-    // Delete intermediate networks
-    Abc_NtkDelete( pLogicNtk );
-    Abc_NtkDelete( pStrashNtk ); // Safe because we set pManFunc = NULL
-
-    AigWrapper* retAig = new AigWrapper(this);
-    retAig->SetManager(pNewAig);
-
-    retAig->compress();
-    return retAig;
+    exit(1);
+    return;
 
 }
+
+
+
+// AigWrapper* AigWrapper::quantify(std::vector<int>& varsToEliminate, int fExist,
+//      std::vector<std::pair<int, AigWrapper*>> &tseitinSkolems){
+//     MEASURE_TIME("quantify",0, LogLevel::ERROR);
+//     MEASURE_TIME("quantify",0,LogLevel::STATS);
+//     Abc_Ntk_t * pNtk, * pLogicNtk, * pStrashNtk;
+//     Aig_Man_t * pNewAig;
+//     DdManager * dd;
+//     DdNode * bFunc, * bCube, * bFinalRes;
+//     Abc_Obj_t * pPo, * pPi;
+//     Vec_Ptr_t * vPiNames;
+//     int i;
+
+
+
+//     // ------------------------------------------------------------------
+//     // PHASE 1: AIG -> BDD Conversion & Sanitization
+//     // ------------------------------------------------------------------
+    
+//     // 1. Wrap the AIG manager in a standard ABC Network
+//     pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( this->manager );
+//     if ( pNtk == NULL ){
+//         globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkFromAigPhase failed.");
+//         exit(1);
+//     }
+
+//     Abc_NtkShortNames(pNtk);
+
+
+//     // 2. Build Global BDDs and capture the CUDD Manager
+//     dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,1,0,1);
+//     if(dd==NULL){
+//         globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
+//         exit(1);
+//     }
+
+//     // 3. Extract the original logic function (Assuming 1 Primary Output)
+//     pPo = Abc_NtkPo( pNtk, 0 );
+//     bFunc = (DdNode *)Abc_ObjGlobalBdd( pPo );
+
+
+    
+//     // ------------------------------------------------------------------
+//     // PHASE 2: Formal Logic Quantifications
+//     // ------------------------------------------------------------------
+    
+//     // 1. Existential Quantification
+//     if ( !varsToEliminate.empty() ) {
+//         bCube = BuildVariableCube( dd, varsToEliminate);
+//         if(fExist){
+//             bFinalRes  = Cudd_bddExistAbstract( dd, bFunc, bCube );
+//         }
+//         else{
+//             bFinalRes  = Cudd_bddUnivAbstract( dd, bFunc, bCube );
+//         }
+//         Cudd_Ref( bFinalRes );
+//         Cudd_RecursiveDeref( dd, bCube );
+//     } else {
+//         bFinalRes = bFunc; 
+//         Cudd_Ref( bFinalRes );
+//     }
+
+
+//     // ------------------------------------------------------------------
+//     // PHASE 3: Port Alignment & Network Derivation
+//     // ------------------------------------------------------------------
+
+//     // 1. Extract the sanitized PI names (100% segfault safe now)
+//     vPiNames = Vec_PtrAlloc( Abc_NtkPiNum(pNtk) );
+//     Abc_NtkForEachPi( pNtk, pPi, i ) {
+//         Vec_PtrPush( vPiNames, (void *)Abc_ObjName(pPi) );
+//     }
+
+//     // 2. Derive the new Logic Network using the API
+//     // (This creates a NEW CUDD manager inside pLogicNtk and safely transfers bFinalRes)
+//     pLogicNtk = Abc_NtkDeriveFromBdd( dd, bFinalRes, Abc_ObjName(pPo), vPiNames );
+//     Vec_PtrFree( vPiNames );
+
+
+
+//     // ------------------------------------------------------------------
+//     // PHASE 4: Strashing & Memory Hijack
+//     // ------------------------------------------------------------------
+
+//     // 1. Convert the Logic Network back to an AIG Network
+//     pStrashNtk = Abc_NtkStrash( pLogicNtk, 0, 1, 0 );
+
+//     pNewAig = ABC_NAMESPACE::Abc_NtkToDar( pStrashNtk, 0, 0 );
+
+//     // ------------------------------------------------------------------
+//     // PHASE 5: Strict Garbage Collection
+//     // ------------------------------------------------------------------
+
+//     // Dereference the final BDD in the OLD manager
+//     Cudd_RecursiveDeref( dd, bFinalRes ); 
+
+//     // Free the original network (This safely shuts down the OLD 'dd' manager)
+//     Abc_NtkFreeGlobalBdds( pNtk, 1 ); 
+//     Abc_NtkDelete( pNtk );
+
+//     // Delete intermediate networks
+//     Abc_NtkDelete( pLogicNtk );
+//     Abc_NtkDelete( pStrashNtk ); // Safe because we set pManFunc = NULL
+
+//     AigWrapper* retAig = new AigWrapper(this);
+//     retAig->SetManager(pNewAig);
+
+//     retAig->compress();
+//     return retAig;
+
+// }
 
 
 AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate){
@@ -1057,6 +1321,7 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     retAig->SetManager(pNewAig);
 
     retAig->compress();
+    // retAig->ShowAig();
     return retAig;
     
 }

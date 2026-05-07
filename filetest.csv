@@ -3,3 +3,5 @@
 ./benchmark_tests/afterhqspre/PEC1/pec_adder_3_bit_2_30.dqdimacs,23,10
 ./benchmark_tests/afterhqspre/PEC1/pec_adder_3_bit_2_30.dqdimacs,28,9
 ./benchmark_tests/afterhqspre/PEC1/pec_adder_3_bit_2_30.dqdimacs,29,10
+./small_tests/unit.dqdimacs,4,18
+./small_tests/unit.dqdimacs,5,10

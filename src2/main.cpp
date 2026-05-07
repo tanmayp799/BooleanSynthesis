@@ -9,6 +9,7 @@
 std::string g_argv2;
 bool didManthan=false;
 
+int numOrigInputs=0;
 
 AigWrapper* callBFSS(std::vector<int>& varsToEliminate, int target_d, std::string verilogFile, AigWrapper* wrapper, std::string suffix){
     MEASURE_TIME(fmt::format("callBFSS execution for target_d={} (suffix: {})", target_d, suffix),target_d, LogLevel::ERROR);
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]){
 
     Dqbf* origDqbf = fileParser->ParseDqbf();
 
-    globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
+    // globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
     // std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
 
 
@@ -121,6 +122,12 @@ int main(int argc, char* argv[]){
     // }
 
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
+
+    numOrigInputs = finalFormula->getNumInputs();
+    // AigWrapper* nnfFormula = getMonotonicCircuit(finalFormula);
+
+
+
 
     // Aig_Man_t* origFormula = finalFormula->getManager();
 
@@ -245,10 +252,42 @@ int main(int argc, char* argv[]){
 
     globalLogger.log(LogLevel::INFO, fmt::format("Eliminating existentials: [{}]", fmt::join(exisVarsToEliminate, " ")));
 
+
+    std::vector<std::pair<int, AigWrapper*>> tseitinSkolems;
+
     if(!existentials.empty()){
-        AigWrapper* newFinal = finalFormula->quantify(exisVarsToEliminate, 1);
+
+        DdManager* ddMan;
+        DdNode* FddNode;
+        Abc_Ntk_t* pNtk;
+
+        getBDD(finalFormula, ddMan, FddNode, pNtk);
+
+        
+        Nnf_Man nnfNew;
+        nnfNew.init(ddMan, FddNode);
+
+        assert(nnfNew.isWDNNF()==true);
+        Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
+        
+
+        // exit(1);
+        tseitinSkolems = getTseitinSkolems(SAig,exisVarsToEliminate);
+
+        AigWrapper* newFinalFormula = quantify(pNtk, ddMan,FddNode, exisVarsToEliminate);
+
+        // AigWrapper* tmpwrap=new AigWrapper();
+        // tmpwrap->SetManager(SAig);
+        // tmpwrap->compress();
+
+        // // Aig_ManShow(SAig,0,NULL);
+        // // int yy;
+        // // std::cin>>yy;
+        // tmpwrap->ShowAig();
+        // exit(1);
+        // AigWrapper* newFinal = finalFormula->quantify(exisVarsToEliminate, 1, tseitinSkolems);
         delete finalFormula;
-        finalFormula = newFinal;
+        finalFormula = newFinalFormula;
     }
 
     // AigWrapper* origBenchmark = new AigWrapper(finalFormula);
@@ -506,7 +545,7 @@ int main(int argc, char* argv[]){
     // exit(1);
 
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
-    AigWrapper* origBenchmark = new AigWrapper(finalFormula); 
+    // AigWrapper* origBenchmark = new AigWrapper(finalFormula); 
     AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
     int numNewInputs = depVars.size();
     // numNewInputs+= origDqbf->GetExistentials().size();
@@ -554,7 +593,7 @@ int main(int argc, char* argv[]){
         // finalFormula->ShowAig();
         unsatCoreFormula->merge(p.second);
     }
-
+    // finalFormula->ShowAig();
     // for(auto p:outputToAig){
     //     delete p.second;
     // }
@@ -567,8 +606,9 @@ int main(int argc, char* argv[]){
     CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
     CadicalWrapper* constraintWrapper = new CadicalWrapper();
 
-    int res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
-
+    int res;
+    if(!depVars.empty()) res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
+    else res = 0;
     if(res==1){
         globalLogger.log(LogLevel::INFO, "No Solution Exists.");
         exit(20);
@@ -579,11 +619,12 @@ int main(int argc, char* argv[]){
     }
 
     // origBenchmark->ShowAig();
-
-    int res2 =verify(origBenchmark, origDqbf, fileParser->argv);
+    AigWrapper* origBenchmark = new AigWrapper(origDqbf);
+    int res2 =verify(origBenchmark, origDqbf, tseitinSkolems, fileParser->argv);
 
     if(res2==20){
         globalLogger.log(LogLevel::INFO, "Verification complete: Check Passed!");
+        dumpAigerSkolems(tseitinSkolems);
     }
     else{
         globalLogger.log(LogLevel::INFO, "Verification complete: Check Failed!");

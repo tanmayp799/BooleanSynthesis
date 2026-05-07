@@ -1315,7 +1315,17 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
     return 0;
 }
 
-int verify(AigWrapper* finalFormula, Dqbf* origDqbf, char* argv[]){
+
+
+void dumpAigerSkolems(std::vector<std::pair<int, AigWrapper*>>& tseitinSkolems){
+
+
+    
+
+
+}
+
+int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, AigWrapper*>>& tseitinSkolems, char* argv[]){
     MEASURE_TIME("verify",-1, LogLevel::ERROR);
     
     // AigWrapper* finalFormula = new AigWrapper(origDqbf);
@@ -1420,49 +1430,116 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, char* argv[]){
     //     // Aig_Obj_t* outObj = Aig_ManCo(origFormula,0);
     // }
 
+
+
+    // PART-1 Substitute skolem functions for tseitin variables. //
+    Aig_Man_t* formulaMan = finalFormula->getManager();
+    int sz = tseitinSkolems.size();
+    for(int i=sz-1;i>=0;i--){
+        int varToReplace = tseitinSkolems[i].first;
+        AigWrapper* skolem = tseitinSkolems[i].second;
+        Aig_Man_t* skolemMan = skolem->getManager();
+
+        if(Aig_ManCiNum(formulaMan) < Aig_ManCiNum(skolemMan)){
+            while(Aig_ManCiNum(formulaMan) < Aig_ManCiNum(skolemMan)){
+                Aig_ObjCreateCi(formulaMan);
+            }
+        }
+        else if(Aig_ManCiNum(formulaMan) > Aig_ManCiNum(skolemMan)){
+            while(Aig_ManCiNum(formulaMan) > Aig_ManCiNum(skolemMan)){
+                Aig_ObjCreateCi(skolemMan);
+            }
+        }
+
+        Abc_Ntk_t* formulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(formulaMan);
+        Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
+        Aig_ManStop(formulaMan);
+        Aig_ManStop(skolemMan);
+        
+        Abc_NtkAppend(formulaNtk, skolemNtk, 1);
+        Aig_Man_t* newFormulaMan = ABC_NAMESPACE::Abc_NtkToDar(formulaNtk, 0, 0);
+        Abc_NtkDelete(formulaNtk);
+        Abc_NtkDelete(skolemNtk);
+
+        Aig_Obj_t* newDriver = Aig_Substitute(newFormulaMan, Aig_ManCo(newFormulaMan,0), varToReplace, Aig_ManCo(newFormulaMan,1));
+        Aig_ObjCreateCo(newFormulaMan, newDriver);
+
+        int numOutToDelete = Aig_ManCoNum(newFormulaMan)-1;
+        for(int i=0;i<numOutToDelete;i++){
+            Aig_ObjDisconnect(newFormulaMan, Aig_ManCo(newFormulaMan, i));
+            Aig_ObjConnect(newFormulaMan, Aig_ManCo(newFormulaMan, i), Aig_ManConst0(newFormulaMan), NULL);
+        }
+
+        Aig_ManCoCleanup(newFormulaMan);
+        Aig_ManCleanup(newFormulaMan);
+        if(Aig_ManCoNum(newFormulaMan) == 0){
+            Aig_ObjCreateCo(newFormulaMan, Aig_ManConst0(newFormulaMan));
+        }
+
+        formulaMan = newFormulaMan;
+        finalFormula->SetManager(formulaMan);
+        finalFormula->compress();
+        formulaMan = finalFormula->getManager();
+        
+    }
+
+
+
+
     Aig_Man_t* formulaAfterTseitin = finalFormula->getManager();
 
-    Aig_Man_t* skolemMan = skolemAig->getManager();
+    Aig_Man_t* finalCheck = formulaAfterTseitin;
+    if(!origDqbf->GetDepVars().empty()){
 
-    while(Aig_ManCiNum(formulaAfterTseitin) < Aig_ManCiNum(skolemMan)){
-        Aig_ObjCreateCi(formulaAfterTseitin);
-    }
-
-    // assert(Aig_ManCoNum(skolemMan)== origDqbf->GetDepVars().size());
     
-    Abc_Ntk_t* formulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(formulaAfterTseitin);
-    Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
-    Aig_ManStop(formulaAfterTseitin);
-    Aig_ManStop(skolemMan);
-    
-    Abc_NtkAppend(formulaNtk, skolemNtk, 1);
-    Aig_Man_t* finalCheck = ABC_NAMESPACE::Abc_NtkToDar(formulaNtk, 0, 0);
-    Abc_NtkDelete(formulaNtk);
-    Abc_NtkDelete(skolemNtk);
 
-    std::set<int> depVars = origDqbf->GetDepVars();
-    std::vector<int> varIds(depVars.begin(), depVars.end());
-    std::vector<Aig_Obj_t*> funcIds;
+        Aig_Man_t* skolemMan = skolemAig->getManager();
 
-    for(int i=0;i<varIds.size();i++){
-        funcIds.push_back(Aig_ManCo(finalCheck,i+1));
+        while(Aig_ManCiNum(formulaAfterTseitin) < Aig_ManCiNum(skolemMan)){
+            Aig_ObjCreateCi(formulaAfterTseitin);
+        }
+        
+
+        while(Aig_ManCiNum(formulaAfterTseitin) > Aig_ManCiNum(skolemMan)){
+            Aig_ObjCreateCi(skolemMan);
+        }
+        
+
+        // assert(Aig_ManCoNum(skolemMan)== origDqbf->GetDepVars().size());
+        
+        Abc_Ntk_t* formulaNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(formulaAfterTseitin);
+        Abc_Ntk_t* skolemNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(skolemMan);
+        Aig_ManStop(formulaAfterTseitin);
+        Aig_ManStop(skolemMan);
+        
+        Abc_NtkAppend(formulaNtk, skolemNtk, 1);
+        finalCheck = ABC_NAMESPACE::Abc_NtkToDar(formulaNtk, 0, 0);
+        Abc_NtkDelete(formulaNtk);
+        Abc_NtkDelete(skolemNtk);
+
+        std::set<int> depVars = origDqbf->GetDepVars();
+        std::vector<int> varIds(depVars.begin(), depVars.end());
+        std::vector<Aig_Obj_t*> funcIds;
+
+        for(int i=0;i<varIds.size();i++){
+            funcIds.push_back(Aig_ManCo(finalCheck,i+1));
+        }
+
+        Aig_Obj_t* newDriver = Aig_SubstituteVec(finalCheck,Aig_ManCo(finalCheck,0),varIds,funcIds);
+        Aig_ObjCreateCo(finalCheck, newDriver);
+
+        int numOutToDelete = Aig_ManCoNum(finalCheck);
+        for(int i=0;i<numOutToDelete-1;i++){
+            Aig_ObjDisconnect(finalCheck,Aig_ManCo(finalCheck,i));
+            Aig_ObjConnect(finalCheck, Aig_ManCo(finalCheck,i),Aig_ManConst0(finalCheck), NULL);
+        }
+
+        Aig_ManCoCleanup(finalCheck);
+        Aig_ManCleanup(finalCheck);
+        if(Aig_ManCoNum(finalCheck)==0){
+            Aig_ObjCreateCo(finalCheck, Aig_ManConst0(finalCheck));
+        }
     }
-
-    Aig_Obj_t* newDriver = Aig_SubstituteVec(finalCheck,Aig_ManCo(finalCheck,0),varIds,funcIds);
-    Aig_ObjCreateCo(finalCheck, newDriver);
-
-    int numOutToDelete = Aig_ManCoNum(finalCheck);
-    for(int i=0;i<numOutToDelete-1;i++){
-        Aig_ObjDisconnect(finalCheck,Aig_ManCo(finalCheck,i));
-        Aig_ObjConnect(finalCheck, Aig_ManCo(finalCheck,i),Aig_ManConst0(finalCheck), NULL);
-    }
-
-    Aig_ManCoCleanup(finalCheck);
-    Aig_ManCleanup(finalCheck);
-    if(Aig_ManCoNum(finalCheck)==0){
-        Aig_ObjCreateCo(finalCheck, Aig_ManConst0(finalCheck));
-    }
-
     AigWrapper* tmpwrap = new AigWrapper();
     tmpwrap->SetManager(finalCheck);
 
@@ -1506,4 +1583,285 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, char* argv[]){
 
 
 
+}
+
+
+
+
+
+
+
+
+
+
+// AigWrapper* getMonotonicCircuit(AigWrapper* formula){
+
+//     Aig_Man_t* p = formula->getManager();
+
+//     Aig_Man_t * pNew;
+//     Aig_Obj_t * pObj, * pFanin0, * pFanin1;
+//     Aig_Obj_t ** pMapPos, ** pMapNeg;
+//     Aig_Obj_t * pPos0, * pPos1, * pNeg0, * pNeg1;
+//     int i;
+    
+//     pNew = Aig_ManStart( Aig_ManObjNumMax(p) * 2 );
+
+//     // 2. Allocate mapping arrays mapping original ObjId -> new positive/negative nodes
+//     pMapPos = ABC_ALLOC( Aig_Obj_t *, Aig_ManObjNumMax(p) );
+//     pMapNeg = ABC_ALLOC( Aig_Obj_t *, Aig_ManObjNumMax(p) );
+//     memset( pMapPos, 0, sizeof(Aig_Obj_t *) * Aig_ManObjNumMax(p) );
+//     memset( pMapNeg, 0, sizeof(Aig_Obj_t *) * Aig_ManObjNumMax(p) );
+
+//     // Map constant 0
+//     pMapPos[0] = Aig_ManConst0(pNew);
+//     pMapNeg[0] = Aig_ManConst1(pNew); // The negation of Const 0 is Const 1
+
+//     // 3. Create Combinational Inputs (Interleaved: x1, x1_neg, x2, x2_neg...)
+//     Aig_ManForEachCi( p, pObj, i ) {
+//         pMapPos[pObj->Id] = Aig_ObjCreateCi( pNew );
+//         pMapNeg[pObj->Id] = Aig_ObjCreateCi( pNew );
+    
+//     }
+
+
+//     // 4. Process internal nodes in topological order
+//     Aig_ManForEachNode( p, pObj, i )
+//     {
+//         pFanin0 = Aig_ObjChild0(pObj);
+//         pFanin1 = Aig_ObjChild1(pObj);
+
+//         // Resolve Fanin 0 phases
+//         if ( Aig_IsComplement(pFanin0) ) {
+//             pPos0 = pMapNeg[Aig_Regular(pFanin0)->Id];
+//             pNeg0 = pMapPos[Aig_Regular(pFanin0)->Id];
+//         } else {
+//             pPos0 = pMapPos[Aig_Regular(pFanin0)->Id];
+//             pNeg0 = pMapNeg[Aig_Regular(pFanin0)->Id];
+//         }
+
+//         // Resolve Fanin 1 phases
+//         if ( Aig_IsComplement(pFanin1) ) {
+//             pPos1 = pMapNeg[Aig_Regular(pFanin1)->Id];
+//             pNeg1 = pMapPos[Aig_Regular(pFanin1)->Id];
+//         } else {
+//             pPos1 = pMapPos[Aig_Regular(pFanin1)->Id];
+//             pNeg1 = pMapNeg[Aig_Regular(pFanin1)->Id];
+//         }
+
+//         // Positive phase: Pos0 AND Pos1
+//         pMapPos[pObj->Id] = Aig_And( pNew, pPos0, pPos1 );
+
+//         // Negative phase: Neg0 OR Neg1 (Using De Morgan's inside Aig_Or)
+//         pMapNeg[pObj->Id] = Aig_Or( pNew, pNeg0, pNeg1 );
+//     }
+
+
+//     // 5. Map Combinational Outputs
+//     Aig_ManForEachCo( p, pObj, i )
+//     {
+//         pFanin0 = Aig_ObjChild0(pObj);
+        
+//         // We only care about outputting the correct evaluated positive phase
+//         if ( Aig_IsComplement(pFanin0) ) {
+//             pPos0 = pMapNeg[Aig_Regular(pFanin0)->Id];
+//         } else {
+//             pPos0 = pMapPos[Aig_Regular(pFanin0)->Id];
+//         }
+        
+//         Aig_ObjCreateCo( pNew, pPos0 );
+//     }
+
+//     // 6. Cleanup
+//     ABC_FREE( pMapPos );
+//     ABC_FREE( pMapNeg );
+
+//     Aig_ManCleanup( pNew );
+    
+//     AigWrapper* nnfFormula = new AigWrapper();
+//     nnfFormula->SetManager(pNew);
+//     return nnfFormula;
+
+// }
+
+
+
+
+
+void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t* &pNtk){
+    Aig_Man_t* FMan = formula->getManager();
+    Abc_Ntk_t* FNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(FMan);
+
+    Abc_NtkShortNames(FNtk);
+
+    ddMan = (DdManager*)Abc_NtkBuildGlobalBdds(FNtk, 1e10,1,1,0,1);
+    FddNode = (DdNode*)Abc_ObjGlobalBdd(Abc_NtkPo(FNtk,0));
+    pNtk=FNtk;
+    return;
+
+}
+
+
+// DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices) {
+//     DdNode * bCube = Cudd_ReadOne( dd );
+//     Cudd_Ref( bCube );
+    
+//     for ( int i = 0; i < pIndices.size(); i++ ) {
+//         DdNode * bVar = Cudd_bddIthVar( dd, pIndices[i] );
+//         DdNode * bTemp = Cudd_bddAnd( dd, bCube, bVar );
+//         Cudd_Ref( bTemp );
+//         Cudd_RecursiveDeref( dd, bCube );
+//         bCube = bTemp;
+//     }
+//     return bCube;
+// }
+
+
+
+
+AigWrapper* quantify(Abc_Ntk_t* pNtk, DdManager* ddMan, DdNode* FddNode, std::vector<int> &varsToEliminate){
+    
+    Abc_Ntk_t * pLogicNtk, * pStrashNtk;
+    Aig_Man_t * pNewAig;
+    DdNode *bCube, *bFinalRes;
+    Vec_Ptr_t * vPiNames;
+    Abc_Obj_t* pPi,* pPo;
+    int i;
+
+    pPo = Abc_NtkPo(pNtk,0);
+
+    if(!varsToEliminate.empty()){
+        bCube = BuildVariableCube(ddMan, varsToEliminate);
+        bFinalRes = Cudd_bddExistAbstract(ddMan,FddNode, bCube);
+
+        Cudd_Ref(bFinalRes);
+        Cudd_RecursiveDeref(ddMan, FddNode);
+
+    }
+    else{
+        bFinalRes = FddNode;
+        Cudd_Ref(bFinalRes);
+    }
+
+    vPiNames = Vec_PtrAlloc(Abc_NtkPiNum(pNtk));
+    Abc_NtkForEachPi(pNtk,pPi,i){
+        Vec_PtrPush(vPiNames, (void *)Abc_ObjName(pPi));
+    }
+
+    pLogicNtk = Abc_NtkDeriveFromBdd(ddMan, bFinalRes, Abc_ObjName(pPo), vPiNames);
+    Vec_PtrFree(vPiNames);
+
+    pStrashNtk = Abc_NtkStrash(pLogicNtk,0,1,0);
+    pNewAig = ABC_NAMESPACE::Abc_NtkToDar(pStrashNtk,0,0);
+
+    Cudd_RecursiveDeref(ddMan,bFinalRes);
+    Abc_NtkFreeGlobalBdds(pNtk,1);
+    Abc_NtkDelete(pNtk);
+
+    Abc_NtkDelete(pLogicNtk);
+    Abc_NtkDelete(pStrashNtk);
+
+    AigWrapper* newFormula = new AigWrapper();
+    newFormula->SetManager(pNewAig);
+
+    newFormula->compress();
+    // newFormula->ShowAig();
+
+    return newFormula;
+
+}
+
+
+std::vector<std::pair<int, AigWrapper*>> getTseitinSkolems(Aig_Man_t* SAig, std::vector<int> existentialVarsToEliminate){
+
+    std::vector<std::pair<int, AigWrapper*>> retVec;
+    int sz = existentialVarsToEliminate.size();
+    int yy;
+    for(int i=0;i<sz;i++){
+        Aig_Man_t* currSkolem = Aig_ManDupOrdered(SAig);
+        int idx=existentialVarsToEliminate[i];
+
+        globalLogger.log(LogLevel::ERROR, fmt::format("Generating skolem for id: {}", idx));
+        std::vector<int> varIds;
+        std::vector<Aig_Obj_t*> funcIds;
+
+        varIds.push_back(idx+1);
+        varIds.push_back(numOrigInputs+idx+1);
+
+        funcIds.push_back(Aig_ManConst1(currSkolem));
+        funcIds.push_back(Aig_ManConst0(currSkolem));
+
+        for(int j = i+1; j<sz;j++){
+            int idx2 = existentialVarsToEliminate[j];
+            varIds.push_back(idx2+1);
+            varIds.push_back(numOrigInputs+idx2+1);
+
+            funcIds.push_back(Aig_ManConst1(currSkolem));
+            funcIds.push_back(Aig_ManConst1(currSkolem));
+
+        }
+
+        // Aig_ManShow(currSkolem,0,NULL);
+        // std::cin>>yy;
+
+        Aig_Obj_t* newDriver = Aig_SubstituteVec(currSkolem, Aig_ManCo(currSkolem, 0), varIds, funcIds);
+        Aig_ObjCreateCo(currSkolem, newDriver);
+
+        int numOuts=Aig_ManCoNum(currSkolem);
+        for(int j=0;j<numOuts-1;j++){
+            Aig_ObjDisconnect(currSkolem, Aig_ManCo(currSkolem, j));
+            Aig_ObjConnect(currSkolem, Aig_ManCo(currSkolem, j), Aig_ManConst0(currSkolem), NULL);
+            // Aig_ManCoCleanup(specMan);
+        }
+
+        Aig_ManCoCleanup(currSkolem);
+        Aig_ManCleanup(currSkolem);
+        if(Aig_ManCoNum(currSkolem) == 0){
+            Aig_ObjCreateCo(currSkolem, Aig_ManConst0(currSkolem));
+        }
+
+
+        // Aig_Obj_t* newDriver2 = Aig_Substitute(currSkolem, Aig_ManCo(currSkolem, 0), numOrigInputs+7, Aig_Not(Aig_ManCi(currSkolem, ))
+
+
+        std::vector<int> negVarsToSubstitute;
+        for(int i=0;i<numOrigInputs;i++){
+            negVarsToSubstitute.push_back(numOrigInputs+i+1);
+        }
+        // globalLogger.log(LogLevel::ERROR, fmt::format("varstosub: {}", fmt::join(negVarsToSubstitute, " ")));
+        std::vector<Aig_Obj_t*> negFuncIds;
+        for(int i=0;i<numOrigInputs;i++){
+            // std::cout<<i+1<<std::endl;
+            negFuncIds.push_back(Aig_Not(Aig_ManCi(currSkolem,i)));
+        }
+        Aig_Obj_t* newDriver2 = Aig_SubstituteVec(currSkolem, Aig_ManCo(currSkolem, 0), negVarsToSubstitute, negFuncIds);
+        Aig_ObjCreateCo(currSkolem, newDriver2);
+
+        int numOuts2 = Aig_ManCoNum(currSkolem);
+        for(int j=0; j<numOuts2-1; j++){
+            Aig_ObjDisconnect(currSkolem, Aig_ManCo(currSkolem, j));
+            Aig_ObjConnect(currSkolem, Aig_ManCo(currSkolem, j), Aig_ManConst0(currSkolem), NULL);
+        }
+
+        Aig_ManCoCleanup(currSkolem);
+        Aig_ManCleanup(currSkolem);
+        if(Aig_ManCoNum(currSkolem) == 0){
+            Aig_ObjCreateCo(currSkolem, Aig_ManConst0(currSkolem));
+        }
+        
+
+
+        AigWrapper* skolemAig = new AigWrapper();
+        skolemAig->SetManager(currSkolem);
+        skolemAig->compress();
+        // currSkolem = compressAig(currSkolem);
+        // Aig_ManShow(currSkolem,0,NULL);
+        // std::cin>>yy;
+        globalLogger.log(LogLevel::ERROR,fmt::format("Skolem for id: {} generated", idx + 1));
+        // skolemAig->ShowAig();
+
+        retVec.push_back({idx+1, skolemAig});
+
+    }
+    // exit(1);
+    return retVec;
 }

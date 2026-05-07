@@ -2,6 +2,7 @@
 #define AIG_WRAPPER_H
 
 #include "Dqbf.h"
+// #include "nnf.h"
 
 #define clause ABC_clause
 extern "C" {
@@ -81,7 +82,7 @@ class AigWrapper {
     void SetManager(Aig_Man_t* man){this->manager = man;}
 
 
-    AigWrapper* quantify(std::vector<int>& varsToEliminate, int fExist);
+    // AigWrapper* quantify(std::vector<int>& varsToEliminate, int fExist, std::vector<std::pair<int, AigWrapper*>> &tseitinSkolems);
 
     // void substituteInputs(std::set<int> inputsToReplace, char* skolemFile, char* orderingFile);
     
@@ -96,4 +97,5 @@ Aig_Obj_t* Aig_SubstituteVec(Aig_Man_t* pMan, Aig_Obj_t* initAig, std::vector<in
 
 Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Obj_t* func);
 void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars);
+DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices);
 #endif // "AIG_WRAPPER_H"
