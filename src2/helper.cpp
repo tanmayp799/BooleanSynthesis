@@ -1094,7 +1094,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 		if(!changeFlag){
             std::cout<<"No change occured...."<<std::endl;
 			// Abc_Stop();
-            exit(1);
+            // exit(1);
+            return 1;
+
         }
         // std::cout<<"adding constraint clause...\n";
         for(auto e:currConstraint){
