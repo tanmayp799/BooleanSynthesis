@@ -1060,8 +1060,8 @@ void generateTseitinSkolem(Aig_Man_t* ckt, std::vector<int> &ordering,
 
         }
 
-        Aig_ManShow(currSkolem,0,NULL);
-        std::cin>>xxx;
+        // Aig_ManShow(currSkolem,0,NULL);
+        // std::cin>>xxx;
 
 
         Aig_Obj_t* newDriver = Aig_SubstituteVec(currSkolem, Aig_ManCo(currSkolem, 0), varIds, funcIds);
@@ -1080,8 +1080,8 @@ void generateTseitinSkolem(Aig_Man_t* ckt, std::vector<int> &ordering,
             Aig_ObjCreateCo(currSkolem, Aig_ManConst0(currSkolem));
         }
         currSkolem = compressAig(currSkolem);
-        Aig_ManShow(currSkolem,0,NULL);
-        std::cin>>xxx;
+        // Aig_ManShow(currSkolem,0,NULL);
+        // std::cin>>xxx;
 
         Aig_Man_t* singleSkolem = GetSingleSkolemAig(currSkolem);
         Aig_ManStop(currSkolem);

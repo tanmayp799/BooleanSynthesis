@@ -29,7 +29,7 @@ Dqbf* Parser::ParseDqbf(){
     // int maxVar = 0;
 
     std::vector<std::set<int>> existentialBlocks;
-
+    std::vector<std::pair<std::set<int>, char>> blocks;
     std::string token;
     while(infile >> token){
         if(token == "c"){
@@ -44,10 +44,13 @@ Dqbf* Parser::ParseDqbf(){
         }
         else if(token == "a"){
             int var;
+            std::set<int> tmp;
             while(infile >> var && var != 0){
                 universals.insert(var);
+                tmp.insert(var);
                 // if(var > maxVar) maxVar = var;
             }
+            blocks.push_back({tmp,'a'});
         }
         else if(token == "e"){
             int var;
@@ -58,7 +61,8 @@ Dqbf* Parser::ParseDqbf(){
                 dependencies[var] = std::set<int>(universals);
                 // if(var > maxVar) maxVar = var;
             }
-            existentialBlocks.push_back(tmp);
+            // existentialBlocks.push_back(tmp);
+            blocks.push_back({tmp,'e'});
         }
         else if(token == "d"){
             int var;
@@ -71,6 +75,7 @@ Dqbf* Parser::ParseDqbf(){
             while(infile >> dep && dep != 0){
                 dependencies[var].insert(dep);
             }
+            blocks.push_back({{var}, 'd'});
         }
         else{
             std::set<int> clause;
@@ -98,6 +103,19 @@ Dqbf* Parser::ParseDqbf(){
     //     existentials.erase(e);
     //     depVars.insert(e);
     // }
+    int numBlocks = blocks.size();
+
+    if(blocks.back().second=='e'){
+        existentials = blocks.back().first;
+        blocks.pop_back();
+    }
+    for(auto block:blocks){
+        if(block.second=='e'){
+            for(auto var:block.first){
+                depVars.insert(var);
+            }
+        }
+    }
 
     if(!existentialBlocks.empty()) {
         existentials = existentialBlocks.back();
