@@ -1,3 +1,2 @@
 benchmark,time(s),result
-amba10b4unrealn,603,error
-amba10b4unrealy,3600,timeout
+amba10b4unrealn,5838,error

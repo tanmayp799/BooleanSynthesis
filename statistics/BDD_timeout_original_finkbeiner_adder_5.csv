@@ -1,0 +1,13 @@
+benchmark,time(s),result
+pec_adder_n_bit_5_0,7200,timeout
+pec_adder_n_bit_5_10,7200,timeout
+pec_adder_n_bit_5_11,7200,timeout
+pec_adder_n_bit_5_12,7200,timeout
+pec_adder_n_bit_5_13,7200,timeout
+pec_adder_n_bit_5_14,7200,timeout
+pec_adder_n_bit_5_15,7200,timeout
+pec_adder_n_bit_5_16,7200,timeout
+pec_adder_n_bit_5_17,7200,timeout
+pec_adder_n_bit_5_18,7200,timeout
+pec_adder_n_bit_5_19,6500,error
+pec_adder_n_bit_5_1,7200,timeout
