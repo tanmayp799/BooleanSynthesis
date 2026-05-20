@@ -11,3 +11,9 @@
 ./small_tests/cnt5n.dqdimacs,16,11
 ./small_tests/unit.dqdimacs,4,15
 ./small_tests/unit.dqdimacs,5,13
+./small_tests/cnt11n.dqdimacs,2,21
+./small_tests/cnt11n.dqdimacs,27,18
+./small_tests/cnt11n.dqdimacs,28,22
+./benchmark_tests/original/Balabanov/battleship-10-10-unsat.cnf.dqdimacs,12,105
+./benchmark_tests/original/Balabanov/battleship-10-10-unsat.cnf.dqdimacs,13,113
+./benchmark_tests/original/Balabanov/battleship-10-10-unsat.cnf.dqdimacs,24,102

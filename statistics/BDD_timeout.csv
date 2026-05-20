@@ -1,3 +1,6 @@
 benchmark,time(s),result
-amba10b4unrealn,603,error
-amba10b4unrealy,3600,timeout
+cnt11n,1778165473.587474065,sat
+cnt5n,1778165474.595348833,sat
+noUnit,1778165475.591387562,sat
+threeVar,1778165476.305498091,sat
+unit,1778165476.793224053,sat

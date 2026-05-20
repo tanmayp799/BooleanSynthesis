@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
 
     numOrigInputs = finalFormula->getNumInputs();
     
-
+    // finalFormula->ShowAig();
 
 
     std::set<int> existentials = origDqbf->GetExistentials();
@@ -59,30 +59,30 @@ int main(int argc, char* argv[]){
 
     std::vector<std::pair<int, AigWrapper*>> tseitinSkolems;
 
+    
+    DdManager* ddMan;
+    DdNode* FddNode;
+    Abc_Ntk_t* pNtk;
+    
+    getBDD(finalFormula, ddMan, FddNode, pNtk);
+    
+    globalLogger.log(LogLevel::INFO, "Generated BDD");
+    Nnf_Man nnfNew;
+    nnfNew.init(ddMan, FddNode);
+    
+    assert(nnfNew.isWDNNF()==true);
+    Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
+    
+    
     if(!existentials.empty()){
-
-        DdManager* ddMan;
-        DdNode* FddNode;
-        Abc_Ntk_t* pNtk;
-
-        getBDD(finalFormula, ddMan, FddNode, pNtk);
-
-        globalLogger.log(LogLevel::INFO, "Generated BDD");
-        Nnf_Man nnfNew;
-        nnfNew.init(ddMan, FddNode);
-
-        assert(nnfNew.isWDNNF()==true);
-        Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
-        
-
         // exit(1);
         tseitinSkolems = getTseitinSkolems(SAig,exisVarsToEliminate);
 
         globalLogger.log(LogLevel::INFO, "Generated Skolem functions for tseitin Variables");
 
 
-        AigWrapper* newFinalFormula = quantify(pNtk, ddMan,FddNode, exisVarsToEliminate);
-
+        // AigWrapper* newFinalFormula = quantify(pNtk, ddMan,FddNode, exisVarsToEliminate);
+        quantify2(SAig, exisVarsToEliminate);
         globalLogger.log(LogLevel::INFO, "Quantified Existentials");
 
         // AigWrapper* tmpwrap=new AigWrapper();
@@ -95,11 +95,12 @@ int main(int argc, char* argv[]){
         // tmpwrap->ShowAig();
         // exit(1);
         // AigWrapper* newFinal = finalFormula->quantify(exisVarsToEliminate, 1, tseitinSkolems);
-        delete finalFormula;
-        finalFormula = newFinalFormula;
-    }
-
+        // delete finalFormula;
     
+    }
+    finalFormula->SetManager(SAig);
+
+    // finalFormula->ShowAig();
 
     std::set<int> depVars = origDqbf->GetDepVars();
     std::set<int> universals = origDqbf->GetUniversals();
@@ -131,6 +132,8 @@ int main(int argc, char* argv[]){
 
         std::sort(existentialVarsToEliminate.begin(), existentialVarsToEliminate.end());
         
+
+
         // AigWrapper* skolemAig=nullptr;
         // if(!varsToEliminate.empty()){
         //     skolemAig = callBFSS(varsToEliminate, target_d, verilogFile, finalFormula,"_d");
@@ -170,8 +173,8 @@ int main(int argc, char* argv[]){
     
     }
 
-
-
+    Aig_Man_t* finalMan=finalFormula->getManager();
+    getMonoAig(finalMan);
 
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
     // AigWrapper* origBenchmark = new AigWrapper(finalFormula); 

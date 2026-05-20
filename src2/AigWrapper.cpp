@@ -159,6 +159,57 @@ Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Ob
 }
 
 
+
+
+
+
+
+
+
+/*
+Quantification using PHI(X,Y,X',Y')
+*/
+void quantify2(Aig_Man_t* pMan, std::vector<int>& varsToElim){
+    assert(Aig_ManCiNum(pMan) == 2* numOrigInputs);
+
+
+    std::vector<int> varsToSub;
+    std::vector<Aig_Obj_t*> funcIds;
+
+    for(auto e:varsToElim){
+        varsToSub.push_back(e+1);
+        varsToSub.push_back(numOrigInputs+e+1);
+        
+        funcIds.push_back(Aig_ManConst1(pMan));
+        funcIds.push_back(Aig_ManConst1(pMan));
+    }
+
+
+
+    Aig_Obj_t* newDriver = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), varsToSub, funcIds);
+    Aig_ObjCreateCo(pMan, newDriver);
+
+    int numOuts=Aig_ManCoNum(pMan);
+    for(int j=0;j<numOuts-1;j++){
+        Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
+        Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
+    }
+
+    Aig_ManCoCleanup(pMan);
+    Aig_ManCleanup(pMan);
+
+    if(Aig_ManCoNum(pMan) == 0){
+        Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
+    }
+    return;
+
+
+}
+
+
+
+
+
 AigWrapper::~AigWrapper(){
     Aig_ManStop(this->manager);
 }
@@ -657,6 +708,50 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, int target_d, std::stri
 
 
 }
+
+
+
+
+
+void getMonoAig(Aig_Man_t* pMan){
+    assert(Aig_ManCiNum(pMan) == 2*numOrigInputs);
+
+    std::vector<int> negVarsToSub;
+    
+    for(int i=0;i<numOrigInputs;i++){
+        negVarsToSub.push_back(numOrigInputs+i+1);
+    }
+    // globalLogger.log(LogLevel::ERROR, fmt::format("varstosub: {}", fmt::join(negVarsToSubstitute, " ")));
+    std::vector<Aig_Obj_t*> negFuncIds;
+    for(int i=0;i<numOrigInputs;i++){
+        // std::cout<<i+1<<std::endl;
+        negFuncIds.push_back(Aig_Not(Aig_ManCi(pMan,i)));
+    }
+    Aig_Obj_t* newDriver2 = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), negVarsToSub, negFuncIds);
+    Aig_ObjCreateCo(pMan, newDriver2);
+
+
+    int numOuts2 = Aig_ManCoNum(pMan);
+    for(int j=0; j<numOuts2-1; j++){
+        Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
+        Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
+    }
+
+    Aig_ManCoCleanup(pMan);
+    Aig_ManCleanup(pMan);
+    if(Aig_ManCoNum(pMan) == 0){
+        Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
+    }
+
+
+    // pMan = compressAig(pMan);
+
+    return;
+
+}
+
+
+
 
 AigWrapper::AigWrapper(){
     this->manager=nullptr;
@@ -1226,12 +1321,32 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     Vec_Ptr_t * vPiNames;
     int i;
 
+    int xx;
+    Aig_Man_t* pMan;
+
+    pMan = Aig_ManDupOrdered(this->manager);
+
+
+
+    // Use pMan to existentially quantify using quantify2()
+    quantify2(pMan,existentialVarsToEliminate);
+
+    // Aig_ManShow(pMan,0,NULL);
+    // std::cin>>xx;
+
+
+    getMonoAig(pMan);
+    // pMan->pName = NULL;
+    
+    // Aig_ManShow(pMan,0,NULL);
+    // std::cin>>xx;
+
     // ------------------------------------------------------------------
     // PHASE 1: AIG -> BDD Conversion & Sanitization
     // ------------------------------------------------------------------
     
     // 1. Wrap the AIG manager in a standard ABC Network
-    pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( this->manager );
+    pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( pMan );
     if ( pNtk == NULL ){
         globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkFromAigPhase failed.");
         exit(1);
@@ -1257,19 +1372,21 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     // PHASE 2: Formal Logic Quantifications
     // ------------------------------------------------------------------
     
-    // 1. Existential Quantification
-    if ( !existentialVarsToEliminate.empty() ) {
-        bExistCube = BuildVariableCube( dd, existentialVarsToEliminate);
-        bExistRes  = Cudd_bddExistAbstract( dd, bFunc, bExistCube );
-        Cudd_Ref( bExistRes );
-        Cudd_RecursiveDeref( dd, bExistCube );
-    } else {
-        bExistRes = bFunc; 
-        Cudd_Ref( bExistRes );
-    }   
+    // // 1. Existential Quantification
+    // if ( !existentialVarsToEliminate.empty() ) {
+    //     bExistCube = BuildVariableCube( dd, existentialVarsToEliminate);
+    //     bExistRes  = Cudd_bddExistAbstract( dd, bFunc, bExistCube );
+    //     Cudd_Ref( bExistRes );
+    //     Cudd_RecursiveDeref( dd, bExistCube );
+    // } else {
+    //     bExistRes = bFunc; 
+    //     Cudd_Ref( bExistRes );
+    // }   
 
-    globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {}", target_d));
-    
+    // globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {}", target_d));
+    bExistRes = bFunc;
+    Cudd_Ref( bExistRes );
+
     // 2. Universal Quantification
     if ( !universalVarsToEliminate.empty() ) {
         bUnivCube = BuildVariableCube( dd, universalVarsToEliminate);
@@ -1322,6 +1439,8 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     // Free the original network (This safely shuts down the OLD 'dd' manager)
     Abc_NtkFreeGlobalBdds( pNtk, 1 ); 
     Abc_NtkDelete( pNtk );
+    Aig_ManStop(pMan);
+
 
     // Delete intermediate networks
     Abc_NtkDelete( pLogicNtk );

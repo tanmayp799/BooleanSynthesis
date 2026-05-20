@@ -42,6 +42,7 @@ extern "C" {
 
 
 extern std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
+extern int numOrigInputs;
 
 class AigWrapper {
     public:
@@ -79,7 +80,10 @@ class AigWrapper {
     void substituteSkolem(AigWrapper* skolemAig, int target_d, std::string flag);
     // int DumpVerilog(std::string fileName);
     int DumpVerilogWithFrame(std::string fileName);
-    void SetManager(Aig_Man_t* man){this->manager = man;}
+    void SetManager(Aig_Man_t* man){
+        // Aig_ManStop(this->manager);
+        this->manager = man;
+    }
 
 
     // AigWrapper* quantify(std::vector<int>& varsToEliminate, int fExist, std::vector<std::pair<int, AigWrapper*>> &tseitinSkolems);
@@ -98,4 +102,6 @@ Aig_Obj_t* Aig_SubstituteVec(Aig_Man_t* pMan, Aig_Obj_t* initAig, std::vector<in
 Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Obj_t* func);
 void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars);
 DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices);
+void quantify2(Aig_Man_t* pMan, std::vector<int>& exisVarsToElim);
+void getMonoAig(Aig_Man_t* pMan);
 #endif // "AIG_WRAPPER_H"
