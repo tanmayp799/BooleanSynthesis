@@ -10,7 +10,7 @@
 
 
 extern bool didManthan;
-extern int numOrigInputs;
+// extern int numOrigInputs;
 
 // std::vector<KissatWrapper*> generateLocalSpecs(Dqbf* origDqbf);
 
@@ -24,9 +24,10 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t* &pNtk);
 
 AigWrapper* quantify(Abc_Ntk_t* pNtk, DdManager* ddMan, DdNode* FddNode, std::vector<int> &varsToEliminate);
+// void quantify2(Aig_Man_t* pMan, std::vector<int>& exisVarsToElim);
 
 std::vector<std::pair<int, AigWrapper*>> getTseitinSkolems(Aig_Man_t* SAig, std::vector<int> existentialVarsToEliminate);
-
+// void getMonoAig(Aig_Man_t* pMan);
 // AigWrapper* getMonotonicCircuit(AigWrapper* formula);
 
 #endif // "HELPER_H"

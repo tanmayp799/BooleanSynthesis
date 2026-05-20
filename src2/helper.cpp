@@ -1688,7 +1688,6 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 
 
 
-
 void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t* &pNtk){
     Aig_Man_t* FMan = formula->getManager();
     Abc_Ntk_t* FNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(FMan);
@@ -1717,6 +1716,45 @@ void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t*
 //     return bCube;
 // }
 
+// /*
+// Quantification using PHI(X,Y,X',Y')
+// */
+// void quantify2(Aig_Man_t* pMan, std::vector<int>& varsToElim){
+//     assert(Aig_ManCiNum(pMan) == 2* numOrigInputs);
+
+
+//     std::vector<int> varsToSub;
+//     std::vector<Aig_Obj_t*> funcIds;
+
+//     for(auto e:varsToElim){
+//         varsToSub.push_back(e+1);
+//         varsToSub.push_back(numOrigInputs+e+1);
+        
+//         funcIds.push_back(Aig_ManConst1(pMan));
+//         funcIds.push_back(Aig_ManConst1(pMan));
+//     }
+
+
+
+//     Aig_Obj_t* newDriver = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), varsToSub, funcIds);
+//     Aig_ObjCreateCo(pMan, newDriver);
+
+//     int numOuts=Aig_ManCoNum(pMan);
+//     for(int j=0;j<numOuts-1;j++){
+//         Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
+//         Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
+//     }
+
+//     Aig_ManCoCleanup(pMan);
+//     Aig_ManCleanup(pMan);
+
+//     if(Aig_ManCoNum(pMan) == 0){
+//         Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
+//     }
+//     return;
+
+
+// }
 
 
 
@@ -1772,6 +1810,41 @@ AigWrapper* quantify(Abc_Ntk_t* pNtk, DdManager* ddMan, DdNode* FddNode, std::ve
     return newFormula;
 
 }
+
+
+// void getMonoAig(Aig_Man_t* pMan){
+//     assert(Aig_ManCiNum(pMan) == 2*numOrigInputs);
+
+//     std::vector<int> negVarsToSub;
+    
+//     for(int i=0;i<numOrigInputs;i++){
+//         negVarsToSub.push_back(numOrigInputs+i+1);
+//     }
+//     // globalLogger.log(LogLevel::ERROR, fmt::format("varstosub: {}", fmt::join(negVarsToSubstitute, " ")));
+//     std::vector<Aig_Obj_t*> negFuncIds;
+//     for(int i=0;i<numOrigInputs;i++){
+//         // std::cout<<i+1<<std::endl;
+//         negFuncIds.push_back(Aig_Not(Aig_ManCi(pMan,i)));
+//     }
+//     Aig_Obj_t* newDriver2 = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), negVarsToSub, negFuncIds);
+//     Aig_ObjCreateCo(pMan, newDriver2);
+
+
+//     int numOuts2 = Aig_ManCoNum(pMan);
+//     for(int j=0; j<numOuts2-1; j++){
+//         Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
+//         Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
+//     }
+
+//     Aig_ManCoCleanup(pMan);
+//     Aig_ManCleanup(pMan);
+//     if(Aig_ManCoNum(pMan) == 0){
+//         Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
+//     }
+
+//     return;
+
+// }
 
 
 std::vector<std::pair<int, AigWrapper*>> getTseitinSkolems(Aig_Man_t* SAig, std::vector<int> existentialVarsToEliminate){

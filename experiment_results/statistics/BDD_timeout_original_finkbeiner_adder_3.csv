@@ -1,0 +1,17 @@
+benchmark,time(s),result
+pec_adder_n_bit_3_0,7200,timeout
+pec_adder_n_bit_3_10,7201,timeout
+pec_adder_n_bit_3_11,7200,timeout
+pec_adder_n_bit_3_12,7200,timeout
+pec_adder_n_bit_3_13,7200,timeout
+pec_adder_n_bit_3_14,7200,timeout
+pec_adder_n_bit_3_15,7200,timeout
+pec_adder_n_bit_3_16,7200,timeout
+pec_adder_n_bit_3_17,7200,timeout
+pec_adder_n_bit_3_18,7200,timeout
+pec_adder_n_bit_3_19,7200,timeout
+pec_adder_n_bit_3_1,7200,timeout
+pec_adder_n_bit_3_20,7201,timeout
+pec_adder_n_bit_3_21,7200,timeout
+pec_adder_n_bit_3_22,7200,timeout
+pec_adder_n_bit_3_23,7200,timeout
