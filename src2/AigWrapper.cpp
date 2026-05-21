@@ -6,6 +6,8 @@
 // std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 
 
+
+
 /** Function
  * Composes input variable in initiAig with @param one, returns resulting Aig_Obj
  * @param pMan      [in out]    Aig Manager
@@ -207,6 +209,61 @@ void quantify2(Aig_Man_t* pMan, std::vector<int>& varsToElim){
 }
 
 
+
+/** Function
+ * Compresses Aig by converting it to an Ntk and performing a bunch of steps on it.
+ * Deletes SAig and returns a compressed version
+ * @param SAig      [in]        Aig to be compressed
+ * @param times     [in]        Number of compression cycles to be run
+ */
+Aig_Man_t* compressAigByNtkMultiple(Aig_Man_t* SAig, int times) {
+	Aig_Man_t* temp;
+	std::string command;
+    Abc_Frame_t * pAbc = Abc_FrameGetGlobalFrame();
+
+	// OUT("Cleaning up...");
+	int removed = Aig_ManCleanup(SAig);
+	std::cout << "Removed " << removed <<" nodes" << std::endl;
+
+	// SAig =  Dar_ManCompress2(temp = SAig, 1, 1, 26, 1, 0);
+	// Aig_ManStop(temp);
+
+	Abc_Ntk_t * SNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(SAig);
+	Abc_FrameSetCurrentNetwork(pAbc, SNtk);
+
+	// TODO: FIX
+	// assert(options.evalAigAtNode);
+	command = "rewrite -lz; refactor -l;";
+
+	// cout << "balancing..." << endl;
+	if (Cmd_CommandExecute(pAbc, "balance;")) {
+		std::cout << "Cannot preprocess SNtk" << std::endl;
+		return NULL;
+	}
+
+	for (int i = 0; i < times; ++i)	{
+		std::cout << "cycle " << i << ": " << command;
+		// TIME_MEASURE_START
+
+		
+		if (Cmd_CommandExecute(pAbc, (char*)command.c_str())) {
+			// cout << "Cannot preprocess SNtk, took " << TIME_MEASURE_ELAPSED << endl;
+			return NULL;
+		}
+		// cout << "took " << TIME_MEASURE_ELAPSED << endl;
+	}
+
+	// cout << "balancing..." << endl;
+	if (Cmd_CommandExecute(pAbc, "balance;")) {
+		std::cout << "Cannot preprocess SNtk" << std::endl;
+		return NULL;
+	}
+
+	SNtk = Abc_FrameReadNtk(pAbc);
+	temp = ABC_NAMESPACE::Abc_NtkToDar(SNtk, 0, 0);
+	Aig_ManStop(SAig);
+	return temp;
+}
 
 
 
@@ -458,7 +515,7 @@ int AigWrapper::getNumInputs(){
 }
 
 void AigWrapper::compress(){
-    this->manager = compressAig(this->manager);
+    this->manager = compressAigByNtkMultiple(this->manager, 1);
 }
 
 Abc_Ntk_t* AigWrapper::getNtk(){

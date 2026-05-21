@@ -354,7 +354,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%1000==0){
+        if(iter%1==0){
             freq=true;
         }
 
@@ -1928,7 +1928,7 @@ std::vector<std::pair<int, AigWrapper*>> getTseitinSkolems(Aig_Man_t* SAig, std:
 
         AigWrapper* skolemAig = new AigWrapper();
         skolemAig->SetManager(currSkolem);
-        skolemAig->compress();
+        // skolemAig->compress();
         // currSkolem = compressAig(currSkolem);
         // Aig_ManShow(currSkolem,0,NULL);
         // std::cin>>yy;
