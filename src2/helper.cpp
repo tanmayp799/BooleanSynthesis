@@ -354,7 +354,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%1==0){
+        if(iter%1000==0){
             freq=true;
         }
 
