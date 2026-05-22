@@ -892,7 +892,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
             
             int a_i = Abc_NtkVerifySimulatePattern(varToBasisMap[id].first, cex)[0];
             int b_i = Abc_NtkVerifySimulatePattern(varToBasisMap[id].second, cex)[0];
-            printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
+            // if(verbose && freq) printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
             if(verbose && freq) globalLogger.log(LogLevel::INFO, fmt::format("id: {} | a_i: {} | b_i: {}", id, a_i, b_i));
         }
 
