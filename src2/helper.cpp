@@ -1689,7 +1689,7 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 
 
 void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t* &pNtk){
-    MEASURE_TIME("getBDD", -1, LogLevel::ERROR);
+    MEASURE_TIME("getBDD", -5, LogLevel::STATS);
     Aig_Man_t* FMan = formula->getManager();
     Abc_Ntk_t* FNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase(FMan);
 
