@@ -291,6 +291,149 @@ AigWrapper::AigWrapper(std::string verilogFile){
 
 AigWrapper::AigWrapper(Dqbf* dqbf){
     // this->numInputs = origDqbf->GetNumInputs();
+
+
+    // step 1. generate the /qdimacs file in the tmp folder.
+    fs::path tmpDir = fs::absolute("./tmp");
+    fs::path binaryPath = fs::absolute("./bin/readCnf");
+    fs::path qdimacsFile = tmpDir / "target.qdimacs";
+
+    fs::create_directories(tmpDir);
+
+    std::ofstream outFile(qdimacsFile);
+
+    if(!outFile.is_open()){
+        globalLogger.log(LogLevel::ERROR, fmt::format("Could not open the file: {}", qdimacsFile.string()));
+        exit(1);
+    }
+
+    std::vector<std::set<int>> clauses = dqbf->GetClauses();
+    std::set<int> universals = dqbf->GetUniversals();
+    std::set<int> existentials = dqbf->GetExistentials();
+    std::set<int> depVars = dqbf->GetDepVars();
+
+    int numVars = universals.size()+existentials.size()+depVars.size();
+    int numClauses = clauses.size();
+
+    std::vector<int> qdimacsInputs;
+    for(auto e:universals){
+        qdimacsInputs.push_back(e);
+    }
+
+    for(auto e:depVars){
+        qdimacsInputs.push_back(e);
+    }
+
+    std::vector<int> qdimacsOutputs;
+    for(auto e:existentials){
+        qdimacsOutputs.push_back(e);
+    }
+
+    outFile << "p cnf " << numVars << " " << numClauses << std::endl;
+    outFile << "a ";
+    for(auto e:qdimacsInputs){
+        outFile << e << " ";
+    }
+    outFile << "0" << std::endl;
+
+    outFile << "e ";
+    for(auto e:qdimacsOutputs){
+        outFile << e << " ";
+    }
+    outFile << "0" << std::endl;
+
+    for(auto clause:clauses){
+        for(auto lit:clause){
+            outFile << lit << " ";
+        }
+        outFile << "0" << std::endl;
+    }
+
+    outFile.close();
+
+    std::string cmd = "cd " + tmpDir.string() + "&& " + binaryPath.string() + " " +qdimacsFile.string();
+
+    int sysResult = std::system(cmd.c_str());
+    globalLogger.log(LogLevel::ERROR, fmt::format("Tested file i/o for readCnf, exit code: {}", sysResult));
+    // exit(1);
+
+
+    if(sysResult == 0){
+        globalLogger.log(LogLevel::INFO, "readCnf successful, using output to generate AIG");
+
+        fs::path target_var = tmpDir / "target_var.txt";
+
+        std::vector<int> newExistentials;
+
+        std::ifstream inFile(target_var);
+        if(!inFile.is_open()){
+            globalLogger.log(LogLevel::ERROR, fmt::format("Could not open the file: {}", target_var.string()));
+            exit(1);
+            
+        }
+
+        std::string line;
+        while(std::getline(inFile, line)){
+            if(line.empty()) continue;
+            // newExistentials.push_back(std::stoi(line))
+
+            if(line.find("v_")==0){
+                try{
+                    std::string numberPart = line.substr(2);
+                    int varId = std::stoi(numberPart);
+                    newExistentials.push_back(varId);
+                }
+                catch(const std::exception& e){
+                    globalLogger.log(LogLevel::ERROR, fmt::format("Error parsing varId from line: {}, exception: {}", line, e.what()));
+                    exit(1);
+                }
+            }
+        }
+        inFile.close();
+
+        fs::path verilogFile = tmpDir / "target.v";
+        AigWrapper* tmpWrap = new AigWrapper(verilogFile.string());
+        Aig_Man_t* tmpMan = tmpWrap->getManager();
+
+        this->manager = Aig_ManDupSimple(tmpMan);
+        delete tmpWrap;
+
+        while(Aig_ManCiNum(this->manager) < numVars){
+            Aig_ObjCreateCi(this->manager);
+        }
+
+
+
+        std::vector<int> ordering;
+        for(auto e: qdimacsInputs){
+            ordering.push_back(e);
+        }
+
+        for(auto e: newExistentials){
+            ordering.push_back(e);
+            existentials.erase(e);
+        }
+
+        for(auto e:existentials){
+            ordering.push_back(e);
+        }
+
+        remapInputs(this->manager, ordering);
+
+        std::set<int> newExis(newExistentials.begin(), newExistentials.end());
+        dqbf->SetExistentials(newExis);
+
+        return;
+
+
+
+
+    }
+
+
+    globalLogger.log(LogLevel::INFO, "ReadCnf Failed. Proceeding with Naive approach to build AIG...");
+
+
     this->manager = Aig_ManStart(0);
     
     int numInputs = dqbf->GetNumInputs();

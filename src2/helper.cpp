@@ -1696,7 +1696,7 @@ void getBDD(AigWrapper* formula, DdManager* &ddMan, DdNode* &FddNode, Abc_Ntk_t*
 
     Abc_NtkShortNames(FNtk);
 
-    ddMan = (DdManager*)Abc_NtkBuildGlobalBdds(FNtk, 1e10,1,1,0,1);
+    ddMan = (DdManager*)Abc_NtkBuildGlobalBdds(FNtk, 1e10,1,0,0,1);
     FddNode = (DdNode*)Abc_ObjGlobalBdd(Abc_NtkPo(FNtk,0));
     pNtk=FNtk;
     return;

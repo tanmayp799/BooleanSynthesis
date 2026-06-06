@@ -60,21 +60,21 @@ int main(int argc, char* argv[]){
     std::vector<std::pair<int, AigWrapper*>> tseitinSkolems;
 
     
-    DdManager* ddMan;
-    DdNode* FddNode;
-    Abc_Ntk_t* pNtk;
-    
-    getBDD(finalFormula, ddMan, FddNode, pNtk);
-    
-    globalLogger.log(LogLevel::INFO, "Generated BDD");
-    Nnf_Man nnfNew;
-    nnfNew.init(ddMan, FddNode);
-    
-    assert(nnfNew.isWDNNF()==true);
-    Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
     
     
     if(!existentials.empty()){
+        DdManager* ddMan;
+        DdNode* FddNode;
+        Abc_Ntk_t* pNtk;
+        
+        getBDD(finalFormula, ddMan, FddNode, pNtk);
+        
+        globalLogger.log(LogLevel::INFO, "Generated BDD");
+        Nnf_Man nnfNew;
+        nnfNew.init(ddMan, FddNode);
+        
+        assert(nnfNew.isWDNNF()==true);
+        Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
         // exit(1);
         tseitinSkolems = getTseitinSkolems(SAig,exisVarsToEliminate);
 
@@ -88,7 +88,8 @@ int main(int argc, char* argv[]){
         // AigWrapper* tmpwrap=new AigWrapper();
         // tmpwrap->SetManager(SAig);
         // tmpwrap->compress();
-
+        Aig_ManStop(SAig);
+        SAig=nullptr;
         // // Aig_ManShow(SAig,0,NULL);
         // // int yy;
         // // std::cin>>yy;
@@ -96,9 +97,11 @@ int main(int argc, char* argv[]){
         // exit(1);
         // AigWrapper* newFinal = finalFormula->quantify(exisVarsToEliminate, 1, tseitinSkolems);
         // delete finalFormula;
-    
+        Abc_NtkFreeGlobalBdds(pNtk, 1);
+        ddMan=nullptr;
+        FddNode=nullptr;
     }
-    finalFormula->SetManager(SAig);
+    // finalFormula->SetManager(SAig);
 
     // finalFormula->ShowAig();
 

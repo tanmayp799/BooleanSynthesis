@@ -2,6 +2,9 @@
 #define AIG_WRAPPER_H
 
 #include "Dqbf.h"
+#include <filesystem>
+#include <sys/wait.h>
+namespace fs = std::filesystem;
 // #include "nnf.h"
 
 #define clause ABC_clause

@@ -37,6 +37,9 @@ public:
     int GetNumClauses();
     std::vector<std::set<int>> GetClauses();
 
+    void SetExistentials(std::set<int> newExis){
+        this->existentials = newExis;
+    }
     // Dqbf* SubstituteConst(int var, bool setTrue, bool inPlace);
     // KissatWrapper* getLocalFormula(int var);
 };
