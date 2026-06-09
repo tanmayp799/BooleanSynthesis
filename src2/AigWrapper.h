@@ -78,7 +78,8 @@ class AigWrapper {
     }
     
 
-    AigWrapper* getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate);
+    AigWrapper* getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate,
+         std::vector<int>& group1, std::vector<int>& group2, std::vector<int>& group3);
 
     void substituteSkolem(AigWrapper* skolemAig, int target_d, std::string flag);
     // int DumpVerilog(std::string fileName);
@@ -95,6 +96,7 @@ class AigWrapper {
     
     private:
     Aig_Man_t* manager;
+    AigWrapper* getLocalSpec_beta(int target_d, std::vector<int>& group1, std::vector<int>& group2, std::vector<int>& group3);
 };
 
 

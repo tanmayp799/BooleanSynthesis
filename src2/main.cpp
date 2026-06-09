@@ -117,6 +117,47 @@ int main(int argc, char* argv[]){
     globalLogger.log(LogLevel::INFO, "Generating Local Specifications");
     
     for(int target_d : depVars) {
+
+
+        // BETA: NEW APPROACH: generate 3 groups for ordering
+        
+        //GROUP 1 : Dependency Set + target_d
+        std::vector<int> group1;
+        std::set<int> dependency_set = origDqbf->GetDependencySet(target_d);
+        for(auto e:dependency_set){
+            group1.push_back(e);
+        }
+
+        group1.push_back(target_d);
+
+
+        //group 2: Universals - dependency set.
+        std::vector<int> group2;
+        for(auto e:universals){
+            if(dependency_set.find(e)==dependency_set.end()){
+                group2.push_back(e);
+            }
+        }
+
+        //group 3: remaining depVars and existentials.
+        std::vector<int> group3;
+        for(auto e:depVars){
+            if(e!=target_d){
+                group3.push_back(e);
+            }
+        }
+
+        std::set<int> existentials = origDqbf->GetExistentials();
+        for(auto e:existentials){
+            group3.push_back(e);
+        }
+
+        
+
+        
+
+
+
         std::vector<int> existentialVarsToEliminate;
         
         // 1. Add all 'e' variables to elimination list
@@ -151,7 +192,7 @@ int main(int argc, char* argv[]){
 
         std::vector<int> universalVarsToEliminate;
 
-        std::set<int> dependency_set = origDqbf->GetDependencySet(target_d);
+        // std::set<int> dependency_set = origDqbf->GetDependencySet(target_d);
         for(auto e:universals){
             if(dependency_set.find(e)==dependency_set.end()){
                 universalVarsToEliminate.push_back(e-1);
@@ -160,24 +201,24 @@ int main(int argc, char* argv[]){
         std::sort(universalVarsToEliminate.begin(), universalVarsToEliminate.end());
 
         std::vector<int> printExistential;
-        for (int e : existentialVarsToEliminate) printExistential.push_back(e + 1);
+        for (int e : group3) printExistential.push_back(e);
         std::vector<int> printUniversal;
-        for (int e : universalVarsToEliminate) printUniversal.push_back(e + 1);
+        for (int e : group2) printUniversal.push_back(e);
 
-        globalLogger.log(LogLevel::INFO,fmt::format("Generating localSpec for target_d={}: eliminating existentials [{}] and universals [{}]", 
+        globalLogger.log(LogLevel::INFO,fmt::format("Generating localSpec for target_d={}: eliminating existentials group3 [{}] and universals group2 [{}]", 
             target_d, fmt::join(printExistential, " "), fmt::join(printUniversal, " ")));
-        AigWrapper* localSpec = finalFormula->getLocalSpec(target_d, existentialVarsToEliminate, universalVarsToEliminate);
+        AigWrapper* localSpec = finalFormula->getLocalSpec(target_d, existentialVarsToEliminate, universalVarsToEliminate, group1, group2, group3);
 
        
         
         outputToAig[target_d] = localSpec;
 
         finalSkolems.push_back(localSpec);
-    
+        localSpec->ShowAig();
     }
 
     Aig_Man_t* finalMan=finalFormula->getManager();
-    getMonoAig(finalMan);
+    // getMonoAig(finalMan);
 
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
     // AigWrapper* origBenchmark = new AigWrapper(finalFormula); 

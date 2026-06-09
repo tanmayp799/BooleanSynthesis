@@ -1510,9 +1510,143 @@ void generateTseitinSkolem(Aig_Man_t* ckt, std::vector<int> &ordering,
 // }
 
 
-AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate){
+AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1, std::vector<int>& group2, std::vector<int>& group3){
+    MEASURE_TIME("GetLocalSpec_beta",target_d, LogLevel::ERROR);
+    MEASURE_TIME("GetLocalSpec_beta",target_d, LogLevel::STATS);
+
+    int i;
+    Abc_Ntk_t* pNtk;
+    Aig_Man_t* pMan;
+
+    DdManager * dd;
+    Abc_Obj_t * pPo, * pPi;
+    DdNode * bFunc, * bExistRes, * bUnivRes;
+
+    pMan = Aig_ManDupOrdered(this->manager);
+
+    std::vector<int> ordering;
+    for(auto e:group1){
+        ordering.push_back(e);
+    }
+
+    for(auto e:group2){
+        ordering.push_back(e);
+    }
+
+    for(auto e:group3){
+        ordering.push_back(e);
+    }
+
+
+    Aig_ManShow(pMan, 0, NULL);
+    int xx;
+    std::cin>>xx;
+
+    pMan = remapInputs(pMan, ordering);
+    pMan = compressAig(pMan);
+
+    Aig_ManShow(pMan, 0, NULL);
+    // int xx;
+    std::cin>>xx;
+
+    pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( pMan );
+    if ( pNtk == NULL ){
+        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkFromAigPhase failed.");
+        exit(1);
+    }
+    
+    // ------------------------------------------------------------------
+    // DEBUG: Dump the PI order to verify topology
+    // ------------------------------------------------------------------
+    globalLogger.log(LogLevel::INFO, "--- ABC Network PI Physical Order ---");
+    
+    Abc_Obj_t * pPi_test;
+    int i_test;
+    Abc_NtkForEachPi( pNtk, pPi_test, i_test ) {
+        // This prints the index and the name of the PI as it exists in the network
+        globalLogger.log(LogLevel::INFO, fmt::format("PI Order Index {}: Name '{}'", i_test, Abc_ObjName(pPi_test)));
+    }
+    globalLogger.log(LogLevel::INFO, "---------------------------------------");
+    
+    Abc_NtkShortNames(pNtk);
+
+
+    dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,0,0,1);
+    if(dd==NULL){
+        globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
+        exit(1);
+    }
+
+    pPo = Abc_NtkPo( pNtk, 0 );
+    bFunc = (DdNode *)Abc_ObjGlobalBdd( pPo );
+
+    globalLogger.log(LogLevel::INFO, fmt::format("Generated BDD for id: {}", target_d));
+
+    int boundary3 = group1.size() + group2.size();
+
+    bExistRes = Cudd_bddExistAbstractBoundary(dd, bFunc, boundary3);
+    Cudd_Ref(bExistRes);
+
+    Cudd_RecursiveDeref(dd, bFunc);
+
+    int boundary2 = group1.size();
+
+    bUnivRes = Cudd_bddUnivAbstractBoundary(dd, bExistRes, boundary2);
+    Cudd_Ref(bUnivRes);
+
+    Cudd_RecursiveDeref(dd, bExistRes);
+
+    globalLogger.log(LogLevel::INFO, fmt::format("Final Spec BDD size: {} nodes", Cudd_DagSize(bUnivRes)));
+
+
+    Vec_Ptr_t* vPiNames = Vec_PtrAlloc(Abc_NtkPiNum(pNtk));
+    Abc_NtkForEachPi(pNtk, pPi, i) {
+        Vec_PtrPush( vPiNames, (void *)Abc_ObjName(pPi));
+    }
+
+    Abc_Ntk_t* pLogicNtk = Abc_NtkDeriveFromBdd( dd, bUnivRes, Abc_ObjName(pPo), vPiNames);
+    Vec_PtrFree(vPiNames);
+
+    Abc_Ntk_t* pStrashNtk = Abc_NtkStrash(pLogicNtk, 0,1,0);
+
+    Aig_Man_t* pNewAig= ABC_NAMESPACE::Abc_NtkToDar(pStrashNtk,0,0);
+
+    Cudd_RecursiveDeref(dd, bUnivRes);
+
+    Abc_NtkFreeGlobalBdds(pNtk, 1);
+    Abc_NtkDelete(pNtk);
+    Aig_ManStop(pMan);
+
+    Abc_NtkDelete(pLogicNtk);
+    Abc_NtkDelete(pStrashNtk);
+
+    std::vector<int> inverse_ordering(ordering.size());
+    for(size_t ii = 0; ii<ordering.size();++ii){
+        inverse_ordering[ordering[ii]-1] = ii+1;
+    }
+
+    pNewAig = remapInputs(pNewAig, inverse_ordering);
+    pNewAig = compressAig(pNewAig);
+
+    AigWrapper* retAig = new AigWrapper(this);
+    retAig->SetManager(pNewAig);
+
+    retAig->compress();
+    // retAig->ShowAig();
+    return retAig;
+}
+
+
+AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existentialVarsToEliminate, std::vector<int>& universalVarsToEliminate,
+                                std::vector<int>& group1, std::vector<int>& group2, std::vector<int>& group3){
     MEASURE_TIME("GetLocalSpec",target_d, LogLevel::ERROR);
     MEASURE_TIME("GetLocalSpec",target_d, LogLevel::STATS);
+
+
+
+    return this->getLocalSpec_beta(target_d, group1, group2, group3);
+
+
     Abc_Ntk_t * pNtk, * pLogicNtk, * pStrashNtk;
     Aig_Man_t * pNewAig;
     DdManager * dd;
