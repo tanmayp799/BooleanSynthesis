@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
     globalLogger.log(LogLevel::INFO, "Parsing the file...");
 
     Dqbf* origDqbf = fileParser->ParseDqbf();
-
+    globalLogger.log(LogLevel::DEBUG, fmt::format("initial depvars: {}", origDqbf->GetDepVars()));
 
 
 
@@ -40,16 +40,17 @@ int main(int argc, char* argv[]){
     
 
     AigWrapper* finalFormula = new AigWrapper(origDqbf);
+    globalLogger.log(LogLevel::DEBUG, fmt::format("depvars after aig: {}", origDqbf->GetDepVars()));
 
     numOrigInputs = finalFormula->getNumInputs();
-    
+    globalLogger.log(LogLevel::DEBUG, fmt::format("NumOrigInputs: {}", numOrigInputs));
     // finalFormula->ShowAig();
 
 
-    std::set<int> existentials = origDqbf->GetExistentials();
+    std::set<int> newExistentials = origDqbf->GetNewExistentials();
 
     std::vector<int> exisVarsToEliminate;
-    for(auto e:existentials){
+    for(auto e:newExistentials){
         exisVarsToEliminate.push_back(e-1);
     
     }
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]){
     
     
     
-    if(!existentials.empty()){
+    if(!newExistentials.empty()){
         DdManager* ddMan;
         DdNode* FddNode;
         Abc_Ntk_t* pNtk;
@@ -85,11 +86,16 @@ int main(int argc, char* argv[]){
         quantify2(SAig, exisVarsToEliminate);
         globalLogger.log(LogLevel::INFO, "Quantified Existentials");
 
+
+
+        SAig = getMonoAig(SAig);
+        finalFormula->SetManager(SAig);
+        globalLogger.log(LogLevel::DEBUG, fmt::format("NUM INPUTS: {}", finalFormula->getNumInputs()));
         // AigWrapper* tmpwrap=new AigWrapper();
         // tmpwrap->SetManager(SAig);
         // tmpwrap->compress();
-        Aig_ManStop(SAig);
-        SAig=nullptr;
+        // Aig_ManStop(SAig);
+        // SAig=nullptr;
         // // Aig_ManShow(SAig,0,NULL);
         // // int yy;
         // // std::cin>>yy;
@@ -100,12 +106,16 @@ int main(int argc, char* argv[]){
         Abc_NtkFreeGlobalBdds(pNtk, 1);
         ddMan=nullptr;
         FddNode=nullptr;
+
+        globalLogger.log(LogLevel::DEBUG, fmt::format("depvars after tseitin elimination: {}", origDqbf->GetDepVars()));
+
     }
     // finalFormula->SetManager(SAig);
 
     // finalFormula->ShowAig();
 
     std::set<int> depVars = origDqbf->GetDepVars();
+    globalLogger.log(LogLevel::DEBUG, fmt::format("DepVars: {}", depVars));
     std::set<int> universals = origDqbf->GetUniversals();
     std::vector<AigWrapper*> finalSkolems;
     
@@ -212,14 +222,15 @@ int main(int argc, char* argv[]){
        
         
         outputToAig[target_d] = localSpec;
-
+            localSpec->compress();
         finalSkolems.push_back(localSpec);
+        globalLogger.log(LogLevel::DEBUG, "Final localSpec");
         localSpec->ShowAig();
     }
 
     Aig_Man_t* finalMan=finalFormula->getManager();
-    // getMonoAig(finalMan);
-
+    // finalMan = getMonoAig(finalMan);
+    // finalFormula->SetManager(finalMan);
     // // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
     // AigWrapper* origBenchmark = new AigWrapper(finalFormula); 
     AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
@@ -263,7 +274,7 @@ int main(int argc, char* argv[]){
         // globalLogger.log(LogLevel::INFO, "Showing definiton");
         // p.second->compress();
         // p.second->ShowAig();
-
+        printf("finalFormula PI: %d | delta PI: %d\n", finalFormula->getNumInputs(), p.second->getNumInputs());
         finalFormula->merge(p.second);
         
         // skolemFunctions->merge(p.second);

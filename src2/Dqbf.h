@@ -17,6 +17,7 @@ private:
     /* data */
     std::set<int> universals;
     std::set<int> existentials;
+    std::set<int> newExistentials;
     std::set<int> depVars;
     std::map<int, std::set<int>> dependencies;
     int numInputs;
@@ -31,6 +32,7 @@ public:
     //field access
     std::set<int> GetUniversals();
     std::set<int> GetExistentials();
+    std::set<int> GetNewExistentials(){return this->newExistentials;};
     std::set<int> GetDepVars();
     std::set<int> GetDependencySet(int id);
     int GetNumInputs();
@@ -39,6 +41,10 @@ public:
 
     void SetExistentials(std::set<int> newExis){
         this->existentials = newExis;
+    }
+
+    void SetNewExistentials(std::set<int> newExis){
+        this->newExistentials = newExis;
     }
     // Dqbf* SubstituteConst(int var, bool setTrue, bool inPlace);
     // KissatWrapper* getLocalFormula(int var);

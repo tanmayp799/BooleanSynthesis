@@ -1480,15 +1480,17 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 
         formulaMan = newFormulaMan;
         finalFormula->SetManager(formulaMan);
-        finalFormula->compress();
+        // finalFormula->compress();
         formulaMan = finalFormula->getManager();
         
     }
-
-
-
-
+    
+    
+    
+    
     Aig_Man_t* formulaAfterTseitin = finalFormula->getManager();
+    // formulaAfterTseitin->ShowAig();
+    finalFormula->ShowAig();
 
     Aig_Man_t* finalCheck = formulaAfterTseitin;
     if(!origDqbf->GetDepVars().empty()){
@@ -1549,7 +1551,7 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 
     tmpwrap->compress();
 
-    // tmpwrap->ShowAig();
+    tmpwrap->ShowAig();
 
     finalCheck = tmpwrap->getManager();
     

@@ -129,8 +129,8 @@ Dqbf* Parser::ParseDqbf(){
 
 
 
-    // globalLogger.log(LogLevel::ERROR, fmt::format("Existentials: {}", fmt::join(existentials, " ")));
-    // globalLogger.log(LogLevel::ERROR, fmt::format("DepVars: {}", fmt::join(depVars, " ")));
+    globalLogger.log(LogLevel::ERROR, fmt::format("Existentials: {}", fmt::join(existentials, " ")));
+    globalLogger.log(LogLevel::ERROR, fmt::format("DepVars: {}", fmt::join(depVars, " ")));
 
     // if(numInputs < maxVar) numInputs = maxVar;
 

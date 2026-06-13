@@ -64,10 +64,19 @@ Aig_Man_t* remapInputs(Aig_Man_t* p, std::vector<int> remapIds){
 		Aig_ObjCreateCi(pNew);
 	}
 
+    std::vector<int> oldToNew(remapIds.size());
+    for (size_t new_i = 0; new_i < remapIds.size(); ++new_i) {
+        // The old PI at index (remapIds[new_i] - 1) belongs in slot new_i
+        oldToNew[remapIds[new_i] - 1] = new_i;
+    }
+
+
 	Aig_ManForEachCi(p, pObj, i){
 		// cout<<i+1<<" "<<remapIds[i]<<endl;	
 		Aig_ManCi(p, i)->pData = Aig_ManCi(pNew, remapIds[i]-1 );
 	}
+
+
 
 	Aig_ManForEachNode(p, pObj, i){
 		pObj->pData = Aig_And(pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj));
@@ -292,7 +301,7 @@ AigWrapper::AigWrapper(std::string verilogFile){
 AigWrapper::AigWrapper(Dqbf* dqbf){
     // this->numInputs = origDqbf->GetNumInputs();
 
-
+   
     // step 1. generate the /qdimacs file in the tmp folder.
     fs::path tmpDir = fs::absolute("./tmp");
     fs::path binaryPath = fs::absolute("./bin/readCnf");
@@ -311,6 +320,7 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
     std::set<int> universals = dqbf->GetUniversals();
     std::set<int> existentials = dqbf->GetExistentials();
     std::set<int> depVars = dqbf->GetDepVars();
+    globalLogger.log(LogLevel::DEBUG, fmt::format("intital depvars in AigWrapper constructor: {}", dqbf->GetDepVars()));
 
     int numVars = universals.size()+existentials.size()+depVars.size();
     int numClauses = clauses.size();
@@ -417,11 +427,16 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
         for(auto e:existentials){
             ordering.push_back(e);
         }
+        globalLogger.log(LogLevel::DEBUG, fmt::format("depvars before remap: {}", dqbf->GetDepVars()));
 
-        remapInputs(this->manager, ordering);
+        this->manager = remapInputs(this->manager, ordering);
 
         std::set<int> newExis(newExistentials.begin(), newExistentials.end());
-        dqbf->SetExistentials(newExis);
+        dqbf->SetNewExistentials(newExis);
+        
+        globalLogger.log(LogLevel::DEBUG, fmt::format("final depvars in constructor: {}", dqbf->GetDepVars()));
+
+        // exit(1);
 
         return;
 
@@ -430,6 +445,9 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
 
     }
 
+
+    
+    // old_approach:
 
     globalLogger.log(LogLevel::INFO, "ReadCnf Failed. Proceeding with Naive approach to build AIG...");
 
@@ -658,7 +676,7 @@ int AigWrapper::getNumInputs(){
 }
 
 void AigWrapper::compress(){
-    this->manager = compressAigByNtkMultiple(this->manager, 1);
+    this->manager = compressAig(this->manager);
 }
 
 Abc_Ntk_t* AigWrapper::getNtk(){
@@ -913,43 +931,113 @@ void AigWrapper::substituteSkolem(AigWrapper* skolemAig, int target_d, std::stri
 
 
 
-void getMonoAig(Aig_Man_t* pMan){
-    assert(Aig_ManCiNum(pMan) == 2*numOrigInputs);
+// void getMonoAig(Aig_Man_t* pMan){
+//     assert(Aig_ManCiNum(pMan) == 2*numOrigInputs);
+
+//     std::vector<int> negVarsToSub;
+    
+//     for(int i=0;i<numOrigInputs;i++){
+//         negVarsToSub.push_back(numOrigInputs+i+1);
+//     }
+//     // globalLogger.log(LogLevel::ERROR, fmt::format("varstosub: {}", fmt::join(negVarsToSubstitute, " ")));
+//     std::vector<Aig_Obj_t*> negFuncIds;
+//     for(int i=0;i<numOrigInputs;i++){
+//         // std::cout<<i+1<<std::endl;
+//         negFuncIds.push_back(Aig_Not(Aig_ManCi(pMan,i)));
+//     }
+//     Aig_Obj_t* newDriver2 = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), negVarsToSub, negFuncIds);
+//     Aig_ObjCreateCo(pMan, newDriver2);
+
+
+//     int numOuts2 = Aig_ManCoNum(pMan);
+//     for(int j=0; j<numOuts2-1; j++){
+//         Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
+//         Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
+//     }
+
+//     Aig_ManCoCleanup(pMan);
+//     Aig_ManCleanup(pMan);
+//     if(Aig_ManCoNum(pMan) == 0){
+//         Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
+//     }
+
+
+//     // pMan = compressAig(pMan);
+
+//     return;
+
+// }
+
+
+Aig_Man_t* getMonoAig(Aig_Man_t* pMan){
+    assert(Aig_ManCiNum(pMan) == 2 * numOrigInputs);
 
     std::vector<int> negVarsToSub;
+    for(int i = 0; i < numOrigInputs; i++){
+        negVarsToSub.push_back(numOrigInputs + i + 1);
+    }
     
-    for(int i=0;i<numOrigInputs;i++){
-        negVarsToSub.push_back(numOrigInputs+i+1);
-    }
-    // globalLogger.log(LogLevel::ERROR, fmt::format("varstosub: {}", fmt::join(negVarsToSubstitute, " ")));
     std::vector<Aig_Obj_t*> negFuncIds;
-    for(int i=0;i<numOrigInputs;i++){
-        // std::cout<<i+1<<std::endl;
-        negFuncIds.push_back(Aig_Not(Aig_ManCi(pMan,i)));
+    for(int i = 0; i < numOrigInputs; i++){
+        negFuncIds.push_back(Aig_Not(Aig_ManCi(pMan, i)));
     }
+    
+    // Perform the substitution
     Aig_Obj_t* newDriver2 = Aig_SubstituteVec(pMan, Aig_ManCo(pMan, 0), negVarsToSub, negFuncIds);
     Aig_ObjCreateCo(pMan, newDriver2);
 
-
+    // Disconnect old COs
     int numOuts2 = Aig_ManCoNum(pMan);
-    for(int j=0; j<numOuts2-1; j++){
+    for(int j = 0; j < numOuts2 - 1; j++){
         Aig_ObjDisconnect(pMan, Aig_ManCo(pMan, j));
         Aig_ObjConnect(pMan, Aig_ManCo(pMan, j), Aig_ManConst0(pMan), NULL);
     }
 
     Aig_ManCoCleanup(pMan);
     Aig_ManCleanup(pMan);
+    
     if(Aig_ManCoNum(pMan) == 0){
         Aig_ObjCreateCo(pMan, Aig_ManConst0(pMan));
     }
 
+    // ------------------------------------------------------------------
+    // NEW STEP: Extract the mono-rail logic into a physically smaller AIG
+    // ------------------------------------------------------------------
+    Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
 
-    // pMan = compressAig(pMan);
+    pNew = Aig_ManStart(Aig_ManObjNumMax(pMan));
+    Aig_ManConst1(pMan)->pData = Aig_ManConst1(pNew);
 
-    return;
+    // 1. Create ONLY the original PIs in the new manager
+    Aig_ManForEachCi(pMan, pObj, i){
+        if (i < numOrigInputs) {
+            pObj->pData = Aig_ObjCreateCi(pNew);
+        } else {
+            // Point discarded PIs to Const0 to ensure any stray references 
+            // safely evaluate to a constant (though SubstituteVec should 
+            // have removed them from the transitive fanin anyway).
+            pObj->pData = Aig_ManConst0(pNew);
+        }
+    }
 
+    // 2. Duplicate internal nodes
+    // Because we ran Aig_ManCleanup above, we are only copying the valid mono-rail logic cone.
+    Aig_ManForEachNode(pMan, pObj, i){
+        pObj->pData = Aig_And(pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj));
+    }
+
+    // 3. Duplicate the single valid PO
+    Aig_ManForEachCo(pMan, pObj, i){
+        Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj));
+    }
+
+    // Destroy the old manager with 52 inputs and return the clean 26-input manager
+    Aig_ManStop(pMan);
+    
+    return pNew;
 }
-
 
 
 
@@ -1509,6 +1597,77 @@ void generateTseitinSkolem(Aig_Man_t* ckt, std::vector<int> &ordering,
 
 // }
 
+// void dumpBddToDot(DdManager* dd, DdNode* node, const char* filename, char** inames = NULL) {
+//     FILE* outfile = fopen(filename, "w");
+//     if (outfile == NULL) {
+//         globalLogger.log(LogLevel::ERROR, "Could not open file to dump BDD");
+//         return;
+//     }
+
+//     // Cudd_DumpDot expects an array of nodes, even if we are only dumping one
+//     DdNode** ddnodearray = (DdNode**)malloc(sizeof(DdNode*));
+//     ddnodearray[0] = node;
+
+//     // Optional: array of output names
+//     const char* onames[] = { "F" }; 
+
+//     // Dump the DOT file
+//     // Arguments: manager, num_nodes, node_array, input_names, output_names, file_pointer
+//     Cudd_DumpDot(dd, 1, ddnodearray, inames, (char**)onames, outfile);
+
+//     free(ddnodearray);
+//     fclose(outfile);
+    
+//     globalLogger.log(LogLevel::INFO, fmt::format("BDD dumped to {}", filename));
+// }
+
+void dumpBddToDot(DdManager* dd, DdNode* node, const std::vector<int>& ordering, const std::string& name = "debug_bdd") {
+    int num_vars = Cudd_ReadSize(dd);
+    
+    char** inames = (char**)malloc(num_vars * sizeof(char*));
+    
+    // Map CUDD indices directly to your original QDIMACS IDs
+    for (int i = 0; i < num_vars; i++) {
+        if (i < ordering.size()) {
+            // Label it with the actual original QDIMACS ID
+            std::string actualName = std::to_string(ordering[i]);
+            inames[i] = strdup(actualName.c_str());
+        } else {
+            // Fallback for auxiliary/Tseitin variables created later
+            std::string fallback = "aux_" + std::to_string(i);
+            inames[i] = strdup(fallback.c_str());
+        }
+    }
+
+    std::string filename = name + ".dot";
+    FILE* outfile = fopen(filename.c_str(), "w");
+    if (outfile == NULL) {
+        globalLogger.log(LogLevel::ERROR, "Bdd_ShowWithOrdering: Could not open file.");
+        for (int i = 0; i < num_vars; i++) free(inames[i]);
+        free(inames);
+        return;
+    }
+
+    DdNode** ddnodearray = (DdNode**)malloc(sizeof(DdNode*));
+    ddnodearray[0] = node;
+    const char* onames[] = { "F" }; 
+    
+    Cudd_DumpDot(dd, 1, ddnodearray, inames, (char**)onames, outfile);
+    
+    free(ddnodearray);
+    fclose(outfile);
+
+    for (int i = 0; i < num_vars; i++) {
+        free(inames[i]);
+    }
+    free(inames);
+
+    // std::string cmd = "xdot " + filename + " &"; 
+    // int sysResult = std::system(cmd.c_str());
+    // if(sysResult == -1) {
+    //     globalLogger.log(LogLevel::ERROR, "Bdd_ShowWithOrdering: Failed to launch xdot.");
+    // }
+}
 
 AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1, std::vector<int>& group2, std::vector<int>& group3){
     MEASURE_TIME("GetLocalSpec_beta",target_d, LogLevel::ERROR);
@@ -1537,17 +1696,21 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
         ordering.push_back(e);
     }
 
-
-    Aig_ManShow(pMan, 0, NULL);
-    int xx;
-    std::cin>>xx;
-
-    pMan = remapInputs(pMan, ordering);
-    pMan = compressAig(pMan);
-
-    Aig_ManShow(pMan, 0, NULL);
+    globalLogger.log(LogLevel::DEBUG, fmt::format("Before re-ordering. New ordering: {}", ordering));
+    // Aig_ManShow(pMan, 0, NULL);
     // int xx;
-    std::cin>>xx;
+    // std::cin>>xx;
+
+    std::vector<int> inverse_ordering(ordering.size());
+    for(size_t ii = 0; ii<ordering.size();++ii){
+        inverse_ordering[ordering[ii]-1] = ii+1;
+    }
+    pMan = remapInputs(pMan, inverse_ordering);
+    pMan = compressAig(pMan);
+    globalLogger.log(LogLevel::DEBUG, fmt::format("After re-ordering."));
+    // Aig_ManShow(pMan, 0, NULL);
+    // int xx;
+    // std::cin>>xx;
 
     pNtk = ABC_NAMESPACE::Abc_NtkFromAigPhase( pMan );
     if ( pNtk == NULL ){
@@ -1584,6 +1747,10 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
 
     int boundary3 = group1.size() + group2.size();
 
+    // dumpBddToDot(dd, bFunc, inverse_ordering, "./bdd_initial");
+    // int yy;
+    // std::cin>>yy;
+
     bExistRes = Cudd_bddExistAbstractBoundary(dd, bFunc, boundary3);
     Cudd_Ref(bExistRes);
 
@@ -1591,13 +1758,19 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
 
     int boundary2 = group1.size();
 
+    // dumpBddToDot(dd, bExistRes, inverse_ordering, "./bdd_exis");
+    // // int yy;
+    // std::cin>>yy;
+
     bUnivRes = Cudd_bddUnivAbstractBoundary(dd, bExistRes, boundary2);
     Cudd_Ref(bUnivRes);
 
     Cudd_RecursiveDeref(dd, bExistRes);
 
     globalLogger.log(LogLevel::INFO, fmt::format("Final Spec BDD size: {} nodes", Cudd_DagSize(bUnivRes)));
-
+    // dumpBddToDot(dd, bUnivRes, inverse_ordering, "./bdd_univ");
+    // // int yy;
+    // std::cin>>yy;
 
     Vec_Ptr_t* vPiNames = Vec_PtrAlloc(Abc_NtkPiNum(pNtk));
     Abc_NtkForEachPi(pNtk, pPi, i) {
@@ -1620,12 +1793,12 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
     Abc_NtkDelete(pLogicNtk);
     Abc_NtkDelete(pStrashNtk);
 
-    std::vector<int> inverse_ordering(ordering.size());
-    for(size_t ii = 0; ii<ordering.size();++ii){
-        inverse_ordering[ordering[ii]-1] = ii+1;
-    }
+    // std::vector<int> inverse_ordering(ordering.size());
+    // for(size_t ii = 0; ii<ordering.size();++ii){
+    //     inverse_ordering[ordering[ii]-1] = ii+1;
+    // }
 
-    pNewAig = remapInputs(pNewAig, inverse_ordering);
+    pNewAig = remapInputs(pNewAig, ordering);
     pNewAig = compressAig(pNewAig);
 
     AigWrapper* retAig = new AigWrapper(this);
@@ -1669,7 +1842,7 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     // std::cin>>xx;
 
 
-    getMonoAig(pMan);
+    pMan = getMonoAig(pMan);
     // pMan->pName = NULL;
     
     // Aig_ManShow(pMan,0,NULL);

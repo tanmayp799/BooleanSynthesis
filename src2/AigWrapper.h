@@ -108,5 +108,5 @@ Aig_Obj_t* Aig_Substitute(Aig_Man_t* pMan, Aig_Obj_t* initAig, int varId, Aig_Ob
 void finalSub(AigWrapper* finalFormula, std::vector<AigWrapper*>& finalSkolems, std::set<int>& depVars);
 DdNode * BuildVariableCube( DdManager * dd, std::vector<int> &pIndices);
 void quantify2(Aig_Man_t* pMan, std::vector<int>& exisVarsToElim);
-void getMonoAig(Aig_Man_t* pMan);
+Aig_Man_t* getMonoAig(Aig_Man_t* pMan);
 #endif // "AIG_WRAPPER_H"

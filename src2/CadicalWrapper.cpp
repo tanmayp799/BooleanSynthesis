@@ -124,7 +124,8 @@ void CadicalWrapper::assumeSelectors(int hId){
 }
 
 int CadicalWrapper::solve(){
-    return this->solver.solve();
+    int result = this->solver.solve();
+    return result;
 }
 
 
