@@ -38,6 +38,7 @@ extern "C" {
 	Vec_Ptr_t * Io_FileReadCnf( char * pFileName, int fMulti );
 	void Aig_ManAppend( Aig_Man_t * pBase, Aig_Man_t * pNew );
 	Abc_Ntk_t * Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
+    // Dar_ManRefact
 	
 }
 }

@@ -113,7 +113,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	std::map<int, bool> defaultVal;
     std::set<int> deps = origDqbf->GetDepVars();
-    // for(auto e: origDqbf->GetExistentials()){
+    // for(auto e: origDqbf->GetNewExistentials()){
     //     deps.insert(e);
     // }
 
@@ -329,9 +329,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	// 	return true;
 	// }
-    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size();
+    int numAigInputs = origDqbf->GetNumInputs() + deps.size();
     int numX = origDqbf->GetUniversals().size();
-    int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    int numY = deps.size();
     
 	while(true){
         iter++;
@@ -1490,7 +1490,7 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
     
     Aig_Man_t* formulaAfterTseitin = finalFormula->getManager();
     // formulaAfterTseitin->ShowAig();
-    finalFormula->ShowAig();
+    // finalFormula->ShowAig();
 
     Aig_Man_t* finalCheck = formulaAfterTseitin;
     if(!origDqbf->GetDepVars().empty()){
@@ -1551,9 +1551,38 @@ int verify(AigWrapper* finalFormula, Dqbf* origDqbf, std::vector<std::pair<int, 
 
     tmpwrap->compress();
 
-    tmpwrap->ShowAig();
+    // tmpwrap->ShowAig();
 
     finalCheck = tmpwrap->getManager();
+
+
+
+    // // ------------------------------------------------------------------
+    // // 2. THE CRUCIBLE: Aggressively rewrite the AIG for the SAT solver
+    // // ------------------------------------------------------------------
+    // globalLogger.log(LogLevel::INFO, "Rewriting AIG to collapse MUX trees...");
+    
+    // // Pass 1: Rewrite (Flattens MUXes and reduces node count)
+    // // *If Dar_ManRewriteDefault returns an Aig_Man_t*, keep your old logic here.
+    // // *If it returns an int like Refactor, just call it directly.
+    // Aig_Man_t* pOptimized = Dar_ManRewriteDefault(finalCheck);
+    // if (pOptimized != finalCheck) { 
+    //     Aig_ManStop(finalCheck); 
+    //     finalCheck = pOptimized;
+    // }
+
+    // // Pass 2: Refactor (Re-synthesizes large cones of logic)
+    // // Setup the parameter struct
+    // Dar_RefPar_t Pars;
+    // Dar_ManDefaultRefParams( &Pars ); // Let ABC fill in the optimal defaults
+    
+    // // Execute refactor directly on the AIG (In-Place)
+    // int refactorSuccess = Dar_ManRefactor( finalCheck, &Pars );
+    // if ( !refactorSuccess ) {
+    //     globalLogger.log(LogLevel::ERROR, "Dar_ManRefactor failed to optimize the AIG.");
+    // }
+    // // Notice: We DO NOT call Aig_ManStop(finalCheck) here!
+    // // ------------------------------------------------------------------
     
     tmpwrap->negateOutput();
 
@@ -1932,7 +1961,7 @@ std::vector<std::pair<int, AigWrapper*>> getTseitinSkolems(Aig_Man_t* SAig, std:
 
         AigWrapper* skolemAig = new AigWrapper();
         skolemAig->SetManager(currSkolem);
-        // skolemAig->compress();
+        skolemAig->compress();
         // currSkolem = compressAig(currSkolem);
         // Aig_ManShow(currSkolem,0,NULL);
         // std::cin>>yy;

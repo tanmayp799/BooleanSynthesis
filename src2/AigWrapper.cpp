@@ -1721,15 +1721,15 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
     // ------------------------------------------------------------------
     // DEBUG: Dump the PI order to verify topology
     // ------------------------------------------------------------------
-    globalLogger.log(LogLevel::INFO, "--- ABC Network PI Physical Order ---");
-    
-    Abc_Obj_t * pPi_test;
-    int i_test;
-    Abc_NtkForEachPi( pNtk, pPi_test, i_test ) {
-        // This prints the index and the name of the PI as it exists in the network
-        globalLogger.log(LogLevel::INFO, fmt::format("PI Order Index {}: Name '{}'", i_test, Abc_ObjName(pPi_test)));
-    }
-    globalLogger.log(LogLevel::INFO, "---------------------------------------");
+    // globalLogger.log(LogLevel::INFO, "--- ABC Network PI Physical Order ---");
+    // 
+    // Abc_Obj_t * pPi_test;
+    // int i_test;
+    // Abc_NtkForEachPi( pNtk, pPi_test, i_test ) {
+    //     // This prints the index and the name of the PI as it exists in the network
+    //     globalLogger.log(LogLevel::INFO, fmt::format("PI Order Index {}: Name '{}'", i_test, Abc_ObjName(pPi_test)));
+    // }
+    // globalLogger.log(LogLevel::INFO, "---------------------------------------");
     
     Abc_NtkShortNames(pNtk);
 

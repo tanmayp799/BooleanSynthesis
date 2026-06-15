@@ -115,6 +115,10 @@ int main(int argc, char* argv[]){
     // finalFormula->ShowAig();
 
     std::set<int> depVars = origDqbf->GetDepVars();
+    // // std::set<int> existentials = origDqbf->GetNewExistentials();
+    // for(auto e:newExistentials){
+    //     depVars.insert(e);
+    // }
     globalLogger.log(LogLevel::DEBUG, fmt::format("DepVars: {}", depVars));
     std::set<int> universals = origDqbf->GetUniversals();
     std::vector<AigWrapper*> finalSkolems;
@@ -159,6 +163,7 @@ int main(int argc, char* argv[]){
 
         std::set<int> existentials = origDqbf->GetExistentials();
         for(auto e:existentials){
+            // if(newExistentials.find(e) != newExistentials.end()) continue;
             group3.push_back(e);
         }
 
@@ -225,7 +230,7 @@ int main(int argc, char* argv[]){
             localSpec->compress();
         finalSkolems.push_back(localSpec);
         globalLogger.log(LogLevel::DEBUG, "Final localSpec");
-        localSpec->ShowAig();
+        // localSpec->ShowAig();
     }
 
     Aig_Man_t* finalMan=finalFormula->getManager();
@@ -310,6 +315,7 @@ int main(int argc, char* argv[]){
         globalLogger.log(LogLevel::INFO, "Solution Exists.");
     }
 
+    exit(1);
     // origBenchmark->ShowAig();
     AigWrapper* origBenchmark = new AigWrapper(origDqbf);
     int res2 =verify(origBenchmark, origDqbf, tseitinSkolems, fileParser->argv);
