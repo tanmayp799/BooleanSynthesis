@@ -9,7 +9,8 @@ kissat_logs/
 bfss_test/
 testFolder/
 benchmarkInfo/
-
+statistics_latest/
+logs/
 
 abc.history
 gmon.out

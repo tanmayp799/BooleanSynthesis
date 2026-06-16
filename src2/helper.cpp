@@ -923,8 +923,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
             // if(id==13) cout<<"DBBBB: size: "<<depSet.size()<<endl;
             for (auto dep : depSet)
             {
-                //unsatCore Filtering for if condition
-                // if(unsatCoreUnivVars.find(dep) == unsatCoreUnivVars.end()) continue;
+                
                 if (cex[dep - 1] == 0)
                 {
                     depVal.insert(-dep);
@@ -936,11 +935,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 // depVal.insert(cex[dep-1]);
             }
             
-            // std::cout<<"DepVal for d: "<<id<<" => ";
-            // for(auto u:depVal){
-            //     std::cout<<u<<" ";
-            // }
-            // std::cout<<std::endl;
+
             if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
                 
                 changeFlag = true;
@@ -952,11 +947,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 exToAuxMap[id].push_back(newAux);
                 
                 auxilaries.push_back(newAux);
-                // int unsatCoreCnfVar = unsatCoreExtractor.vars()+1;
-                // inputToVarMapping_unsatCore[newAux] = unsatCoreCnfVar;
-                // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
-                // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
-
+  
                 if(verbose && freq) std::cout<<"Dependent Var new Aux created: "<<id<<std::endl;
 
 
@@ -1048,23 +1039,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
                 HtoZMapping[h_id] = newZ;
                 HtoSelectorMapping[h_id].push_back(newS);
-
-                ///////////////////////////////////////////////////////////////////////////////////
-
-                
-
-
-
-
-
-
-
-
-                //////////////////////////////////////////////////////////////////////////////
-                
-
-
-                
+     
                 if(cex[id-1]>0){
                     currConstraint.push_back(-newAux);
                     // currAssumptions.push_back(newAux);
@@ -1127,193 +1102,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         constraintSolver.add(0);
         freq=false;
 
-        // for(auto e:currConstraint){
-        //     if(e>0) unsatCoreExtractor.add(inputToVarMapping_unsatCore[e]);
-        //     else unsatCoreExtractor.add(-inputToVarMapping_unsatCore[-e]);
-        // }
-        // unsatCoreExtractor.add(0);
 
     }
 
-    // int numInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size();
-    
-    // std::set<int> deps = origDqbf->GetDepVars();
-
-    // for(auto id:deps){
-    //     int hId = exToHMapping[id];
-    //     globalLogger.log(LogLevel::ERROR, fmt::format("id: {} -> hId: {}", id,hId));
-
-    //     solverWrapper->setDefaultValue(hId, 1);
-    // }
-
-
-
-    // std::map<int, std::map<std::set<int>,std::pair<int,int>>> ex_caseToAuxMapping;
-    // int iter = 0;
-    // while(true){
-    //     iter++;
-
-    //     if(iter%1==0) globalLogger.log(LogLevel::INFO, fmt::format("******************       Iteration: {}       ******************", iter));
-
-
-
-    //     for(auto id:deps){
-    //         int hId = exToHMapping[id];
-    //         solverWrapper->assumeSelectors(hId);
-    //     }
-
-    //     int status = solverWrapper->solve();
-
-    //     if(status == CaDiCaL::UNKNOWN){
-    //         break;
-    //     }
-
-    //     if(status==CaDiCaL::UNSATISFIABLE){
-    //         /*
-    //         fill code block
-    //         */
-    //         int constraintStatus = constraintWrapper->solve();
-            
-    //         if(constraintStatus == CaDiCaL::UNSATISFIABLE){
-    //             globalLogger.log(LogLevel::INFO, "Constraint Unsatisfiable, no solution exists.");
-    //             return 1;
-    //         }
-            
-    //         if(constraintStatus == CaDiCaL::SATISFIABLE){
-    //             // store the skolem functions
-    //             globalLogger.log(LogLevel::INFO, "Constraint Satisfiable");
-    //             return 0;
-    //         }
-
-    //         if(constraintStatus == CaDiCaL::UNKNOWN){
-    //             globalLogger.log(LogLevel::ERROR, "Constrainst Solver returned UNKNOWN Status.");
-    //             return 1;
-    //         }
-    //     }
-
-    //     assert(status == CaDiCaL::SATISFIABLE);
-
-
-        
-
-    //     bool changeFlag = false;
-        
-    //     std::vector<int> cex = solverWrapper->getCex();
-
-
-    //     globalLogger.log(LogLevel::DEBUG, fmt::format("Cex: {}", fmt::join(cex," ")));
-
-    //     std::vector<int> currConstraint;
-
-    //     std::vector<int> currAssumptions;
-
-    //     for(auto id:deps){
-    //         if(cex[id-1]>0){
-    //             currAssumptions.push_back(id);
-    //         }
-    //         else{
-    //             currAssumptions.push_back(-id);
-    //         }
-    //     }
-
-    //     std::set<int> univs = origDqbf->GetUniversals();
-    //     std::vector<int> univAssumptions;
-    //     for(auto id:univs){
-    //         if(cex[id-1]>0){
-    //             univAssumptions.push_back(id);
-    //         }
-    //         else{
-    //             univAssumptions.push_back(-id);
-    //         }
-    //     }
-
-    //     unsatCoreWrapper->assume(currAssumptions);
-    //     unsatCoreWrapper->assume(univAssumptions);
-
-
-    //     int unsatCoreStatus = unsatCoreWrapper->solve();
-    //     if(unsatCoreStatus==CaDiCaL::SATISFIABLE){
-    //         /* log error*/
-    //         return 1;
-    //     }
-
-    //     std::set<int> unsatCoreLits = getUnsatCore(currAssumptions, univAssumptions, unsatCoreWrapper);
-
-
-    //     globalLogger.log(LogLevel::DEBUG, fmt::format("UnsatCoreLits: {}", fmt::join(unsatCoreLits," ")));
-
-
-    //     for(auto e:unsatCoreLits){
-    //         int id = abs(e);
-
-    //         int aVal =  Abc_NtkVerifySimulatePattern(varToBasisMap[id].first, cex.data())[0];
-    //         int bVal =  Abc_NtkVerifySimulatePattern(varToBasisMap[id].second, cex.data())[0];
-
-    //         globalLogger.log(LogLevel::DEBUG, fmt::format("id: {} aVal: {} bVal: {}", id, aVal, bVal));
-            
-
-    //         if(!(aVal==0 && bVal==1)){
-    //             printf("AiBi Check Failed: %d\n",id);
-    //             continue;
-    //         }
-
-    //         std::set<int> depVal;
-    //         std::set<int> depSet = origDqbf->GetDependencySet(id);
-    //         for(auto dep:depSet){
-    //             if(cex[dep-1]==0){
-    //                 depVal.insert(-dep);
-    //             }
-    //             else depVal.insert(dep);
-    //         }
-
-    //         globalLogger.log(LogLevel::DEBUG, fmt::format("DepVal for id: {} => : {}",id, fmt::join(depVal," ")));
-
-
-
-    //         if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
-            
-    //             changeFlag=true;
-
-    //             int newAuxVar = solverWrapper->getNewVar();
-
-    //             solverWrapper->synthesize(depVal, exToHMapping[id], newAuxVar);
-
-    //             if(cex[id-1]>0){
-    //                 currConstraint.push_back(-newAuxVar);
-    //             }
-    //             else{
-    //                 currConstraint.push_back(newAuxVar);
-
-    //             }
-
-    //             ex_caseToAuxMapping[id][depVal]= {newAuxVar, newAuxVar};
-    //         }
-    //         else{
-    //             changeFlag=true;
-    //             int newAuxVar = ex_caseToAuxMapping[id][depVal].first;
-                
-    //             if(cex[id-1]>0){
-    //                 currConstraint.push_back(-newAuxVar);
-    //             }
-    //             else{
-    //                 currConstraint.push_back(newAuxVar);
-
-    //             }
-    //         }
-    //     }
-    //     if(!changeFlag){
-    //         globalLogger.log(LogLevel::INFO, "No Change Occured.");
-    //         break;
-    //     }
-
-    //     globalLogger.log(LogLevel::DEBUG, fmt::format("CurrConstraint: {}", fmt::join(currConstraint," ")));
-
-
-    //     solverWrapper->addClause(currConstraint);
-    //     constraintWrapper->addClause(currConstraint);
-
-    // }
-    // // return 1;
     return 0;
 }
 
