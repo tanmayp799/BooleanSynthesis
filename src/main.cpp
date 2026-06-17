@@ -32,9 +32,67 @@ int numTrue=0, numFalse=0, numBoth=0;
 // int numX, numY;
 map<int, vector<int>> dependencies;
 
+// ExperimentalMetrics global_metrics;
+
+
+void timeout_handler(int signum) {
+    global_metrics.execution_status = "TIMEOUT";
+    global_metrics.print_json_metrics();
+    std::_Exit(signum);
+}
+
+void final_cleanup_hook() {
+    
+        global_metrics.print_json_metrics();
+    
+}
+
+void callManthan(){
+    // global_metrics.last_checkpoint = "MANTHAN_START";
+
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+
+    std::filesystem::path p(global_metrics.benchmark_name);
+    string rawname=p.filename().string();
+
+    string inpFile = "../benchmark_tests/dqbf20/"+rawname;
+    string command = "cd ./manthan_test && ./test.sh " + inpFile;
+    cout<<command<<endl;
+    int return_code = std::system(command.c_str());
+    int xx;
+    cin>>xx;
+
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    global_metrics.manthan_time = elapsed_time.count();
+
+
+    if(return_code !=0){
+        global_metrics.execution_status = "ERROR_MANTHAN_FAILED";
+
+        // global_metrics.print_json_metrics();
+        exit(1);
+    }
+    return;
+}
+
 int main(int argc, char *argv[])
 {
     // extern Abc_Ntk_t * Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
+
+
+    global_metrics.start_timestamp = std::chrono::high_resolution_clock::now();
+    signal(SIGTERM, timeout_handler);
+    signal(SIGSEGV, timeout_handler);
+    signal(SIGABRT, timeout_handler);
+    std::atexit(final_cleanup_hook);
+
+
+    global_metrics.benchmark_name = argv[1];
+
     int mySIG;
     Abc_Start();
     srand(time(0));
@@ -48,57 +106,19 @@ int main(int argc, char *argv[])
     bool didManthan=false;
     // cout<<argc<<endl;
     // exit(1);
-    if (argc == 4)  
-    {
-        didManthan=true;
-    }
+    // if (argc == 4)  
+    // {
+    //     didManthan=true;
+    // }
 
-    if(argc!=2 && argc!=4){
-        cerr<<"Usage: ./bin/main <DQDIMACS FILE> <VERILOG FILE> <ORDER FILE>"<<endl;
+    if(argc!=2){
+        cerr<<"Usage: ./bin/main <DQDIMACS FILE>"<<endl;
         return 1;
     }
 
 
    
-    // Abc_Ntk_t* n = getNtkFromCNF("./data/small.dqdimacs");
-    // DQCNF* dqcnf = new DQCNF("./data/small.dqdimacs");
-
-    // Aig_Man_t* m = dqcnf->genAIGMan();
-    // Cnf_Dat_t* c = Cnf_Derive(m,1);
-    // Abc_Ntk_t* n = Abc_NtkFromAigPhase(m);
-    // Aig_ManShow(m,0,NULL);
-
-    // printf("numClauses: %d | numVars: %d\n",c->nClauses,c->nVars);
-    // for(int i=0;i<c->nClauses;i++){
-    //     for(int j=0;j<c->pClauses[i][j]!=0;j++){
-    //         // solver.add(pCnf->pClauses[i][j]);
-    //         printf("%d ",c->pClauses[i][j]);
-    //     }
-    //     cout<<endl;
-    //     // solver.add(0);
-    // }
-
-    // Io_WriteCnf(n,"./out_test.dimacs",1);
-    // Abc_NtkDarToCnf( Abc_Ntk_t * pNtk, char * pFileName, int fFastAlgo, int fChangePol, int fVerbose );
-    // Abc_Ntk_t* newNtK = Abc_NtkDarToCnf( n, "./out_test.dimacs",0,0,1);
-    // Cnf_Dat_t* myCnf = myDarToCnf(n, "./out_test2.dimacs",0,0,1);
-    // cout<<"NEW CNFFFFFFFFFFFFFFF\n";
     
-    // int * pLit, * pStop;
-    // for(int i=0;i<myCnf->nClauses;i++){
-    //     for(pLit=myCnf->pClauses[i],pStop=myCnf->pClauses[i+1];pLit<pStop;pLit++){
-    //         printf("%d ", Cnf_Lit2Var2(*pLit));
-    //     }
-    //     printf("0\n");
-    // }
-
-    // for(int i=0;i<Abc_NtkCiNum(n);i++){
-    //     printf("INPUT %d , var map: %d\n",i+1, myCnf->pVarNums[Abc_ObjId(Abc_NtkCi(n,i))]);
-    // }
-
-    // exit(1);
-    
-
     main_time_start = TIME_NOW;
 
     string inpPath = argv[1];
@@ -108,51 +128,45 @@ int main(int argc, char *argv[])
     cout << "Read the file\n";
     phiCNF->unateCheck();
     // phiCNF->preprocess();
+
+    auto stat_exs = phiCNF->get_existentials();
+    auto stat_univs = phiCNF->get_universals();
+    auto stat_deps = phiCNF->get_deps();
+
+    global_metrics.count_a = stat_univs.size();
+    global_metrics.count_e = stat_exs.size();
+    global_metrics.count_d = stat_deps.size();
+    global_metrics.last_checkpoint = "INIT";
+
+    for(auto id:stat_deps){
+        global_metrics.d_vars.push_back(id);
+        auto depset = phiCNF->get_dependencySet(id);
+        global_metrics.individual_dep_set_sizes.push_back(depset.size());
+    }
+
+    global_metrics.individual_projection_times.resize(global_metrics.count_d,0.0);
+    global_metrics.is_trivial_a.resize(global_metrics.count_d, false);
+    global_metrics.is_trivial_b.resize(global_metrics.count_d, false);
+
     Aig_Man_t *phi_Man = phiCNF->genAIGMan();
 
-    // Aig_ManShow(phi_Man,0,NULL);
-    // cin>>mySIG;
-    // exit(1);
-    // vector<int> ones = {27,25,23,22,21,19,18,17,15,14};
-    // vector<int> zeros = {26,24,20};
+    auto tmp_exis = phiCNF->get_existentials();
+    if(!tmp_exis.empty()){
+        didManthan=true;
+        global_metrics.last_checkpoint = "MANTHAN_START";
+        callManthan();
+        global_metrics.last_checkpoint = "MANTHAN_END";
+    }
 
+    map<int, int> dep_id_to_idx; // Maps variable ID to its 0-indexed array position
+    int current_idx = 0;
+    for (auto id : stat_deps) {
+        dep_id_to_idx[id] = current_idx;
+        global_metrics.individual_dep_set_sizes[current_idx] = phiCNF->get_dependencySet(id).size();
+        current_idx++;
+    }
 
-    // for(auto id:ones){
-    //     Aig_Obj_t* newOut = Aig_SubstituteConst(phi_Man, Aig_ManCo(phi_Man,0), id, 1);
-    //     Aig_ObjCreateCo(phi_Man,newOut);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-    // }
-
-    // for(auto id:zeros){
-    //     Aig_Obj_t* newOut = Aig_SubstituteConst(phi_Man, Aig_ManCo(phi_Man,0), id, 0);
-    //     Aig_ObjCreateCo(phi_Man,newOut);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-    // }
-    // Aig_Man_t* tm = compressAig(phi_Man);
-    // Aig_ManShow(phi_Man,0,NULL);
-    // cin>>mySIG;
-
-    // Aig_Obj_t* newOut2 = Aig_Substitute(phi_Man, Aig_ManCo(phi_Man,0), 16, Aig_Not(Aig_ManCi(phi_Man,5)));
-    // Aig_ObjCreateCo(phi_Man,newOut2);
-
-    //     Aig_ObjDisconnect(phi_Man, Aig_ManCo(phi_Man, 0));
-    //     Aig_ObjConnect(phi_Man, Aig_ManCo(phi_Man, 0), Aig_ManConst0(phi_Man), NULL);
-    //     Aig_ManCoCleanup(phi_Man);
-    //     Aig_ManCleanup(phi_Man);
-
-    // Aig_Man_t* tm = compressAig(phi_Man);
-    // Aig_ManShow(tm,0,NULL);
-    // cin>>mySIG;
-    // exit(1);
-
+    
     numOrigInputs = Aig_ManCiNum(phi_Man);
 
     // Aig_ManShow(phi_Man,0,NULL);
@@ -172,9 +186,14 @@ int main(int argc, char *argv[])
 
     string stat_filename = "/home/coolboy19/Desktop/RnD/BooleanSynthesis/projection_stat.csv";
     FILE* stat_file = fopen(stat_filename.c_str(),"a");
+    global_metrics.last_checkpoint = "PROJECTION_START";
     // fprintf(stat_file, "tc_name, numPos, numNeg, numBoth\n");
     for (auto id : deps)
     {
+
+        auto proj_start = std::chrono::high_resolution_clock::now();
+        
+
         DQCNF *tCNF = phiCNF->getProjection(id);
         projectedPhis[id] = tCNF;
         Aig_Man_t *tMan = tCNF->genAIGMan();
@@ -183,25 +202,31 @@ int main(int argc, char *argv[])
         tMan = compressAig(tMan);
         projectedMans[id] = tMan;
 
+        auto proj_end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> proj_duration = proj_end - proj_start;
+        global_metrics.individual_projection_times[dep_id_to_idx[id]] = proj_duration.count();
+
+        
+
+
+
+
         if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
             && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 printf("Phi_i is const 0 for id: %d\n",id);
             }
 
-        // Aig_ManShow(tMan,0,NULL);
-        // cin>>mySIG;
-        // exit(1);
-        // Aig_ManShow(tMan,0,NULL);
-        // int q;
-        // cin>>q;
+        
     }
+    global_metrics.last_checkpoint = "PROJECTION_END";
+    // cout<<"DONE. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
 
-    std::ostringstream oss;
-    oss << phiPath.filename().string() << ", " << numTrue << ", " << numFalse << ", " << numBoth << "\n";
-    std::string result = oss.str(); // result: "example, 1, 2, 3\n"
-    // string output_stat = std::format("{}, {}, {}, {}\n", phiPath.filename().string(), numTrue, numFalse, numBoth);
-    fprintf(stat_file,result.c_str());
-    fclose(stat_file);
+    // std::ostringstream oss;
+    // oss << phiPath.filename().string() << ", " << numTrue << ", " << numFalse << ", " << numBoth << "\n";
+    // std::string result = oss.str(); // result: "example, 1, 2, 3\n"
+    // // string output_stat = std::format("{}, {}, {}, {}\n", phiPath.filename().string(), numTrue, numFalse, numBoth);
+    // fprintf(stat_file,result.c_str());
+    // fclose(stat_file);
     // exit(1);
     cout<<"DONE. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
 
@@ -278,6 +303,8 @@ int main(int argc, char *argv[])
     map<int, Abc_Ntk_t *> A_Ntk;
     map<int, Abc_Ntk_t *> B_Ntk;
 
+    global_metrics.last_checkpoint = "BASIS_START";
+
     for (auto id : deps)
     {
 
@@ -323,6 +350,7 @@ int main(int argc, char *argv[])
         if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
             && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a[dep_id_to_idx[id]] = true;
             }
         if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
             && !Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
@@ -376,6 +404,7 @@ int main(int argc, char *argv[])
         if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
             && !Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 printf("B_i is const 1 for id: %d\n",id);
+                global_metrics.is_trivial_b[dep_id_to_idx[id]] = true;
             }
 
         // if(id==25){
@@ -392,6 +421,8 @@ int main(int argc, char *argv[])
         Aig_ManStop(phi_0_Man[id]);
         Aig_ManStop(phi_1_Man[id]);
     }
+
+    global_metrics.last_checkpoint = "BASIS_END";
     cout<<"DONE. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
     // cout << "****   DONE!   *****\n";
 
@@ -411,7 +442,7 @@ int main(int argc, char *argv[])
     if(didManthan){
         cout<<"APPENDING y_i <=> f(a,d)\n";
         // cin>>mySIG;
-        Abc_Ntk_t* defNtk = Io_ReadVerilog(argv[2],0);
+        Abc_Ntk_t* defNtk = Io_ReadVerilog((char*)"./manthan_test/out_skolem.v",0);
         defNtk = Abc_NtkToLogic(defNtk);
         defNtk = Abc_NtkStrash(defNtk,0,1,0);
         
@@ -420,7 +451,7 @@ int main(int argc, char *argv[])
             Aig_ObjCreateCi(eDefMan);
         }
         
-        ifstream f(argv[3]);
+        ifstream f("./manthan_test/ordering.txt");
         vector<int> inputMapping;
         vector<int> outputMapping;
         string str;
@@ -455,11 +486,9 @@ int main(int argc, char *argv[])
             cout<<e<<endl;
         }
 
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        
         eDefMan = remapInputs(eDefMan,ordering);
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        
 
         //compose outputs of eDefMan such that inp[OutMap[i]] <=> out[i]
         
@@ -487,8 +516,7 @@ int main(int argc, char *argv[])
         Aig_ManCoCleanup(eDefMan);
         Aig_ManCleanup(eDefMan);
         
-        Aig_ManShow(eDefMan,0,NULL);
-        cin>>mySIG;
+        
 
         Abc_Ntk_t* origFormulaNtk = Abc_NtkFromAigPhase(origFormula);
         Abc_Ntk_t* eDefNtk = Abc_NtkFromAigPhase(eDefMan);
@@ -958,10 +986,13 @@ int main(int argc, char *argv[])
 
     map<int, vector<int>> exToAuxMap;
 
+
+    global_metrics.last_checkpoint=  "CEGIS_START";
+
     while(true){
         iter++;
         //check for sat
-
+        freq=false;
         
         for(auto id:deps){
             int h_id = exToHMapping[id];
@@ -978,7 +1009,7 @@ int main(int argc, char *argv[])
         solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%1==0){
+        if(iter%1000==0){
             freq=true;
         }
 
@@ -996,17 +1027,25 @@ int main(int argc, char *argv[])
         }
 
         if(status == CaDiCaL::UNSATISFIABLE){
-
+            global_metrics.last_checkpoint = "CEGIS_END";
             cout<<"UNSAT BUT WHY?"<<endl;
-            for(int asgNo=0;asgNo<3;asgNo++){
+            for(int asgNo=0;asgNo<1;asgNo++){
                 int constrStatus = constraintSolver.solve();
 
                 if(constrStatus == CaDiCaL::UNSATISFIABLE){
                     printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
+                    cout<<"UNSATISFIABLE\n";
+                    global_metrics.execution_status = "UNSATISFIABLE";
+                    Abc_Stop();
                     exit(1);
                 }
 
                 if(constrStatus == CaDiCaL::SATISFIABLE){
+
+                    global_metrics.execution_status = "SATISFIABLE";
+                    cout<<"SATISFIABLE\n";
+                    Abc_Stop();
+                    return 0;
 
                     map<int, int> cex_aux;
 
@@ -1066,71 +1105,6 @@ int main(int argc, char *argv[])
                 // }
             }
 
-            // int constrStatus = constraintSolver.solve();
-
-            // if(constrStatus == 10){
-            //     cout<<iter<<endl;
-
-
-
-            //     vector<int> newConstraint;
-                
-            //     for(auto e:auxilaries){
-            //         int val = constraintSolver.val(inputToVarMapping[e]);
-            //         if(val>0){
-            //             newConstraint.push_back(-e);
-            //         }
-            //         else{
-            //             newConstraint.push_back(e);
-            //         }
-            //     }
-                
-            //     // newConstraint.push_back(0);
-                
-            //     for(auto e:newConstraint){
-            //         if(e>0){
-            //             constraintSolver.add(inputToVarMapping[e]);
-            //         }
-            //         else{
-            //             constraintSolver.add(-inputToVarMapping[-e]);
-            //         }
-            //     }
-            //     constraintSolver.add(0);
-                
-            //     int newStatus = constraintSolver.solve();
-
-            //     if(newStatus == CaDiCaL::UNSATISFIABLE){
-            //         cerr<<"Couldn't find another assignment for auxilary vars\n";
-            //         exit(1);
-            //     }
-
-                
-            //     map<int, int> cex_aux;
-            //     for(auto e:auxilaries){
-            //         int val = constraintSolver.val(inputToVarMapping[e]);
-            //         cex_aux[e] = val>0?1:0;
-                    
-            //     }
-
-            //     for(auto p:ex_caseToAuxMapping){
-            //         int d_var = p.first;
-            //         auto cases = p.second;
-            //         printf("D Variable: %d\n",d_var);
-
-            //         for(auto p2:cases){
-            //             set<int> currCase = p2.first;
-            //             int aux = p2.second.first;
-            //             if(cex_aux.find(aux)==cex_aux.end()){
-            //                 cerr<<"Error in aux map\n";
-            //                 exit(1);
-            //             }
-            //             for(auto e:currCase){
-            //                 printf("%d ",e);
-            //             }
-            //             printf("   =>     H_Val: %d\n",cex_aux[aux]);
-            //         }
-            //         printf("**************************\n");
-            //     }
 
                 cout<<"HURRAY\n";
                 return 0;
@@ -1516,189 +1490,7 @@ int main(int argc, char *argv[])
                 HtoZMapping[h_id] = newZ;
                 HtoSelectorMapping[h_id].push_back(newS);
 
-                ///////////////////////////////////////////////////////////////////////////////////
-
-                // if(caseToAuxMap_unsatCore.find(depVal)==caseToAuxMap_unsatCore.end()){
-                //     int newCaseVar = unsatCoreExtractor.vars()+2;
-
-                //     // dep => var === ~dep or var
-                //     vector<int> c1;
-                //     for(auto d:depVal){
-                //         if(d>0){
-                //             c1.push_back(-inputToVarMapping_unsatCore[d]);
-                //         }
-                //         else{
-                //             c1.push_back(inputToVarMapping_unsatCore[-d]);
-                //         }
-                //     }
-                //     c1.push_back(newCaseVar);
-                //     c1.push_back(0);
-
-                //     for(auto e:c1){
-                //         unsatCoreExtractor.add(e);
-                //     }
-
-
-                //     // var => dep ---> ~ var OR dep
-                //     for(auto d:depVal){
-                //         unsatCoreExtractor.add(-newCaseVar);
-                //         if(d>0){
-                //             unsatCoreExtractor.add(inputToVarMapping_unsatCore[d]);
-                //         }
-                //         else{
-                //             unsatCoreExtractor.add(-inputToVarMapping_unsatCore[-d]);
-                //         }
-                //         unsatCoreExtractor.add(0);
-                //     }
-                //     caseToAuxMap_unsatCore[depVal] = newCaseVar;
-                // }
-
-                // int uc_caseVar = caseToAuxMap_unsatCore[depVal];
-
-                // h_id = exToHMapping[id];
-                // int uc_hVar = inputToVarMapping_unsatCore[h_id];
-                // int uc_zVar = HtoZMapping_unsatCore[h_id];
-
-                // int uc_newZ = unsatCoreExtractor.vars()+3;
-                // int uc_newS = unsatCoreExtractor.vars()+4;
-                // int uc_cnfVar = unsatCoreCnfVar;
-                // // newZ = ite(caseVar, newAux,zVar)
-                // //adding clause 1
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_cnfVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 2
-                // unsatCoreExtractor.add(-uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_cnfVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 3
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(-uc_zVar);
-                // unsatCoreExtractor.add(0);
-
-                // //adding clause 4
-                // unsatCoreExtractor.add(uc_caseVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_zVar);
-                // unsatCoreExtractor.add(0);
-
-                // //Now we will add h<=> newZ if selector
-                // //adding h or -newZ or newS
-                // unsatCoreExtractor.add(uc_hVar);
-                // unsatCoreExtractor.add(-uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
-
-                // //adding -h or newZ or newS
-                // unsatCoreExtractor.add(-uc_hVar);
-                // unsatCoreExtractor.add(uc_newZ);
-                // unsatCoreExtractor.add(uc_newS);
-                // unsatCoreExtractor.add(0);
-
-                // HtoZMapping_unsatCore[h_id] = uc_newZ;
-                // HtoSelectorMapping_unsatCore[h_id].push_back(uc_newS);
-
-
-
-
-
-
-
-
-                //////////////////////////////////////////////////////////////////////////////
-                // cout<<newAux<<" "<<cnfVar<<endl;
-                // we add the clause ~depVal or h or ~newAux
-                // printf("depVal: ");
-                // vector<int> c1;
-                // vector<int> c1_unsatCore;
-                // for(auto d: depVal){
-                //     // printf("d: %d | val-> %d, inputMap->%d\n",d,cex[d-1],inputToVarMapping[d]);
-                //     // printf("%d ",d);
-                //     if(d > 0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c1.push_back(-inputToVarMapping[d]);
-                //         c1_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //         // cout<<-inputToVarMapping[d]<<" | ";    
-                //     }
-                //     else{
-                //         c1.push_back(inputToVarMapping[-d]);
-                //         c1_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //         // solver.add(inputToVarMapping[-d]);
-                //         // cout<<inputToVarMapping[-d]<<" | ";
-                //     }
-                // }
-                // // cout<<endl;
-                // c1.push_back(inputToVarMapping[exToHMapping[id]]);
-                // c1.push_back(-inputToVarMapping[newAux]);
-                // c1.push_back(0);
                 
-                // c1_unsatCore.push_back(inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c1_unsatCore.push_back(-inputToVarMapping_unsatCore[newAux]);
-                // c1_unsatCore.push_back(0);
-                
-                // cout<<"Adding clause 1...\n";
-                // for(auto e:c1){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-                // // implicationClauses.push_back(c1_unsatCore);
-
-                // for(auto e:c1_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-
-                // // solver.write_dimacs("./debug_1stClause.dimacs");
-                // // cin>>mySIG;
-                // //we add the clause ~depVal or ~h or newAux
-                // vector<int> c2;
-                // vector<int> c2_unsatCore;
-                // for(auto d:depVal){
-                //     if(d>0){
-                //         // solver.add(-inputToVarMapping[d]);
-                //         c2.push_back(-inputToVarMapping[d]);
-                //         c2_unsatCore.push_back(-inputToVarMapping_unsatCore[d]);
-                //     }
-                //     else{
-                //         // solver.add(inputToVarMapping[-d]);
-                //         c2.push_back(inputToVarMapping[-d]);
-                //         c2_unsatCore.push_back(inputToVarMapping_unsatCore[-d]);
-                //     }
-                // }
-                
-                // c2.push_back(-inputToVarMapping[exToHMapping[id]]);
-                // c2.push_back(inputToVarMapping[newAux]);
-                // c2.push_back(0);
-
-                // c2_unsatCore.push_back(-inputToVarMapping_unsatCore[exToHMapping[id]]);
-                // c2_unsatCore.push_back(inputToVarMapping_unsatCore[newAux]);
-                // c2_unsatCore.push_back(0);
-
-                // // implicationClauses.push_back(c2_unsatCore);
-
-
-
-                // cout<<"Adding clause 2...\n";
-                // for(auto e:c2){
-                //     cout<<e<<" ";
-                //     solver.add(e);
-                // }
-                // cout<<endl;
-
-                // for(auto e:c2_unsatCore){
-                //     unsatCoreExtractor.add(e);
-                // }
-
-                // solver.add(-inputToVarMapping[exToHMapping[id]]);
-                // solver.add(inputToVarMapping[newAux]);
-                // solver.add(0);
-
                 if(cex[id-1]>0){
                     currConstraint.push_back(-newAux);
                     // currAssumptions.push_back(newAux);
@@ -1726,66 +1518,6 @@ int main(int argc, char *argv[])
 
         }
 
-
-        // int unsatCoreStatus = unsatCoreExtractor.solve();
-
-        // if(unsatCoreStatus == CaDiCaL::SATISFIABLE){
-        //     cerr<<"Theres a problem... unsatCore is sat after adding the assumptions\n";
-        //     unsatCoreExtractor.write_dimacs("./sat_core.dimacs");
-        //     int cex[numAigInputs];
-        //     for(int i=1;i<=numAigInputs;i++){
-        //         int val = unsatCoreExtractor.val(inputToVarMapping_unsatCore[i]);
-        //         cex[i-1]=val>0? 1:0;
-        //     }
-
-
-        //     if(verbose && freq) {cout << "CEX : ";
-
-        //     for (int i = 0; i < numAigInputs; i++)
-        //     {
-        //         cout << cex[i] << " ";
-        //     }
-        //     cout << endl;}
-
-        //     exit(1);
-        // }
-
-        // if(unsatCoreStatus == CaDiCaL::UNSATISFIABLE){
-        //     for(auto e:currAssumptions){
-        //         if(e>0){
-        //             if(unsatCoreExtractor.failed(inputToVarMapping_unsatCore[e])){
-        //                 currConstraint.insert(-e);
-        //             }
-        //         }
-        //         else{
-        //             if(unsatCoreExtractor.failed(-inputToVarMapping_unsatCore[-e])){
-        //                 currConstraint.insert(-e);
-        //             }
-        //         }
-        //     }
-        // }
-        // else{
-        //     cerr<<"SOMETHING WENT WRONG, timeout occured for unsatCoreExtractor\n";
-        //     exit(1);
-        // }
-
-        // exit(1);
-
-        // int oldSize = constraints.size();
-        // constraints.insert(currConstraint);
-        // int newSize = constraints.size();
-
-        // if(newSize!=oldSize){
-        //     changeFlag=true;
-        // }
-
-        // cout<<"PRinting current constraint:\n";
-        // for(auto e: currConstraint){
-        //     cout<<e<<" ";
-        // }
-        // cout<<endl;
-        // exit(1);
-        // cin>>mySIG;
     
 
         if(!changeFlag){
@@ -1817,566 +1549,13 @@ int main(int argc, char *argv[])
         constraintSolver.add(0);
         freq=false;
 
-        // for(auto e:currConstraint){
-        //     if(e>0) unsatCoreExtractor.add(inputToVarMapping_unsatCore[e]);
-        //     else unsatCoreExtractor.add(-inputToVarMapping_unsatCore[-e]);
-        // }
-        // unsatCoreExtractor.add(0);
 
     }
 
     
-    return 0;
-
-    // Aig_ManShow(constraintMan,0,NULL);
-    // int aa;
-    // cin>>aa;
-
-    // start the main loop
-    // origFormu  , constrMan //
-    // map<pair<int, set<int>>, pair<Aig_Obj_t *, Aig_Obj_t *>> ex_caseToAuxMapping; // {ex_id,[depVal] }-> <Aig_Obj_t*, Aig_Obj_t*>
-
-
-    // map<set<int>, Aig_Obj_t *> caseToNodeMapping;
-    // map<Aig_Obj_t*, int> auxToIdMapping;
-    // int iter = 0;
-    // set<set<int>> constraintSet;
-    // cout<<"****************      Starting Main Loop     *******************"<<endl;
-
-    
-    // TIME_MEASURE_START
-    // bool verbose;
-    // bool debug;
-
-    // int aa;
-    // cout<<"VERBOSE? :";
-    // cin>>aa;
-    // verbose = aa?true:false;
-    // cout<<"DEBUG? :";
-    // cin>>aa;
-    // debug = aa?true:false;
-    
-    // map<int, int> exToAuxCount;
-    
-    // while (true)
-    // {
-    //     int totalInputs = Aig_ManCiNum(origFormula);
-    //     iter++;
-
-    //     if(iter%100==0){
-    //         cout<<"NUM INPUTS: "<<Aig_ManCiNum(origFormula)<<endl;;
-    //         cout<<"NETWORK SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
-            
-    //     }
-    //     if(verbose && iter%100==0) cout << "************     ITER: " << iter << "    **************" << endl;
-
-    //     if(0){
-    //         cout<<"************          INFOO TIMEEEEEE      ****************\n";
-    //         // cout<<"Num Aux Created: "<<auxToIdMapping.size()<<endl;
-    //     }
-    //     if(debug) {cout<<"SHOWING ORIGFORMULA: ";
-    //     int aa;
-    //     cin>>aa;
-    //     Aig_ManShow(origFormula,0,NULL);
-    //     cin>>aa;}
-
-    //     Aig_Man_t* tmpMan = Aig_ManDupOneOutput(origFormula,0,0);
-    //     Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(tmpMan);
-    //     TIME_MEASURE_START
-    //     int status = Abc_NtkMiterSat(FNtk, 100000, 0, 0, NULL, NULL);
-    //     if(verbose && iter%100==0) cout<<"SAT TIME ELAPSED: "<<TIME_MEASURE_ELAPSED<<endl;
-    //     if (status == -1)
-    //     {
-    //         cerr << "Timeout Occured.\n";
-    //         cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
-    //         cout<<"TIMEOUT OCCURED."<<endl;
-    //         Abc_Stop();
-    //         exit(1);
-    //     }
-    //     // Aig_ManShow(origFormula,0,NULL);
-        
-    //     // int res = Abc_NtkVerifySimulatePattern(FNtk,ex)[0];
-    //     // cout<<res<<endl;
-    //     // exit(1);
-    //     if (status == 1)
-    //     {
-    //         Abc_Ntk_t *constraintNtk = Abc_NtkFromAigPhase(constraintMan);
-
-    //         int constrStatus = Abc_NtkMiterSat(constraintNtk, 100000, 0, 0, NULL, NULL);
-    //         if (constrStatus !=0)
-    //         {   
-    //             // Aig_ManShow(constraintMan,0,NULL);
-    //             cout << "Failed to satisfy auxilary variable constraints. Terminating...\n";
-    //             cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
-    //             cout<<"UNSATISFIABLE"<<endl;
-    //             Abc_Stop();
-    //             return 0;
-    //         }
-    //         cout << "Formula has become unsat :)\n";
-    //         cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
-    //         cout<<"SATISFIABLE"<<endl;
-    //         Abc_Stop();
-    //         return 0;
-    //     }
-
-    //     if(verbose && iter%100==0)    cout << "Formula is SAT. Working on the counter-example...\n";
-
-    //     int *cex = FNtk->pModel;
-
-    //     if(verbose) {cout << "CEX : ";
-
-    //     for (int i = 0; i < totalInputs; i++)
-    //     {
-    //         cout << cex[i] << " ";
-    //     }
-    //     cout << endl;}
-
-    //     if(verbose){
-    //         if(iter%100==0){
-    //             for(auto p:exToAuxCount){
-    //                 cout<<"EX VAR: "<<p.first<<" -> "<<p.second<<"| ";
-    //             }
-    //             cout<<endl;
-    //         }
-    //     }
-
-    //     Aig_Obj_t *newConstr1 = Aig_ManConst0(origFormula);
-    //     Aig_Obj_t *newConstr2 = Aig_ManConst0(constraintMan);
-
-    //     bool changeFlag = false;
-    //     Aig_Obj_t *tmpMu = Aig_ManConst1(origFormula);
-
-    //     int constraintManInitialSize = constraintMan->vObjs->nSize;
-    //     // set<int> constraintTempSet;
-    //     for (auto id : deps)
-    //     {
-
-    //         int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[id], cex)[0];
-    //         int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[id], cex)[0];
-
-    //         // if(verbose) printf("A[%d]: %d | B[%d]: %d\n", id, a_i, id, b_i);
-    //         if (!(a_i == 0 && b_i == 1))
-    //         {
-    //             continue;
-    //         }
-
-    //         // get the set cex|dep1
-    //         set<int> depVal;
-    //         set<int> depSet = phiCNF->get_dependencySet(id);
-    //         // if(id==13) cout<<"DBBBB: size: "<<depSet.size()<<endl;
-    //         for (auto dep : depSet)
-    //         {
-    //             if (cex[dep - 1] == 0)
-    //             {
-    //                 depVal.insert(-dep);
-    //             }
-    //             else
-    //             {
-    //                 depVal.insert(dep);
-    //             }
-    //             // depVal.insert(cex[dep-1]);
-    //         }
-
-    //         // Aig_Obj_t* newCase = Aig_ManConst1(origFormula);
-    //         // if(id==13){
-    //             // cout<<"DEBUG: ";
-    //             // for(auto dep:depVal){
-    //             //     cout<<dep<<" ";
-    //             // }
-    //             // cout<<endl;
-    //         // }
-    //         if (ex_caseToAuxMapping[id].find(depVal) == ex_caseToAuxMapping[id].end())
-    //         {
-    //             // cout << "Created new auxiliary variable for id: " << id << endl;
-    //             exToAuxCount[id]++;
-    //             changeFlag = true;
-    //             // generate new aux var and update mu
-    //             Aig_Obj_t *newAux = Aig_ObjCreateCi(origFormula);
-    //             Aig_Obj_t *newAuxConstraint = Aig_ObjCreateCi(constraintMan);
-    //             // cout<<"CIO id: "<<Aig_ObjCioId(newAux)<<endl;
-    //             // constraintTempSet.insert(-Aig_ManCiNum(origFormula));
-    //             // auxToIdMapping[newAux] = Aig_ManCiNum(origFormula);
-
-    //             // mu =  mu AND case-> h<->newAux
-    //             Aig_Obj_t *newCase = Aig_ManConst1(origFormula);
-                
-    //                 for (auto dep : depVal)
-    //                 {
-    //                     if (dep > 0)
-    //                     {
-    //                         newCase = Aig_And(origFormula, newCase, Aig_ManCi(origFormula, dep - 1));
-    //                     }
-    //                     else
-    //                     {
-    //                         newCase = Aig_And(origFormula, newCase, Aig_Not(Aig_ManCi(origFormula, -dep - 1)));
-    //                     }
-    //                 }
-    //                 // caseToNodeMapping[depVal] = newCase;
-                
-        
-    //             Aig_Obj_t *hImpAux = Aig_Or(origFormula, Aig_Not(Aig_ManCi(origFormula,exToHMapping[id])), newAux);
-    //             Aig_Obj_t *auxImpH = Aig_Or(origFormula, Aig_Not(newAux), Aig_ManCi(origFormula,exToHMapping[id]));
-    //             Aig_Obj_t *hIFFaux = Aig_And(origFormula, hImpAux, auxImpH);
-
-    //             Aig_Obj_t *caseImpAsg = Aig_Or(origFormula, Aig_Not(newCase), hIFFaux);
-    //             // update tmpMu -> tmpMu AND caseImpAsg
-    //             tmpMu = Aig_And(origFormula, tmpMu, caseImpAsg);
-    //             if(debug) {cout<<"Added implication: ";
-    //             cin>>aa;
-    //             Aig_ManShow(origFormula,0,NULL);
-    //             cin>>aa;}
-    //             // exToCases[id] = Aig_Or(origFormula, exToCases[id], newCase); // for defaultCase node.
-
-    //             // uodate the newConstr nodes.
-    //             newConstr1 = Aig_Or(origFormula, newConstr1, Aig_Not(newAux));
-    //             newConstr2 = Aig_Or(constraintMan, newConstr2, Aig_Not(newAuxConstraint));
-
-    //             ex_caseToAuxMapping[id][depVal] = {Aig_ManCiNum(origFormula), Aig_ManCiNum(constraintMan)};
-    //         }
-    //         else
-    //         {
-    //             // the aux variable already exists, which implies that we only need to update the constraints.
-    //             auto p = ex_caseToAuxMapping[id][depVal];
-    //             int inputId = p.first;
-    //             // cout<<inputId<<endl;
-    //             // cout<<"CEX[inputId]: "<<cex[inputId]<<endl;
-    //             if(cex[inputId-1]==1){
-    //                 // constraintTempSet.insert(-inputId);
-    //                 newConstr1 = Aig_Or(origFormula, newConstr1, Aig_Not(Aig_ManCi(origFormula,p.first-1)));
-    //                 newConstr2 = Aig_Or(constraintMan, newConstr2, Aig_Not(Aig_ManCi(constraintMan,p.second-1)));
-    //             }
-    //             else{
-    //                 // constraintTempSet.insert(inputId);
-    //                 newConstr1 = Aig_Or(origFormula, newConstr1, Aig_ManCi(origFormula,p.first-1));
-    //                 newConstr2 = Aig_Or(constraintMan, newConstr2, Aig_ManCi(constraintMan,p.second-1));
-    //             }
-    //         }
-    //     }
-    //     // int initVal = constraintSet.size();
-    //     // constraintSet.insert(constraintTempSet);
-    //     // int newVal = constraintSet.size();
-    //     // cout<<"PRINTING CONSTRAINT SET SETS: "<<endl;
-    //     // int sid=0;
-    //     // int cont;
-    //     // cin>>cont;
-        
-    //     // for(auto s:constraintSet){
-    //     //     cout<<sid<<": [";
-    //     //     for(auto e:s){
-    //     //         cout<<e<<" ";
-    //     //     }
-    //     //     cout<<"]"<<endl;
-    //     //     sid++;
-    //     // }
-    //     // cout<<"DONE PRINTING\n";
-    //     // if(verbose) printf("SET VAL: init: %d | new: %d\n",initVal,newVal);
-    //     // if(newVal!=initVal){
-    //     //     changeFlag=true;
-    //     // }
-
-    //     // update origFormula
-    //     Aig_Obj_t *newOut_tmp = Aig_ManConst1(origFormula);
-
-    //     // update mu
-    //     if(debug) {cout<<"BEFORE APPENDING tmpMu: ";
-    //     cin>>aa;
-    //     Aig_ManShow(origFormula,0,NULL);
-    //     cin>>aa;}
-
-    //     if(tmpMu != Aig_ManConst1(origFormula)){
-    //         // cout<<"HERE2\n";
-    //         mu = Aig_And(origFormula, Aig_ManCo(origFormula,1)->pFanin0, tmpMu);
-    //         // cout<<Aig_ObjId(mu)<<endl;
-    //         if(debug) {cout<<"AFTER APPENDING: ";
-    //         cin>>aa;
-    //         Aig_ManShow(origFormula,0,NULL);
-    //         cin>>aa;}
-    //     }
-    //     else{
-    //         mu = Aig_ManCo(origFormula,1)->pFanin0;
-    //     }
-
-    //     // update constraint
-    //     if(newConstr1 != Aig_ManConst0(origFormula)){
-    //         // newConstr1 = Aig_ManConst1(origFormula);
-    //         constraint = Aig_And(origFormula, Aig_ManCo(origFormula,3)->pFanin0, newConstr1);
-    //     }
-    //     else{
-    //         constraint = Aig_ManCo(origFormula,3)->pFanin0;
-    //     }
-
-    //     // build defaultCase
-    //     defaultCase = Aig_ManConst1(origFormula);
-    //     for (auto id : deps)
-    //     {
-
-    //         // Aig_Obj_t *currCase = exToCases[id];
-
-    //         // ~case => h<=>1 = case v h
-
-    //         // if(iter==2) {Aig_ManShow(origFormula,0,NULL);
-    //         // int aa;
-    //         // cin>>aa;}
-
-    //         Aig_Obj_t* caseConj = Aig_ManConst1(origFormula);
-    //         for(auto p:ex_caseToAuxMapping[id]){
-    //             auto s = p.first;
-    //             Aig_Obj_t* currCase = Aig_ManConst1(origFormula);
-    //             for(auto e:s){
-    //                 if(e>0){
-    //                     currCase = Aig_And(origFormula,currCase, Aig_ManCi(origFormula,e-1));
-    //                 }
-    //                 else{
-    //                     currCase = Aig_And(origFormula,currCase,Aig_Not(Aig_ManCi(origFormula,-e-1)));
-    //                 }
-    //             }
-    //             caseConj = Aig_And(origFormula,caseConj,Aig_Not(currCase));
-    //         }
-
-    //         // caseConj => h = ~caseConj v h
-
-    //         Aig_Obj_t *tmp = Aig_Or(origFormula, Aig_Not(caseConj), Aig_ManCi(origFormula,exToHMapping[id]));
-    //         defaultCase = Aig_And(origFormula, defaultCase, tmp);
-    //         if(debug) {cout<<"BUILT DEFAULT CASE FOR id: "<<id<<endl;
-    //         cout<<"PRINTING: ";
-    //         cin>>aa;
-    //         Aig_ManShow(origFormula,0,NULL);
-    //         cin>>aa;}
-    //     }
-    //     deltaAndNegPhi = Aig_ManCo(origFormula,4)->pFanin0;
-    //     newOut_tmp = Aig_And(origFormula, newOut_tmp, deltaAndNegPhi);
-    //     newOut_tmp = Aig_And(origFormula, newOut_tmp, mu);
-    //     newOut_tmp = Aig_And(origFormula, newOut_tmp, defaultCase);
-    //     newOut_tmp = Aig_And(origFormula, newOut_tmp, constraint);
-        
-        
-    //     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 0));
-    //     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 0), Aig_ManConst0(origFormula), NULL);
-
-    //     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 1));
-    //     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 1), Aig_ManConst0(origFormula), NULL);
-
-    //     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 2));
-    //     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 2), Aig_ManConst0(origFormula), NULL);
-
-    //     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 3));
-    //     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 3), Aig_ManConst0(origFormula), NULL);
-
-    //     Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 4));
-    //     Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 4), Aig_ManConst0(origFormula), NULL);
-
-    //     // Aig_ObjDisconnect(origFormula, Aig_ManCo(origFormula, 0));
-    //     // Aig_ObjConnect(origFormula, Aig_ManCo(origFormula, 0), Aig_ManConst0(origFormula), NULL);
-
-    //     Aig_ObjCreateCo(origFormula, newOut_tmp);
-    //     Aig_ObjCreateCo(origFormula,mu);
-    //     Aig_ObjCreateCo(origFormula,defaultCase);
-    //     Aig_ObjCreateCo(origFormula,constraint);
-    //     Aig_ObjCreateCo(origFormula,deltaAndNegPhi);
-
-
-    //     Aig_ManCoCleanup(origFormula);
-    //     Aig_ManCleanup(origFormula);
-
-    //     if (Aig_ManCoNum(origFormula) == 0)
-    //     {
-    //         Aig_ObjCreateCo(origFormula, Aig_ManConst0(origFormula));
-    //     }
-
-    //     // update constraintMan
-    //     //  output = output AND newConstr2
-        
-    //     Aig_Obj_t *constrNewOut = Aig_ManCo(constraintMan, 0)->pFanin0;
-    //     Aig_Obj_t* constrOldOut = constrNewOut;
-    //     if(newConstr2 !=Aig_ManConst0(constraintMan)){
-    //         constrNewOut = Aig_And(constraintMan, constrNewOut, newConstr2);
-    //     }
-        
-    //     if(constrOldOut !=constrNewOut){
-    //         changeFlag=true;
-    //     }
-
-    //     Aig_ObjCreateCo(constraintMan, constrNewOut);
-
-    //     Aig_ObjDisconnect(constraintMan, Aig_ManCo(constraintMan, 0));
-    //     Aig_ObjConnect(constraintMan, Aig_ManCo(constraintMan, 0), Aig_ManConst0(constraintMan), NULL);
-
-    //     Aig_ManCoCleanup(constraintMan);
-    //     Aig_ManCleanup(constraintMan);
-        
-    //     if (Aig_ManCoNum(constraintMan) == 0)
-    //     {
-    //         Aig_ObjCreateCo(constraintMan, Aig_ManConst0(constraintMan));
-    //     }
-    //     // cout<<"ENTER 1 to show constraint network: ";
-    //     // int inp;
-    //     // cin>>inp;
-    //     // if(inp == 1){Aig_ManShow(constraintMan,0,NULL);
-    //     // cin>>aa;}
-
-    //     // changeFlag=true;
-    //     if (changeFlag == false)
-    //     {
-    //         cerr << "No new variables created... exiting :(\n";
-    //         cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
-    //         cout<<"UNSATISFIABLE"<<endl;
-    //         Abc_Stop();
-    //         exit(1);
-    //     }
-    //     // if(1){
-    //     //     cout<<"INITIAL SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
-    //     //     Aig_ManShow(origFormula,0,NULL);
-    //     //     int aa;
-    //     //     cin>>aa;
-    //     // }
-    //     if(iter%1==0) origFormula = compressAig(origFormula);
-    //     // if(1){
-    //     //     cout<<"New SIZE: "<<Aig_ManNodeNum(origFormula)<<endl;
-    //     //     Aig_ManShow(origFormula,0,NULL);
-    //     //     int aa;
-    //     //     cin>>aa;
-    //     // }
-    // }
-    // Abc_Stop();
-    // cout<<"Ending Main Loop. Time Elapsed: "<<TIME_MEASURE_ELAPSED<<endl;
-    // cout<<"UNSATISFIABLE."<<endl;
     // return 0;
 
-    // // while (true)
-    // // {
-    // //     iter++;
-    // //     Abc_Ntk_t *FNtk = Abc_NtkFromAigPhase(Formula);
-    // //     // Aig_ManShow(Formula,0,NULL);
-    // //     // cout<<"Enter 1 ";
-    // //     // cin>>mySIG;
-    // //     int status = Abc_NtkMiterSat(FNtk, 100000, 0, 1, NULL, NULL);
-    // //     if (status == -1)
-    // //     {
-    // //         cerr << "Timeout Occured\n";
-    // //         exit(1);
-    // //     }
-
-    // //     if (status == 1)
-    // //     {
-    // //         cout << "UNSat!!\n";
-
-    // //         return 0;
-    // //     }
-
-    // //     cout << "Formula is SAT. Working on the counter-example...\n";
-
-    // //     int *cex = FNtk->pModel;
-    // //     cout << "ITER: " << iter << " | CEX : ";
-    // //     for (int i = 0; i < totalInputs; i++)
-    // //     {
-    //         cout << cex[i] << " ";
-    //     }
-    //     cout << endl;
-    //     bool changeFlag = false;
-    //     for (int i = 0; i < numY; i++)
-    //     {
-
-    //         int a_i = Abc_NtkVerifySimulatePattern(A_Ntk[i], cex)[0];
-    //         int b_i = Abc_NtkVerifySimulatePattern(B_Ntk[i], cex)[0];
-
-    //         printf("A[%d]: %d | B[%d]: %d\n", i, a_i, i, b_i);
-    //         if (!(a_i == 0 && b_i == 1))
-    //         {
-    //             continue;
-    //         }
-
-    //         // get the dependency clause to insert in defccase
-    //         vector<int> newClause;
-    //         for (auto dep : dependencies[numX + i + 1])
-    //         {
-    //             if (cex[dep - 1] == 0)
-    //             {
-    //                 newClause.push_back(-dep);
-    //             }
-    //             else
-    //             {
-    //                 newClause.push_back(dep);
-    //             }
-    //         }
-    //         sort(newClause.begin(), newClause.end());
-    //         int oldSize = defaultCase[i].size();
-    //         defaultCase[i].insert(newClause);
-    //         if (defaultCase[i].size() != oldSize)
-    //         {
-    //             changeFlag = true;
-    //         }
-    //     }
-
-    //     if (!changeFlag)
-    //     {
-    //         cout << "No change occured.. :( Ending loop.\n";
-    //         cout << "Skolem Function do not exist.\n";
-    //         break;
-    //     }
-
-    //     Aig_ManStop(Formula);
-
-    //     Formula = Aig_ManDupOrdered(origFormula);
-
-    //     Aig_Obj_t *dcCum = Aig_ManConst1(Formula);
-    //     Aig_Obj_t *muCum = Aig_ManConst1(Formula);
-
-    //     for (int i = 0; i < numY; i++)
-    //     {
-    //         set<vector<int>> list = defaultCase[i];
-    //         // cout<<"Creating default case and mu for y_"<<i<<endl;
-
-    //         Aig_Obj_t *dc_i = Aig_ManConst1(Formula);
-    //         Aig_Obj_t *mu_i = Aig_ManConst0(Formula);
-    //         if (list.empty())
-    //         {
-    //             // dc_i=Aig_ManConst1(Formula);
-    //             // cout<<"empty\n";
-    //         }
-    //         else
-    //         {
-    //             for (auto c : list)
-    //             {
-    //                 Aig_Obj_t *tmp = Aig_ManConst1(Formula);
-    //                 for (auto lit : c)
-    //                 {
-    //                     if (lit > 0)
-    //                     {
-    //                         tmp = Aig_And(Formula, tmp, Aig_ManCi(Formula, lit - 1));
-    //                     }
-    //                     else
-    //                     {
-    //                         tmp = Aig_And(Formula, tmp, Aig_Not(Aig_ManCi(Formula, -lit - 1)));
-    //                     }
-    //                 }
-    //                 dc_i = Aig_And(Formula, dc_i, Aig_Not(tmp));
-    //                 mu_i = Aig_Or(Formula, mu_i, tmp);
-    //             }
-    //         }
-
-    //         Aig_Obj_t *dc_i_imp_H = Aig_Or(Formula, Aig_Not(dc_i), Aig_ManCi(Formula, numOrigInputs + i));
-    //         dcCum = Aig_And(Formula, dcCum, dc_i_imp_H);
-
-    //         Aig_Obj_t *mu_i_imp_notH = Aig_Or(Formula, Aig_Not(mu_i), Aig_Not(Aig_ManCi(Formula, numOrigInputs + i)));
-    //         muCum = Aig_And(Formula, muCum, mu_i_imp_notH);
-    //     }
-
-    //     Aig_Obj_t *outAndDefault = Aig_And(Formula, Aig_ManCo(Formula, 0)->pFanin0, dcCum);
-    //     Aig_Obj_t *finalOut = Aig_And(Formula, outAndDefault, muCum);
-
-    //     Aig_ObjCreateCo(Formula, finalOut);
-
-    //     // Aig_ManShow(Formula,0,NULL);
-    //     // cin>>mySIG;
-    //     // removing previous out
-    //     Aig_ObjDisconnect(Formula, Aig_ManCo(Formula, 0));
-    //     Aig_ObjConnect(Formula, Aig_ManCo(Formula, 0), Aig_ManConst0(Formula), NULL);
-
-    //     Aig_ManCoCleanup(Formula);
-
-    //     // Aig_ManShow(Formula,0,NULL);
-    //     // cin>>mySIG;
-    // }
+    
 
     Abc_Stop();
 
