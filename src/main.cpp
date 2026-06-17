@@ -357,6 +357,12 @@ int main(int argc, char *argv[])
                 printf("A_i is const 1 for id: %d\n",id);
             }
 
+        std::filesystem::path p(global_metrics.benchmark_name);
+        std::string pure_name = p.stem().string();
+        string fullname_a = "./experiment/basis_a/app1/"+pure_name+".aig";
+        Io_WriteAiger(A_Ntk[id], (char*)fullname_a.c_str(), 0,1,0);
+        
+
         // if(id==25){
 
             // cout<<"Printing A_i:\n";
@@ -406,6 +412,9 @@ int main(int argc, char *argv[])
                 printf("B_i is const 1 for id: %d\n",id);
                 global_metrics.is_trivial_b[dep_id_to_idx[id]] = true;
             }
+
+        string fullname_b = "./experiment/basis_b/app1/"+pure_name+".aig";
+        Io_WriteAiger(B_Ntk[id], (char*)fullname_b.c_str(), 0,1,0);
 
         // if(id==25){
 

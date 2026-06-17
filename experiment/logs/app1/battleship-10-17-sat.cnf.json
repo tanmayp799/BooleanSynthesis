@@ -1,0 +1,18 @@
+{
+  "approach_id": 1,
+  "benchmark_name": "battleship-10-17-sat.cnf.dqdimacs",
+  "count_a": 23,
+  "count_e": 2,
+  "count_d": 1,
+  "total_cegis_iterations": 1,
+  "total_cegis_time": 2.62057,
+  "last_checkpoint": "CEGIS_END",
+  "execution_status": "SATISFIABLE",
+  "total_program_time": 929.485,
+  "manthan_time": 918.381,
+  "d_vars": [26],
+  "dep_set_sizes": [11],
+  "projection_times": [0.523365],
+  "is_trivial_a": [0],
+  "is_trivial_b": [0]
+}

@@ -1,0 +1,18 @@
+{
+  "approach_id": 1,
+  "benchmark_name": "unit.dqdimacs",
+  "count_a": 3,
+  "count_e": 0,
+  "count_d": 2,
+  "total_cegis_iterations": 8,
+  "total_cegis_time": 0.000160299,
+  "last_checkpoint": "CEGIS_END",
+  "execution_status": "UNSATISFIABLE",
+  "total_program_time": 0.0577813,
+  "manthan_time": 0,
+  "d_vars": [4,5],
+  "dep_set_sizes": [2,2],
+  "projection_times": [0.000973981,0.000568445],
+  "is_trivial_a": [1,1],
+  "is_trivial_b": [1,1]
+}
