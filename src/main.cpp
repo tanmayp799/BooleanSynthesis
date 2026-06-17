@@ -491,9 +491,9 @@ int main(int argc, char *argv[])
             ordering.push_back(n);
         }
 
-        for(auto e:ordering){
-            cout<<e<<endl;
-        }
+        // for(auto e:ordering){
+        //     cout<<e<<endl;
+        // }
 
         
         eDefMan = remapInputs(eDefMan,ordering);
@@ -1324,13 +1324,13 @@ int main(int argc, char *argv[])
                     }
 
 
-                    if(verbose && freq) {cout << "CEX : ";
+                    // if(verbose && freq) {cout << "CEX : ";
 
-                    for (int i = 0; i < numOrigInputs; i++)
-                    {
-                        cout << cex[i] << " ";
-                    }
-                    cout << endl;}
+                    // for (int i = 0; i < numOrigInputs; i++)
+                    // {
+                    //     cout << cex[i] << " ";
+                    // }
+                    // cout << endl;}
                     // tmp.insert(lit);
                 }
                 else if(unsatCoreStatus == CaDiCaL::UNSATISFIABLE){

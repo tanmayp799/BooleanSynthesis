@@ -388,7 +388,7 @@ struct ExperimentalMetrics {
     // 1. Construct a clean output filename (e.g., bin/benchmarks/cnt20y.dqdimacs -> ./logs/app1_cnt20y.json)
     std::filesystem::path p(benchmark_name);
     std::string pure_name = p.stem().string(); // Extract "cnt20y"
-    std::string json_output_path = "./experiment/logs/app" + std::to_string(approach_id) + "/" + pure_name + ".json";
+    std::string json_output_path = "./experiment/stats/app" + std::to_string(approach_id) + "/" + pure_name + ".json";
 
     // 2. Open the dedicated json file stream
     std::ofstream json_file(json_output_path);

@@ -3,6 +3,9 @@ obj/
 .vscode/
 data/
 benchmarks/
+sandboxes/
+experiment/
+
 
 abc.history
 gmon.out
