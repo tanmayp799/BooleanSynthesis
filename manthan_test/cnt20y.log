@@ -1,0 +1,102 @@
+Generated QDIMACS: ./out.qdimacs
+Generated Mapping: ./ordering.txt
+  - Inputs (Line 1): 46 vars
+  - Outputs (Line 2): 36 vars
+ c configuring dependency paths
+ c starting Manthan
+ c parsing
+ c count X (universally quantified variables) variables 46
+ c count Y (existentially quantified variables) variables 36
+ c preprocessing: finding unates (constant functions)
+ c count of positive unates 0
+ c count of negative unates 0
+ c finding uniquely defined functions
+ c count of uniquely defined variables 22
+ c generating samples
+ c generated samples.. learning candidate functions via decision learning
+ c generated candidate functions for all variables.
+ c error --- ABC network read fail
+Manthan Done!
+[INFO] Starting the program...
+[INFO] Parsing the file...
+[INFO] Generating Local Specs...
+Cannot visualize AIG with more than 200 nodes.
+[INFO] Generating localSpec for target_d=2: eliminating existentials [45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals [24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44]
+Final localSpec
+[INFO] Generating localSpec for target_d=45: eliminating existentials [2 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals [1 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44]
+Final localSpec
+[INFO] Generating localSpec for target_d=46: eliminating existentials [2 45 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals [1 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23]
+Final localSpec
+[INFO] Generating localSpec for target_d=47: eliminating existentials [2 45 46 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=48: eliminating existentials [2 45 46 47 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=49: eliminating existentials [2 45 46 47 48 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=50: eliminating existentials [2 45 46 47 48 49 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=51: eliminating existentials [2 45 46 47 48 49 50 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=52: eliminating existentials [2 45 46 47 48 49 50 51 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=53: eliminating existentials [2 45 46 47 48 49 50 51 52 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=54: eliminating existentials [2 45 46 47 48 49 50 51 52 53 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=55: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=56: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=57: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=58: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=59: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=60: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=61: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=62: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=63: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=64: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=65: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=66: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=67: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=68: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 69 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=69: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 70 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=70: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 71 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=71: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 72 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=72: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 73 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=73: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 74 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=74: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 75 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=75: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 76 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=76: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 77 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=77: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 78 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=78: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 79 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=79: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 80 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=80: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 81 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=81: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 82] and universals []
+Final localSpec
+[INFO] Generating localSpec for target_d=82: eliminating existentials [2 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81] and universals []
+Final localSpec
+[INFO] Plugging in Skolem functions generated by Manthan.

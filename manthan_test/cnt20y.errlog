@@ -1,0 +1,42 @@
+[ERROR] GetLocalSpec took 948 ms
+[ERROR] GetLocalSpec took 963 ms
+[ERROR] GetLocalSpec took 945 ms
+[ERROR] GetLocalSpec took 927 ms
+[ERROR] GetLocalSpec took 982 ms
+[ERROR] GetLocalSpec took 955 ms
+[ERROR] GetLocalSpec took 909 ms
+[ERROR] GetLocalSpec took 900 ms
+[ERROR] GetLocalSpec took 968 ms
+[ERROR] GetLocalSpec took 960 ms
+[ERROR] GetLocalSpec took 946 ms
+[ERROR] GetLocalSpec took 1008 ms
+[ERROR] GetLocalSpec took 934 ms
+[ERROR] GetLocalSpec took 951 ms
+[ERROR] GetLocalSpec took 939 ms
+[ERROR] GetLocalSpec took 952 ms
+[ERROR] GetLocalSpec took 943 ms
+[ERROR] GetLocalSpec took 943 ms
+[ERROR] GetLocalSpec took 937 ms
+[ERROR] GetLocalSpec took 938 ms
+[ERROR] GetLocalSpec took 946 ms
+[ERROR] GetLocalSpec took 1059 ms
+[ERROR] GetLocalSpec took 1049 ms
+[ERROR] GetLocalSpec took 1066 ms
+[ERROR] GetLocalSpec took 1088 ms
+[ERROR] GetLocalSpec took 1108 ms
+[ERROR] GetLocalSpec took 1062 ms
+[ERROR] GetLocalSpec took 1060 ms
+[ERROR] GetLocalSpec took 1100 ms
+[ERROR] GetLocalSpec took 1079 ms
+[ERROR] GetLocalSpec took 1054 ms
+[ERROR] GetLocalSpec took 1099 ms
+[ERROR] GetLocalSpec took 1078 ms
+[ERROR] GetLocalSpec took 1038 ms
+[ERROR] GetLocalSpec took 1056 ms
+[ERROR] GetLocalSpec took 1121 ms
+[ERROR] GetLocalSpec took 1062 ms
+[ERROR] GetLocalSpec took 1059 ms
+[ERROR] GetLocalSpec took 1045 ms
+main: src2/main.cpp:408: int main(int, char**): Assertion `outputMapping.size() == Aig_ManCoNum(eDefMan)' failed.
+./test.sh: line 9: 158661 Aborted                 (core dumped) ./bin/main ./manthan_test/cnt20y.dqdimacs ./manthan_test/out_skolem.v ./manthaXIXIO:  fatal IO errXIO:  fatal IO error 104 (Connection reset by peer) on X server ":1"
+      after 2475 requests (2274 known processed) with 0 events remaining.
