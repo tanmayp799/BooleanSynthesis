@@ -18,13 +18,13 @@ fi
 BENCHMARK_PATH=$1
 
 # 1. Run your input generator script using the dynamic path parameter
-python3 ./manthan_input_gen.py "$BENCHMARK_PATH" ./manthan_test/out.qdimacs ./manthan_test/ordering.txt
+python3 ./manthan_input_gen.py "$BENCHMARK_PATH" ./out.qdimacs ./ordering.txt
 
 # 2. Step inside the directory, activate environment, and run Manthan
 cd ../dependencies/manthan || exit 1
-source ./manthan-venv/bin/activate
-python3 ./manthan.py ../../manthan_test/out.qdimacs --maxrepairitr 30000
-deactivate
+# source ./manthan-venv/bin/activate
+./manthan-venv/bin/python3 ./manthan.py ../../manthan_test/out.qdimacs --maxrepairitr 30000
+# deactivate
 
 # 3. Copy the synthesized Skolem function back to the workspace
 cp ./out_skolem.v ../../manthan_test/

@@ -61,8 +61,8 @@ void callManthan(){
     string command = "cd ./manthan_test && ./test.sh " + inpFile;
     cout<<command<<endl;
     int return_code = std::system(command.c_str());
-    int xx;
-    cin>>xx;
+    // int xx;
+    // cin>>xx;
 
 
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -988,9 +988,10 @@ int main(int argc, char *argv[])
 
 
     global_metrics.last_checkpoint=  "CEGIS_START";
-
+    auto cegis_start = std::chrono::high_resolution_clock::now();
     while(true){
         iter++;
+        global_metrics.total_cegis_iterations++;
         //check for sat
         freq=false;
         
@@ -1000,13 +1001,13 @@ int main(int argc, char *argv[])
             vector<int> selectors = HtoSelectorMapping[h_id];
             int sz = selectors.size();
             for(int i=0;i<sz-1;i++){
-                printf("Assuming %d\n", selectors[i]);
+                // printf("Assuming %d\n", selectors[i]);
                 solver.assume(selectors[i]);
             }
-            printf("Assuming %d\n", -selectors[sz-1]);
+            // printf("Assuming %d\n", -selectors[sz-1]);
             solver.assume(-selectors[sz-1]);
         }
-        solver.write_dimacs("./f1_assumed.dimacs");
+        // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
         if(iter%1000==0){
@@ -1031,11 +1032,13 @@ int main(int argc, char *argv[])
             cout<<"UNSAT BUT WHY?"<<endl;
             for(int asgNo=0;asgNo<1;asgNo++){
                 int constrStatus = constraintSolver.solve();
-
+                auto cegis_end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> time_elapsed= cegis_end-cegis_start;
                 if(constrStatus == CaDiCaL::UNSATISFIABLE){
                     printf("Couldn't satisfy constraints, total assignments generated: %d\n",asgNo);
                     cout<<"UNSATISFIABLE\n";
                     global_metrics.execution_status = "UNSATISFIABLE";
+                    global_metrics.total_cegis_time = time_elapsed.count();
                     Abc_Stop();
                     exit(1);
                 }
@@ -1044,6 +1047,7 @@ int main(int argc, char *argv[])
 
                     global_metrics.execution_status = "SATISFIABLE";
                     cout<<"SATISFIABLE\n";
+                    global_metrics.total_cegis_time = time_elapsed.count();
                     Abc_Stop();
                     return 0;
 
@@ -1174,9 +1178,9 @@ int main(int argc, char *argv[])
             }
         }
 
-        cout<<"Universal Assumptions:\n";
+        // cout<<"Universal Assumptions:\n";
         for(auto e:univAssumptions){
-            cout<<e<<endl;
+            // cout<<e<<endl;
             if(e>0){
                 unsatCoreExtractor.assume(inputToVarMapping_unsatCore[e]);
 
@@ -1187,9 +1191,9 @@ int main(int argc, char *argv[])
             }
             // unsatCoreExtractor.add(0);
         }
-        cout<<"Auxiliary Assumptions:\n";
+        // cout<<"Auxiliary Assumptions:\n";
         for(auto e:currAssumptions){
-            cout<<e<<endl;
+            // cout<<e<<endl;
             if(e>0){
                 // cout<<inputToVarMapping_unsatCore[e]<<endl;
                 unsatCoreExtractor.assume(inputToVarMapping_unsatCore[e]);
@@ -1246,16 +1250,16 @@ int main(int argc, char *argv[])
                 }
             }
 
-            cout<<"Unsat Core A Variables:\n";
+            // cout<<"Unsat Core A Variables:\n";
             for(auto e:univAssumptions){
                 if(e>0){
                     if(unsatCoreExtractor.failed(inputToVarMapping_unsatCore[e])){
-                        cout<<e<<endl;
+                        // cout<<e<<endl;
                     }
                 }
                 else{
                     if(unsatCoreExtractor.failed(-inputToVarMapping_unsatCore[-e])){
-                        cout<<e<<endl;
+                        // cout<<e<<endl;
                     }
                 }
             }
@@ -1274,7 +1278,7 @@ int main(int argc, char *argv[])
             setMinimized=false;
             // set<int> tmp;
             for(auto lit: unsatCoreLits){
-                printf("Trying to remove %d\n",lit);
+                // printf("Trying to remove %d\n",lit);
                 for(auto e:univAssumptions){
                     // cout<<e<<endl;
                     if(e>0){
@@ -1303,7 +1307,7 @@ int main(int argc, char *argv[])
                 int unsatCoreStatus = unsatCoreExtractor.solve();
 
                 if(unsatCoreStatus == CaDiCaL::SATISFIABLE){
-                    printf("%d in UNSAT Core\n",lit);
+                    // printf("%d in UNSAT Core\n",lit);
                     int cex[numOrigInputs];
                     for(int i=1;i<=numOrigInputs;i++){
                         int val = unsatCoreExtractor.val(inputToVarMapping_unsatCore[i]);
@@ -1321,7 +1325,7 @@ int main(int argc, char *argv[])
                     // tmp.insert(lit);
                 }
                 else if(unsatCoreStatus == CaDiCaL::UNSATISFIABLE){
-                    printf("Removed %d\n",lit);
+                    // printf("Removed %d\n",lit);
                     // unsatCoreLits
                     unsatCoreLits.erase(lit);
                     removed_lits.push_back(lit);
@@ -1338,7 +1342,7 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-        cout<<"Printing A_i and B_i for removed lits:\n";
+        if(verbose && freq) cout<<"Printing A_i and B_i for removed lits:\n";
         for(auto e:removed_lits){
             int id = abs(e);
             
@@ -1347,10 +1351,10 @@ int main(int argc, char *argv[])
             printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
         }
 
-        cout<<"UNSAT CORE D Variables:\n";
-        for(auto e:unsatCoreLits){
-            cout<<e<<endl;
-        }
+        // cout<<"UNSAT CORE D Variables:\n";
+        // for(auto e:unsatCoreLits){
+        //     cout<<e<<endl;
+        // }
 
         vector<vector<int>> implicationClauses;
         for(auto e:unsatCoreLits){
@@ -1360,11 +1364,11 @@ int main(int argc, char *argv[])
 
             // if(verbose) printf("var: %d => a_i: %d | b_i: %d\n",id,a_i,b_i);
             if(!(a_i==0 && b_i==1)){
-                printf("AiBi Check Failed: %d\n",id);
+               if(verbose && freq) printf("AiBi Check Failed: %d\n",id);
                 continue;
             }
 
-            cout<<"Dependent Var_ AiBi check pass: "<<id<<endl;
+            if(verbose && freq) cout<<"Dependent Var_ AiBi check pass: "<<id<<endl;
 
             set<int> depVal;
             set<int> depSet = phiCNF->get_dependencySet(id);
@@ -1398,7 +1402,7 @@ int main(int argc, char *argv[])
                 fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
                 VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
 
-                cout<<"Dependent Var new Aux created: "<<id<<endl;
+if(verbose && freq)                cout<<"Dependent Var new Aux created: "<<id<<endl;
 
 
                 //Check if auxilary for this depVal exists or Not, if it does, use it else create one.
@@ -1522,29 +1526,30 @@ int main(int argc, char *argv[])
 
         if(!changeFlag){
             cout<<"No change occured...."<<endl;
+            Abc_Stop();
             return 1;
         }
-        cout<<"adding constraint clause...\n";
+        if(verbose && freq) cout<<"adding constraint clause...\n";
         for(auto e:currConstraint){
             
             if(e>0) {
                 solver.add(inputToVarMapping[e]);
-                cout<<e<<" ";
+                if(verbose && freq) cout<<e<<" ";
             }
             else {
                 solver.add(-inputToVarMapping[-e]);
-                cout<<e<<" ";
+                if(verbose && freq) cout<<e<<" ";
             }
         }
-        cout<<endl;
+        if(verbose && freq)cout<<endl;
         solver.add(0);
-        cout<<"Printing current constraint:\n";
+        // cout<<"Printing current constraint:\n";
         for(auto e:currConstraint){
             if(e>0) {
                 constraintSolver.add(inputToVarMapping[e]);
             }
             else constraintSolver.add(-inputToVarMapping[-e]);
-            cout<<e<<endl;
+            // cout<<e<<endl;
         }
         constraintSolver.add(0);
         freq=false;
