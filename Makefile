@@ -63,9 +63,10 @@ $(ALL_OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	@echo "Compiled "$<" successfully!"	
 
 clean:
-	@$(RM) $(MAIN_OBJECTS) $(POSTP_OBJECTS)
+	@$(RM) $(MAIN_OBJECTS)
 	@echo "Cleanup complete!"
 
 remove: clean
-	@$(RM) $(TARGET_MAIN) $(TARGET_POSTP) $(TARGET_RCNF)
+	
+	@$(RM) $(TARGET_MAIN)
 	@echo "Executable removed!"
