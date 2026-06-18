@@ -50,34 +50,34 @@ extern Logger statisticsLogger;
 
 
 struct ExperimentalMetrics {
-    int approach_id = 3;                  // Approach 4: BDD Dynamic Reordering
-    std::string benchmark_name = "";
+    int approach_id = 3;          //d        // Approach 4: BDD Dynamic Reordering
+    std::string benchmark_name = ""; //d
     
     // Global formula metadata
-    int count_a = 0;
-    int count_e = 0;
-    int count_d = 0;
+    int count_a = 0; //d
+    int count_e = 0; //d
+    int count_d = 0; //d
     
     // Per-variable relational lists
-    std::vector<int> d_vars;
-    std::vector<int> individual_dep_set_sizes; 
-    std::vector<double> individual_exis_quant_times;
-    std::vector<double> individual_univ_quant_times;
-    std::vector<double> individual_bdd_gen_times;
-    std::vector<long long> individual_bdd_sizes;
-    std::vector<long long> individual_aig_sizes;
-    std::vector<bool> is_trivial_a;       // Corresponds to Condition 6: Is A=0?
-    std::vector<bool> is_trivial_b;       // Corresponds to Condition 7: Is B=1?
+    std::vector<int> d_vars; //d
+    std::vector<int> individual_dep_set_sizes;  //d
+    std::vector<double> individual_exis_quant_times; //d
+    std::vector<double> individual_univ_quant_times; //d
+    std::vector<double> individual_bdd_gen_times; //d
+    std::vector<long long> individual_bdd_sizes; //d
+    std::vector<long long> individual_aig_sizes; //d
+    std::vector<bool> is_trivial_a;  //d     // Corresponds to Condition 6: Is A=0?
+    std::vector<bool> is_trivial_b;  //d     // Corresponds to Condition 7: Is B=1?
 
-    double tseitin_elimination_time = 0.0;
-    double getBDD_time = 0.0;
+    double tseitin_elimination_time = 0.0; //d
+    double getBDD_time = 0.0; //d
 
     // Execution state tracking
-    std::string last_checkpoint = "INIT";              
-    int total_cegis_iterations = 0;
-    double total_cegis_time = 0.0;
+    std::string last_checkpoint = "INIT"; //d              
+    int total_cegis_iterations = 0; //d
+    double total_cegis_time = 0.0; //d
     
-    std::string execution_status = "RUNNING";
+    std::string execution_status = "RUNNING"; //d
     std::chrono::time_point<std::chrono::high_resolution_clock> start_timestamp;
 
     ExperimentalMetrics() {
@@ -99,20 +99,17 @@ struct ExperimentalMetrics {
         std::chrono::duration<double> total_program_elapsed = end_timestamp - start_timestamp;
         double total_program_time = total_program_elapsed.count();
 
-        // Calculate Average Dependency Set Size dynamically for quick summary reviews
-        // double avg_dep_set_size = individual_dep_set_sizes.empty() ? 0.0 : 
-        //     std::accumulate(individual_dep_set_sizes.begin(), individual_dep_set_sizes.end(), 0.0) / individual_dep_set_sizes.size();
-
         json_file << "{\n";
         json_file << "  \"approach_id\": " << approach_id << ",\n";
         json_file << "  \"benchmark_name\": \"" << p.filename().string() << "\",\n";
         json_file << "  \"count_a\": " << count_a << ",\n";
         json_file << "  \"count_e\": " << count_e << ",\n";
         json_file << "  \"count_d\": " << count_d << ",\n";
-        // json_file << "  \"avg_dependency_set_size\": " << avg_dep_set_size << ",\n";
         json_file << "  \"total_cegis_iterations\": " << total_cegis_iterations << ",\n";
         json_file << "  \"last_checkpoint\": \"" << last_checkpoint << "\",\n";
         json_file << "  \"execution_status\": \"" << execution_status << "\",\n";
+        json_file << "  \"tseitin_elimination_time\": " << tseitin_elimination_time << ",\n"; // ADDED
+        json_file << "  \"getBDD_time\": " << getBDD_time << ",\n";                         // ADDED
         json_file << "  \"total_cegis_time\": " << total_cegis_time << ",\n";
         json_file << "  \"total_program_time\": " << total_program_time << ",\n";
         
