@@ -177,6 +177,7 @@ AigWrapper::AigWrapper(Dqbf* dqbf){
         // this->ShowAig();
     }
     Aig_ObjCreateCo(this->manager, outNode);
+    this->manager = compressAig(this->manager);
 }
 
 AigWrapper::AigWrapper(KissatWrapper* kw){
@@ -208,6 +209,8 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
     std::vector<int> evars = kw->getExistentialVarsToEliminate();
     std::vector<int> uvars = kw->getUniversalVarsToEliminate();
     std::vector<int> dvars = kw->getDepVarsToEliminate();
+
+    this->manager = compressAig(this->manager);
 
     // if(!evars.empty()){
     //     kw->callManthan();
@@ -299,8 +302,8 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
     // }
 
 
-    Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
-    Aig_ManStop(this->manager);
+    // Abc_Ntk_t* ntk = ABC_NAMESPACE::Abc_NtkFromAigPhase(this->manager);
+    // Aig_ManStop(this->manager);
 
 
     // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
@@ -333,8 +336,8 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
 
     // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
 
-    this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
-    Abc_NtkDelete(ntk);
+    // this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
+    // Abc_NtkDelete(ntk);
     // this->ShowAig();
 
 
@@ -412,6 +415,14 @@ void AigWrapper::merge(AigWrapper* aw){
     Aig_ManCoCleanup(this->manager);
     Aig_ManCleanup(this->manager);
     
+
+    Abc_NtkDelete(baseNtk);
+    Abc_NtkDelete(srcNtk);
+
+    // this->manager = compressAig(this->manager);
+
+
+
     // Aig_ManCoCleanup(this->manager);
     return;
 
@@ -462,6 +473,10 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     Aig_Obj_t *newNode = Aig_And(tMan, Aig_ManCo(tMan, 1)->pFanin0, Aig_Not(Aig_ManCo(tMan, 0)->pFanin0));
 
     Aig_ObjCreateCo(tMan, newNode);
+    // Abc_NtkDelete(phi_0_Ntk);
+    // Abc_NtkDelete(phi_1_Ntk);
+
+
 
     // remove old outputs and cleanup the network
     Aig_ObjDisconnect(tMan, Aig_ManCo(tMan, 0));
@@ -565,6 +580,11 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     // Aig_ManStop(tMan);
     Aig_ManStop(AMan);
     Aig_ManStop(BMan);
+    Abc_NtkDelete(phi_0_Ntk);
+    Abc_NtkDelete(phi_1_Ntk);
+    Abc_NtkDelete(ANtk2);
+    Abc_NtkDelete(BNtk2);
+
 
     return;
 
