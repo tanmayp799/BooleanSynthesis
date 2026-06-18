@@ -22,6 +22,8 @@ extern "C" {
 // Forward declaration of the Kissat solver structure
 struct kissat;
 class Dqbf;
+extern bool exisFailed;
+extern std::map<int,int> dep_to_id;
 
 class KissatWrapper {
 public:

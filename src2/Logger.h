@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <mutex>
+#include <map>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -64,6 +65,7 @@ struct ExperimentalMetrics {
     std::vector<double> individual_kissat_times;
     std::vector<bool> is_trivial_a;
     std::vector<bool> is_trivial_b;
+    std::vector<int> exis_eliminations;
     
     // Execution state and loop metrics
     std::string last_checkpoint = "INIT";              // 1=Boot, 2=Parsing/Prep, 3=Manthan Done, 4=Projection Loop, 5=Success
@@ -122,10 +124,15 @@ struct ExperimentalMetrics {
     for (size_t i = 0; i < individual_kissat_times.size(); ++i) {
         json_file << individual_kissat_times[i] << (i < individual_kissat_times.size() - 1 ? "," : "");
     }
+    json_file << "],\n  \"exis_eliminations\": [";
+    for (size_t i=0; i < exis_eliminations.size(); ++i) {
+        json_file << exis_eliminations[i] << (i < exis_eliminations.size() -1 ? "," : "");
+    }
     json_file << "],\n  \"is_trivial_a\": [";
     for (size_t i = 0; i < is_trivial_a.size(); ++i) {
         json_file << (is_trivial_a[i] ? 1 : 0) << (i < is_trivial_a.size() - 1 ? "," : "");
     }
+    
     json_file << "],\n  \"is_trivial_b\": [";
     for (size_t i = 0; i < is_trivial_b.size(); ++i) {
         json_file << (is_trivial_b[i] ? 1 : 0) << (i < is_trivial_b.size() - 1 ? "," : "");

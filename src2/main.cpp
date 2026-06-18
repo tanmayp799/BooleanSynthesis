@@ -27,6 +27,7 @@ void final_cleanup_hook() {
 }
 
 std::map<int,int> dep_to_id;
+bool exisFailed=false;
 
 int main(int argc, char* argv[]){
 
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]){
     global_metrics.individual_kissat_times = std::vector<double>(global_metrics.count_d,0.0);
     global_metrics.is_trivial_a = std::vector<bool>(global_metrics.count_d,false);
     global_metrics.is_trivial_b = std::vector<bool>(global_metrics.count_d,false);
+    global_metrics.exis_eliminations = std::vector<int>(global_metrics.count_d,0);
 
 
     auto tmpdvars = origDqbf->GetDepVars();
@@ -94,6 +96,11 @@ int main(int argc, char* argv[]){
     }
 
     global_metrics.last_checkpoint = "BVE_DONE";
+
+    if(exisFailed){
+        global_metrics.execution_status = "EXIS_QUANT_FAILED";
+        exit(1);
+    }
 
 
     globalLogger.setOutputFile("./statistics/eliminationStatistics.csv");

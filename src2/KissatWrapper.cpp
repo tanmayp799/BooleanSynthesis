@@ -285,13 +285,35 @@ int KissatWrapper::eliminateExistentialVars(){
     globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedExistentials," ")));
     globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedDeps," ")));
 
+    globalLogger.log(LogLevel::ERROR, fmt::format("d-elim: {}", fmt::join(this->DepVarsToEliminate," ")));
+
     this->eliminatedVars = tmp;
+
+
+    if(!failedExistentials.empty()){
+        // global_metrics.execution_status = "EXIS_QUANT_FAILED";
+        // exit(1);
+        exisFailed=true;
+    }
+    
+    int num_elim_stat = this->DepVarsToEliminate.size() - failedExistentials.size();
+    
+    global_metrics.exis_eliminations[dep_to_id[this->getOutputVar()]] = num_elim_stat;
+
 
     this->ExistentialVarsToEliminate = std::vector<int>(failedExistentials.begin(), failedExistentials.end());
     this->DepVarsToEliminate = std::vector<int>(failedDeps.begin(), failedDeps.end());
 
 
+    //     if(!failedExistentials.empty()){
+    //     // global_metrics.execution_status = "EXIS_QUANT_FAILED";
+    //     // exit(1);
+    //     exisFailed=true;
+    // }
 
+    // int num_elim_stat = exisVarsToElim.size() - failedEliminations.size();
+    
+    // global_metrics.exis_eliminations[dep_to_id[this->getOutputVar()]] = num_elim_stat;
 
 
     
@@ -372,11 +394,19 @@ void KissatWrapper::eliminateUniversalVars(){
     }
 
     globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedEliminations," ")) );
+    // globalLogger.log(LogLevel::ERROR, fmt::format("exisvarstoelim: {}", fmt::join(exisVarsToElim," ")) );
 
-    if(!failedEliminations.empty()){
-        global_metrics.execution_status = "EXIS_QUANT_FAILED";
-        exit(1);
-    }
+    // if(!failedEliminations.empty()){
+    //     // global_metrics.execution_status = "EXIS_QUANT_FAILED";
+    //     // exit(1);
+    //     exisFailed=true;
+    // }
+
+    // int num_elim_stat = exisVarsToElim.size() - failedEliminations.size();
+    
+    // global_metrics.exis_eliminations[dep_to_id[this->getOutputVar()]] = num_elim_stat;
+
+
     // this->localSpec.clear();
     // this->eliminateExistentialVars();
 
