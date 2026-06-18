@@ -26,7 +26,7 @@ void final_cleanup_hook() {
 
 }
 
-
+std::map<int,int> dep_to_id;
 
 int main(int argc, char* argv[]){
 
@@ -56,6 +56,23 @@ int main(int argc, char* argv[]){
     global_metrics.count_e = origDqbf->GetExistentials().size();
     global_metrics.count_d = origDqbf->GetDepVars().size(); - global_metrics.count_e;
     
+    global_metrics.d_vars = std::vector<int>(global_metrics.count_d,0);
+    global_metrics.individual_dep_set_sizes = std::vector<int>(global_metrics.count_d,0);
+    global_metrics.individual_kissat_times = std::vector<double>(global_metrics.count_d,0.0);
+    global_metrics.is_trivial_a = std::vector<bool>(global_metrics.count_d,false);
+    global_metrics.is_trivial_b = std::vector<bool>(global_metrics.count_d,false);
+
+
+    auto tmpdvars = origDqbf->GetDepVars();
+    int tmpid_var = 0;
+    for(auto e:tmpdvars){
+        dep_to_id[e]=tmpid_var;
+        global_metrics.d_vars[tmpid_var] = e;
+        auto tmpdepset = origDqbf->GetDependencySet(e);
+        global_metrics.individual_dep_set_sizes[tmpid_var] = tmpdepset.size();
+        tmpid_var++;
+    }
+
 
     globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
     std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
@@ -64,16 +81,16 @@ int main(int argc, char* argv[]){
     for(auto kw:localInitializations){
 
         auto start_time = std::chrono::high_resolution_clock::now();
-        global_metrics.d_vars.push_back(kw->getOutputVar());
+        // global_metrics.d_vars.push_back(kw->getOutputVar());
         globalLogger.log(LogLevel::INFO, fmt::format("Performing Quantifier Elimination for id: {}", kw->getOutputVar()));
         kw->eliminateExistentialVars();
         kw->eliminateUniversalVars();
 
         auto end_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed_time = end_time - start_time;
-        global_metrics.individual_kissat_times.push_back(elapsed_time.count());
+        global_metrics.individual_kissat_times[dep_to_id[kw->getOutputVar()]] = elapsed_time.count();
 	int depsetsize = origDqbf->GetDependencySet(kw->getOutputVar()).size();
-	global_metrics.individual_dep_set_sizes.push_back(depsetsize);
+	// global_metrics.individual_dep_set_sizes[dep_to_id[kw->getOutputVar()]] = depsetsize;
     }
 
     global_metrics.last_checkpoint = "BVE_DONE";
@@ -125,13 +142,13 @@ int main(int argc, char* argv[]){
 
 
         Aig_Man_t* tMan = ABC_NAMESPACE::Abc_NtkToDar(varToBasisMap[p.first].first,0,0);
-        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst0(tMan) 
             && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 // printf("A_i is const 0 for id: %d\n",id);
-                global_metrics.is_trivial_a.push_back(true);
+                global_metrics.is_trivial_a[dep_to_id[p.first]] = true;
             }
             else{
-                global_metrics.is_trivial_a.push_back(false);
+                global_metrics.is_trivial_a[dep_to_id[p.first]] = false;
             }
 
         Aig_ManStop(tMan);
@@ -143,13 +160,13 @@ int main(int argc, char* argv[]){
             std::string b_path = "./experiment/basis_b/app2/"+pure_name+".aig";
         Io_WriteAiger(varToBasisMap[p.first].first,(char*)a_path.c_str(),0,1,0);
         Io_WriteAiger(varToBasisMap[p.first].second,(char*)b_path.c_str(),0,1,0);
-        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst0(tMan) 
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
             && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 // printf("A_i is const 0 for id: %d\n",id);
-                global_metrics.is_trivial_b.push_back(true);
+                global_metrics.is_trivial_b[dep_to_id[p.first]] = true;
             }
             else{
-                global_metrics.is_trivial_b.push_back(false);
+                global_metrics.is_trivial_b[dep_to_id[p.first]] = false;
             }
             Aig_ManStop(tMan);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));

@@ -372,6 +372,11 @@ void KissatWrapper::eliminateUniversalVars(){
     }
 
     globalLogger.log(LogLevel::ERROR, fmt::format("Failed to eliminate: {}", fmt::join(failedEliminations," ")) );
+
+    if(!failedEliminations.empty()){
+        global_metrics.execution_status = "EXIS_QUANT_FAILED";
+        exit(1);
+    }
     // this->localSpec.clear();
     // this->eliminateExistentialVars();
 
