@@ -28,11 +28,11 @@ CADICAL_INCLUDES = -I $(CADICAL_PATH)/src
 # DIR_INCLUDES = $(ABC_INCLUDES) $(LIB_DIRS) $(CADICAL_INCLUDES) # for src folder and not src2
 KISSAT_INCLUDES = -I $(KISSAT_PATH)/src
 
-LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/ -L $(KISSAT_PATH)/build/
+LIB_DIRS = -L $(ABC_PATH)/ -L $(CADICAL_PATH)/build/ -L $(KISSAT_PATH)/build/ -I ./dependencies/fmt/include
 DIR_INCLUDES = $(ABC_INCLUDES) $(CADICAL_INCLUDES) $(KISSAT_INCLUDES) $(LIB_DIRS)
 
 LIB_ABC    = -Wl,-Bstatic  -labc
-LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz -lfmt
+LIB_COMMON = -Wl,-Bdynamic -lm -ldl -lreadline -ltermcap -lpthread -fopenmp -lrt -Wl,-Bdynamic -lboost_program_options -Wl,-Bdynamic -lz
 LIB_CADICAL = -Wl,-Bstatic -lcadical
 LIB_KISSAT = -Wl,-Bstatic -lkissat
 

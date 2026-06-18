@@ -2,11 +2,16 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#define FMT_HEADER_ONLY 1
+#define FMT_STATIC_THROWS 1
+
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <mutex>
-#include <format>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <vector>
 #include <filesystem>

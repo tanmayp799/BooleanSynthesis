@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
     signal(SIGABRT, timeout_handler);
 
     std::atexit(final_cleanup_hook);
-
+    global_metrics.start_timestamp = std::chrono::high_resolution_clock::now();
     Abc_Start();
     // globalLogger.setOutputFile("./main2_test.log");
     globalLogger.log(LogLevel::INFO, "Starting the program...");
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
     global_metrics.count_a = origDqbf->GetNumInputs();
     global_metrics.count_e = origDqbf->GetExistentials().size();
     global_metrics.count_d = origDqbf->GetDepVars().size(); - global_metrics.count_e;
-
+    
 
     globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
     std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
@@ -72,7 +72,8 @@ int main(int argc, char* argv[]){
         auto end_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed_time = end_time - start_time;
         global_metrics.individual_kissat_times.push_back(elapsed_time.count());
-
+	int depsetsize = origDqbf->GetDependencySet(kw->getOutputVar()).size();
+	global_metrics.individual_dep_set_sizes.push_back(depsetsize);
     }
 
     global_metrics.last_checkpoint = "BVE_DONE";

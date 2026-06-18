@@ -1,4 +1,6 @@
 #!/bin/bash
+ulimit -v 10485760
+
 if [ -z "$1" ]; then exit 1; fi
 
 # 1. Setup absolute paths
