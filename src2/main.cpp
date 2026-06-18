@@ -22,7 +22,7 @@ int main(int argc, char* argv[]){
     for(auto kw:localInitializations){
         globalLogger.log(LogLevel::INFO, fmt::format("Performing Quantifier Elimination for id: {}", kw->getOutputVar()));
         kw->eliminateExistentialVars();
-        // kw->eliminateUniversalVars();
+        kw->eliminateUniversalVars();
     }
 
 
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]){
     globalLogger.closeOutputFile();
 
 
-    exit(1);
+    // exit(1);
 
 
 
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
     int hCount = 1;
 
 
-    exit(1);
+    // exit(1);
 
     std::map<int, int> exToHMapping;
 
