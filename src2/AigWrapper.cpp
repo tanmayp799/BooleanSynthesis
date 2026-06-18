@@ -303,35 +303,35 @@ AigWrapper::AigWrapper(KissatWrapper* kw){
     Aig_ManStop(this->manager);
 
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
+    // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk size: {}\n", Abc_NtkNodeNum(ntk)));
     
-    for(int i=0;i<evars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
-        if(newNtk==NULL) exit(2);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+    // for(int i=0;i<evars.size();i++){
+    //     Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, evars[i]-1, 1);
+    //     if(newNtk==NULL) exit(2);
+    //     Abc_NtkDelete(ntk);
+    //     ntk = newNtk;
+    // }
     
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-e) size: {}\n", Abc_NtkNodeNum(ntk)));
+    // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-e) size: {}\n", Abc_NtkNodeNum(ntk)));
 
 
-    for(int i=0;i<dvars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
-        if(newNtk==NULL) exit(2);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+    // for(int i=0;i<dvars.size();i++){
+    //     Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, dvars[i]-1, 1);
+    //     if(newNtk==NULL) exit(2);
+    //     Abc_NtkDelete(ntk);
+    //     ntk = newNtk;
+    // }
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-d) size: {}\n", Abc_NtkNodeNum(ntk)));
+    // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-d) size: {}\n", Abc_NtkNodeNum(ntk)));
 
-    for(int i=0;i<uvars.size();i++){
-        Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
-        if(newNtk==NULL) exit(2);
-        Abc_NtkDelete(ntk);
-        ntk = newNtk;
-    }
+    // for(int i=0;i<uvars.size();i++){
+    //     Abc_Ntk_t* newNtk = Abc_NtkMiterQuantify(ntk, uvars[i]-1, 0);
+    //     if(newNtk==NULL) exit(2);
+    //     Abc_NtkDelete(ntk);
+    //     ntk = newNtk;
+    // }
 
-    globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
+    // globalLogger.log(LogLevel::DEBUG, fmt::format("Tanmay ntk(-a) size: {}\n", Abc_NtkNodeNum(ntk)));
 
     this->manager = ABC_NAMESPACE::Abc_NtkToDar(ntk, 0, 0);
     Abc_NtkDelete(ntk);

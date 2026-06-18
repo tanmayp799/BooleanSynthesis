@@ -112,9 +112,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	std::map<int, bool> defaultVal;
     std::set<int> deps = origDqbf->GetDepVars();
-    for(auto e: origDqbf->GetExistentials()){
-        deps.insert(e);
-    }
+    // for(auto e: origDqbf->GetExistentials()){
+    //     deps.insert(e);
+    // }
 
     CaDiCaL::Solver solver = solverWrapper->GetSolver();
     CaDiCaL::Solver unsatCoreExtractor = unsatCoreWrapper->GetSolver();
@@ -328,9 +328,9 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 	// 	return true;
 	// }
-    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    int numAigInputs = origDqbf->GetNumInputs() + origDqbf->GetDepVars().size();
     int numX = origDqbf->GetUniversals().size();
-    int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    int numY = origDqbf->GetDepVars().size();
     
 	while(true){
         iter++;
@@ -769,7 +769,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
             
             int a_i = Abc_NtkVerifySimulatePattern(varToBasisMap[id].first, cex)[0];
             int b_i = Abc_NtkVerifySimulatePattern(varToBasisMap[id].second, cex)[0];
-            printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
+            //  printf("id: %d | a_i: %d | b_i: %d\n", id, a_i, b_i);
             if(verbose && freq) globalLogger.log(LogLevel::INFO, fmt::format("id: {} | a_i: {} | b_i: {}", id, a_i, b_i));
         }
 
@@ -813,11 +813,11 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 // depVal.insert(cex[dep-1]);
             }
             
-            std::cout<<"DepVal for d: "<<id<<" => ";
-            for(auto u:depVal){
-                std::cout<<u<<" ";
-            }
-            std::cout<<std::endl;
+            // std::cout<<"DepVal for d: "<<id<<" => ";
+            // for(auto u:depVal){
+            //     std::cout<<u<<" ";
+            // }
+            // std::cout<<std::endl;
             if(ex_caseToAuxMapping[id].find(depVal)==ex_caseToAuxMapping[id].end()){
                 
                 changeFlag = true;
@@ -834,7 +834,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                 // fprintf(mapFile2, "INPUT %d , var map: %d\n", newAux, unsatCoreCnfVar);
                 // VarToInput_unsatCoreExtractor[unsatCoreCnfVar] = newAux;
 
-                std::cout<<"Dependent Var new Aux created: "<<id<<std::endl;
+                if(verbose && freq) std::cout<<"Dependent Var new Aux created: "<<id<<std::endl;
 
 
                 //Check if auxilary for this depVal exists or Not, if it does, use it else create one.
@@ -973,27 +973,27 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 			Abc_Stop();
             return false;
         }
-        std::cout<<"adding constraint clause...\n";
+        if(verbose && freq) std::cout<<"adding constraint clause...\n";
         for(auto e:currConstraint){
             
             if(e>0) {
                 solver.add(inputToVarMapping[e]);
-                std::cout<<e<<" ";
+                if(verbose && freq) std::cout<<e<<" ";
             }
             else {
                 solver.add(-inputToVarMapping[-e]);
-                std::cout<<e<<" ";
+                if(verbose && freq) std::cout<<e<<" ";
             }
         }
-        std::cout<<std::endl;
+        if(verbose && freq) std::cout<<std::endl;
         solver.add(0);
-        std::cout<<"Printing current constraint:\n";
+        // std::cout<<"Printing current constraint:\n";
         for(auto e:currConstraint){
             if(e>0) {
                 constraintSolver.add(inputToVarMapping[e]);
             }
             else constraintSolver.add(-inputToVarMapping[-e]);
-            std::cout<<e<<std::endl;
+            // std::cout<<e<<std::endl;
         }
         constraintSolver.add(0);
         freq=false;

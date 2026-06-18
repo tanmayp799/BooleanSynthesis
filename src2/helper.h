@@ -18,7 +18,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 
 struct ExperimentalMetrics {
-    int approach_id = 1;                  // Set this based on your current Git branch/commit
+    int approach_id = 2;                  // Set this based on your current Git branch/commit
     std::string benchmark_name = "";
     
     // Global formula metadata
