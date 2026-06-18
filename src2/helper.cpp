@@ -335,6 +335,8 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
     
 	while(true){
         iter++;
+        freq=false;
+        global_metrics.total_cegis_iterations++;
         //check for sat
         // if(iter>3000) exit(1);
         
@@ -411,7 +413,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
                     globalLogger.log(LogLevel::INFO,fmt::format("Constraint Satisfiable"));
                     // return 0;
                     std::map<int, int> cex_aux;
-
+                    return 0;
                     for(auto e:auxilaries){
                         int val = constraintSolver.val(inputToVarMapping[e]);
                         cex_aux[e] = val>0?1:0;

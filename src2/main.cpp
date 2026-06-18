@@ -21,7 +21,7 @@ int main(int argc, char* argv[]){
 
     
     MEASURE_TIME("main", -1, LogLevel::ERROR);
-    statisticsLogger.setOutputFile(argv[2]);
+    // statisticsLogger.setOutputFile(argv[2]);
     Abc_Start();
     // globalLogger.setOutputFile("./main2_test.log");
     globalLogger.log(LogLevel::INFO, "Starting the program...");
@@ -33,8 +33,34 @@ int main(int argc, char* argv[]){
 
     Dqbf* origDqbf = fileParser->ParseDqbf();
 
+    global_metrics.benchmark_name = argv[1];
+    global_metrics.count_a = origDqbf->GetUniversals().size();
+    global_metrics.count_e = origDqbf->GetExistentials().size();
+    global_metrics.count_d = origDqbf->GetDepVars().size();
+
+    global_metrics.d_vars = std::vector<int>(global_metrics.count_d,0);
+    global_metrics.individual_dep_set_sizes = std::vector<int>(global_metrics.count_d,0);
+    global_metrics.individual_exis_quant_times = std::vector<double>(global_metrics.count_d,0.0);
+    global_metrics.individual_univ_quant_times = std::vector<double>(global_metrics.count_d,0.0);
+    global_metrics.individual_bdd_gen_times = std::vector<double>(global_metrics.count_d,0.0);
+    global_metrics.individual_bdd_sizes = std::vector<long long>(global_metrics.count_d,0);
+    global_metrics.individual_aig_sizes = std::vector<long long>(global_metrics.count_d,0);
+    global_metrics.is_trivial_a = std::vector<bool>(global_metrics.count_d,true);
+    global_metrics.is_trivial_b = std::vector<bool>(global_metrics.count_d,true);
 
 
+
+
+    auto tmpdvars = origDqbf->GetDepVars();
+    int tmpidvar=0;
+    for(auto e:tmpdvars){
+        dep_to_id[e]=tmpidvar;
+        global_metrics.d_vars[tmpidvar] = e;
+        auto tmpdepset = origDqbf->GetDependencySet(e);
+        global_metrics.individual_dep_set_sizes[tmpidvar] = tmpdepset.size();
+        tmpidvar++;
+    }
+    
 
     std::map<int, AigWrapper*> outputToAig;
     
@@ -64,8 +90,21 @@ int main(int argc, char* argv[]){
     DdNode* FddNode;
     Abc_Ntk_t* pNtk;
     
+    global_metrics.last_checkpoint = "getBDD_START";
+
+    auto getbdd_start_time = std::chrono::high_resolution_clock::now();
+
+
     getBDD(finalFormula, ddMan, FddNode, pNtk);
-    
+
+    auto getbdd_end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> getbdd_elapsed = getbdd_end_time - getbdd_start_time;
+    global_metrics.getBDD_time = getbdd_elapsed.count();
+
+    global_metrics.last_checkpoint = "getBDD_END";
+
+
+
     globalLogger.log(LogLevel::INFO, "Generated BDD");
     Nnf_Man nnfNew;
     nnfNew.init(ddMan, FddNode);
@@ -74,9 +113,18 @@ int main(int argc, char* argv[]){
     Aig_Man_t* SAig = nnfNew.createAigWithoutClouds();
     
     
+
+
     if(!existentials.empty()){
         // exit(1);
+        global_metrics.last_checkpoint = "TSEITIN_ELIMINATE_START";
+        
+        auto tseitin_start_time = std::chrono::high_resolution_clock::now();
+
+
+
         tseitinSkolems = getTseitinSkolems(SAig,exisVarsToEliminate);
+
 
         globalLogger.log(LogLevel::INFO, "Generated Skolem functions for tseitin Variables");
 
@@ -96,6 +144,11 @@ int main(int argc, char* argv[]){
         // exit(1);
         // AigWrapper* newFinal = finalFormula->quantify(exisVarsToEliminate, 1, tseitinSkolems);
         // delete finalFormula;
+        auto tseitin_end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> tseitin_elapsed = tseitin_end_time - tseitin_start_time;
+        global_metrics.tseitin_elimination_time = tseitin_elapsed.count();
+        
+        global_metrics.last_checkpoint = "TSEITIN_ELIMINATE_END";
     
     }
     finalFormula->SetManager(SAig);
@@ -113,6 +166,7 @@ int main(int argc, char* argv[]){
 
     globalLogger.log(LogLevel::INFO, "Generating Local Specifications");
     
+    global_metrics.last_checkpoint = "GET_LOCAL_SPEC_START";
     for(int target_d : depVars) {
         std::vector<int> existentialVarsToEliminate;
         
@@ -161,8 +215,13 @@ int main(int argc, char* argv[]){
         std::vector<int> printUniversal;
         for (int e : universalVarsToEliminate) printUniversal.push_back(e + 1);
 
+
+
         globalLogger.log(LogLevel::INFO,fmt::format("Generating localSpec for target_d={}: eliminating existentials [{}] and universals [{}]", 
             target_d, fmt::join(printExistential, " "), fmt::join(printUniversal, " ")));
+
+
+            
         AigWrapper* localSpec = finalFormula->getLocalSpec(target_d, existentialVarsToEliminate, universalVarsToEliminate);
 
        
@@ -172,6 +231,8 @@ int main(int argc, char* argv[]){
         finalSkolems.push_back(localSpec);
     
     }
+
+    global_metrics.last_checkpoint = "GET_LOCAL_SPEC_END";
 
     Aig_Man_t* finalMan=finalFormula->getManager();
     getMonoAig(finalMan);
@@ -244,17 +305,32 @@ int main(int argc, char* argv[]){
     globalLogger.log(LogLevel::INFO, fmt::format("Starting CEGIS..."));
 
 
+    global_metrics.last_checkpoint = "CEGIS_START";
+
+    auto cegis_start_time = std::chrono::high_resolution_clock::now();
+
     if(!depVars.empty()) res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
     else res = 0;
+
+    auto cegis_end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> cegis_elapsed = cegis_end_time - cegis_start_time;
+    global_metrics.total_cegis_time = cegis_elapsed.count();
+
+    global_metrics.last_checkpoint = "CEGIS_END";
+
     if(res==1){
         globalLogger.log(LogLevel::INFO, "No Solution Exists.");
+        global_metrics.execution_status = "UNSATISFIABLE";
         exit(20);
 
     }
     else{
         globalLogger.log(LogLevel::INFO, "Solution Exists.");
+        global_metrics.execution_status = "SATISFIABLE";
     }
 
+
+    exit(1);
     // origBenchmark->ShowAig();
     AigWrapper* origBenchmark = new AigWrapper(origDqbf);
     int res2 =verify(origBenchmark, origDqbf, tseitinSkolems, fileParser->argv);

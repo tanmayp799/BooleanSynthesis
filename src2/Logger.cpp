@@ -33,9 +33,9 @@ void Logger::log(LogLevel level, const std::string& message) {
     
 
     if(level == LogLevel::STATS){
-        if(logFile.is_open()){
-            logFile<<message<<std::endl;
-        }
+        // if(logFile.is_open()){
+        //     logFile<<message<<std::endl;
+        // }
 
         return;
     }

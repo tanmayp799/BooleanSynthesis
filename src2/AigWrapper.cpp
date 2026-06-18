@@ -614,7 +614,8 @@ void AigWrapper::merge(AigWrapper* aw){
     }
     
 
-
+    Abc_NtkDelete(baseNtk);
+    Abc_NtkDelete(srcNtk);
     // Aig_ManCoCleanup(this->manager);
     return;
 
@@ -874,6 +875,26 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     Aig_Man_t* AMan = tMan;
 
 
+    if(Aig_ObjFanin0(Aig_ManCo(AMan,0)) ==  Aig_ManConst0(AMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(AMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = true;
+            }
+            else{
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = false;
+            }
+
+
+            std::filesystem::path dump_path(global_metrics.benchmark_name);
+            std::string pure_name = dump_path.stem().string();
+            std::string a_path = "./experiment/basis_a/"+pure_name+".aig";
+            std::string b_path = "./experiment/basis_b/"+pure_name+".aig";
+
+            // Io_WriteAiger()
+
+
+
+
     // Aig_ManShow(AMan,0,NULL);
     // int xx;
     // std::cin>>xx;
@@ -913,6 +934,16 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     tMan = compressAig(tMan);
 
     Aig_Man_t* BMan = tMan;
+
+        if(Aig_ObjFanin0(Aig_ManCo(BMan,0)) ==  Aig_ManConst1(BMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(AMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = true;
+            }
+            else{
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = false;
+            }
+
     // Aig_ManShow(BMan,0,NULL);
     // std::cin>>xx;
 
@@ -922,6 +953,9 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 
     varToBasisMap[outputVar] = std::make_pair(ANtk, BNtk);
 
+
+    Io_WriteAiger(ANtk, (char*)a_path.c_str(),0,1,0);
+    Io_WriteAiger(BNtk, (char*)b_path.c_str(),0,1,0);
 
     Abc_Ntk_t* ANtk2 = ABC_NAMESPACE::Abc_NtkFromAigPhase(AMan);
     Abc_Ntk_t* BNtk2 = ABC_NAMESPACE::Abc_NtkFromAigPhase(BMan);
@@ -969,6 +1003,9 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     // Aig_ManStop(tMan);
     Aig_ManStop(AMan);
     Aig_ManStop(BMan);
+
+    Abc_NtkDelete(ANtk2);
+    Abc_NtkDelete(BNtk2);
 
     return;
 
@@ -1384,9 +1421,23 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     pMan = Aig_ManDupOrdered(this->manager);
 
 
-
+    global_metrics.last_checkpoint = "EXIS_QUANT_"+std::to_string(target_d)+"_START";
     // Use pMan to existentially quantify using quantify2()
+
+    auto exis_quant_start_time = std::chrono::high_resolution_clock::now();
+
     quantify2(pMan,existentialVarsToEliminate);
+
+    auto exis_quant_end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> exis_quant_elapsed = exis_quant_end_time - exis_quant_start_time;
+
+    global_metrics.individual_exis_quant_times[dep_to_id[target_d]] = exis_quant_elapsed.count();
+
+    // auto exis_quant_duration = std::chrono::duration_cast<std::chrono::milliseconds>(exis_quant_time_end - exis_quant_time_start);
+    // globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {} in {} ms", target_d, exis_quant_duration.count()));
+    
+
+    global_metrics.last_checkpoint = "EXIS_QUANT_"+std::to_string(target_d)+"_END";
 
     // Aig_ManShow(pMan,0,NULL);
     // std::cin>>xx;
@@ -1413,9 +1464,22 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
 
 
     // 2. Build Global BDDs and capture the CUDD Manager
+
+    auto genbdd_start_time = std::chrono::high_resolution_clock::now();
+
+
     dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,1,0,1);
+
+    auto genbdd_end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> genbdd_elapsed = genbdd_end_time - genbdd_start_time;
+
+    global_metrics.individual_bdd_gen_times[dep_to_id[target_d]] = genbdd_elapsed.count();
+
     if(dd==NULL){
         globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
+
+
+        global_metrics.execution_status="BDD_FAILED_"+std::to_string(target_d);
         exit(1);
     }
 
@@ -1441,8 +1505,12 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     // }   
 
     // globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {}", target_d));
+    global_metrics.last_checkpoint = "UNIV_QUANT_"+std::to_string(target_d)+"_START";
     bExistRes = bFunc;
     Cudd_Ref( bExistRes );
+
+    auto univ_quant_start_time = std::chrono::high_resolution_clock::now();
+
 
     // 2. Universal Quantification
     if ( !universalVarsToEliminate.empty() ) {
@@ -1458,7 +1526,20 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     // Dereference intermediate existential result
     Cudd_RecursiveDeref( dd, bExistRes );
 
+    long long bdd_size_metric = Cudd_DagSize(bFinalRes);
+    global_metrics.individual_bdd_sizes[dep_to_id[target_d]] = bdd_size_metric;
+
+    
+
+
+    auto univ_quant_end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> univ_quant_elapsed = univ_quant_end_time - univ_quant_start_time;
+
+    global_metrics.individual_univ_quant_times[dep_to_id[target_d]] = univ_quant_elapsed.count();
+
+
     globalLogger.log(LogLevel::INFO, fmt::format("Completed Univ Quant for id: {}", target_d));
+    global_metrics.last_checkpoint = "UNIV_QUANT_"+std::to_string(target_d)+"_END";
 
     // ------------------------------------------------------------------
     // PHASE 3: Port Alignment & Network Derivation
@@ -1506,7 +1587,10 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     AigWrapper* retAig = new AigWrapper(this);
     retAig->SetManager(pNewAig);
 
+    
     retAig->compress();
+    long long aig_size_metric = Aig_ManObjNum(pNewAig);
+    global_metrics.individual_aig_sizes[dep_to_id[target_d]] = aig_size_metric;
     // retAig->ShowAig();
     return retAig;
     
