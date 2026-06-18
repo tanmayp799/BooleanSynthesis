@@ -50,7 +50,7 @@ extern Logger statisticsLogger;
 
 
 struct ExperimentalMetrics {
-    int approach_id = 4;                  // Approach 4: BDD Dynamic Reordering
+    int approach_id = 3;                  // Approach 4: BDD Dynamic Reordering
     std::string benchmark_name = "";
     
     // Global formula metadata
@@ -159,7 +159,7 @@ struct ExperimentalMetrics {
     }
 };
 
-static ExperimentalMetrics global_metrics;
-inline std::map<int,int> dep_to_id;
+inline ExperimentalMetrics global_metrics;
+// static std::map<int,int> dep_to_id;
 
 #endif // LOGGER_H

@@ -11,6 +11,9 @@ std::string g_argv2;
 bool didManthan=false;
 
 int numOrigInputs=0;
+std::map<int,int> dep_to_id;
+// ExperimentalMetrics global_metrics;
+
 
 void timeout_handler(int signum) {
 
@@ -75,16 +78,21 @@ int main(int argc, char* argv[]){
     global_metrics.count_a = origDqbf->GetUniversals().size();
     global_metrics.count_e = origDqbf->GetExistentials().size();
     global_metrics.count_d = origDqbf->GetDepVars().size();
+    std::cout<<global_metrics.count_a<<" "<<global_metrics.count_e<<" "<<global_metrics.count_d<<std::endl;
 
     global_metrics.d_vars = std::vector<int>(global_metrics.count_d,0);
     global_metrics.individual_dep_set_sizes = std::vector<int>(global_metrics.count_d,0);
     global_metrics.individual_exis_quant_times = std::vector<double>(global_metrics.count_d,0.0);
+
+    std::cout<<global_metrics.individual_exis_quant_times.size()<<std::endl;
+
     global_metrics.individual_univ_quant_times = std::vector<double>(global_metrics.count_d,0.0);
     global_metrics.individual_bdd_gen_times = std::vector<double>(global_metrics.count_d,0.0);
     global_metrics.individual_bdd_sizes = std::vector<long long>(global_metrics.count_d,0);
     global_metrics.individual_aig_sizes = std::vector<long long>(global_metrics.count_d,0);
     global_metrics.is_trivial_a = std::vector<bool>(global_metrics.count_d,true);
     global_metrics.is_trivial_b = std::vector<bool>(global_metrics.count_d,true);
+
 
 
 

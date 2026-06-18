@@ -1431,8 +1431,12 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
     auto exis_quant_end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> exis_quant_elapsed = exis_quant_end_time - exis_quant_start_time;
 
-    global_metrics.individual_exis_quant_times[dep_to_id[target_d]] = exis_quant_elapsed.count();
 
+
+    auto tmp_mp = dep_to_id;
+    std::cout<<global_metrics.individual_exis_quant_times.size()<<std::endl;
+    global_metrics.individual_exis_quant_times[dep_to_id[target_d]] = exis_quant_elapsed.count();
+    
     // auto exis_quant_duration = std::chrono::duration_cast<std::chrono::milliseconds>(exis_quant_time_end - exis_quant_time_start);
     // globalLogger.log(LogLevel::INFO, fmt::format("Completed Exis Quant for id: {} in {} ms", target_d, exis_quant_duration.count()));
     
@@ -1589,7 +1593,7 @@ AigWrapper* AigWrapper::getLocalSpec(int target_d, std::vector<int>& existential
 
     
     retAig->compress();
-    long long aig_size_metric = Aig_ManObjNum(pNewAig);
+    long long aig_size_metric = Aig_ManObjNum(retAig->getManager());
     global_metrics.individual_aig_sizes[dep_to_id[target_d]] = aig_size_metric;
     // retAig->ShowAig();
     return retAig;
