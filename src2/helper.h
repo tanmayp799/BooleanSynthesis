@@ -17,97 +17,95 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 
 
-struct Metrics {
-    // Structural Metadata
-    int approach_id = 2;
+struct ExperimentalMetrics {
+    int approach_id = 1;                  // Set this based on your current Git branch/commit
     std::string benchmark_name = "";
+    
+    // Global formula metadata
     int count_a = 0;
     int count_e = 0;
-    int count_d = 0; // Keeping structure identical to app1 layout
-
-    // Algorithmic Tracking Counters
+    int count_d = 0;
+    
+    // Per-variable relational tracking vectors (Parallel lists resized to count_d)
+	std::vector<int> d_vars;
+    std::vector<int> individual_dep_set_sizes; 
+    std::vector<double> individual_kissat_times;
+    std::vector<bool> is_trivial_a;
+    std::vector<bool> is_trivial_b;
+    
+    // Execution state and loop metrics
+    std::string last_checkpoint = "INIT";              // 1=Boot, 2=Parsing/Prep, 3=Manthan Done, 4=Projection Loop, 5=Success
     int total_cegis_iterations = 0;
     double total_cegis_time = 0.0;
-    std::string last_checkpoint = "NOT_STARTED";
+	// double manthan_time = 0.0;
     std::string execution_status = "RUNNING";
+    
+    // Initial clock timestamp
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_timestamp;
 
-    // Timing Profiles (Seconds)
-    std::chrono::high_resolution_clock::time_point start_timestamp;
-    double total_program_time = 0.0;
-    double manthan_time = 0.0; // Tracks total execution duration of Kissat BVE loops
+    // Generates a valid JSON string containing all scalar data and vectors
+    void print_json_metrics() const {
+    // 1. Construct a clean output filename (e.g., bin/benchmarks/cnt20y.dqdimacs -> ./logs/app1_cnt20y.json)
+    std::filesystem::path p(benchmark_name);
+    std::string pure_name = p.stem().string(); // Extract "cnt20y"
+    std::string json_output_path = "./experiment/stats/app" + std::to_string(approach_id) + "/" + pure_name + ".json";
 
-    // Feature Arrays for Structural Analysis
-    std::vector<int> d_vars;
-    std::vector<int> dep_set_sizes;
-    std::vector<double> projection_times;
-    std::vector<int> is_trivial_a;
-    std::vector<int> is_trivial_b;
-
-    // Helper method to turn a primitive vector into a JSON array string
-    template<typename T>
-    std::string vector_to_json_array(const std::vector<T>& vec) {
-        std::string json = "[";
-        for (size_t i = 0; i < vec.size(); ++i) {
-            if constexpr (std::is_same_v<T, std::string>) {
-                json += "\"" + vec[i] + "\"";
-            } else {
-                json += std::to_string(vec[i]);
-            }
-            if (i < vec.size() - 1) json += ", ";
-        }
-        json += "]";
-        return json;
+    // 2. Open the dedicated json file stream
+    std::ofstream json_file(json_output_path);
+    if (!json_file.is_open()) {
+        // Fallback to standard error if directory doesn't exist so you don't lose data entirely
+        std::cerr << "CRITICAL: Could not open JSON log file at " << json_output_path << std::endl;
+        return;
     }
 
-    // Flushes all metrics safely into a structured file
-    void print_json_metrics() {
-        // Strip out the directory path to isolate just the raw filename for the JSON string
-        std::string clean_name = benchmark_name;
-        size_t last_slash = clean_name.find_last_of("/\\");
-        if (last_slash != std::string::npos) {
-            clean_name = clean_name.substr(last_slash + 1);
-        }
+    auto end_timestamp = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> total_program_elapsed = end_timestamp - start_timestamp;
+    double total_program_time = total_program_elapsed.count();
 
-        std::string output_filename = "./experiment/stats/app2/" + clean_name;
-        // Strip extension if it ends with .dqdimacs or .qdimacs to append .json
-        size_t ext_dot = output_filename.find_last_of(".");
-        if (ext_dot != std::string::npos) {
-            output_filename = output_filename.substr(0, ext_dot);
-        }
-        output_filename += ".json";
+    // 3. Write directly to the file stream instead of cout
+    json_file << "{\n";
+    json_file << "  \"approach_id\": " << approach_id << ",\n";
+    json_file << "  \"benchmark_name\": \"" << p.filename().string() << "\",\n";
+    json_file << "  \"count_a\": " << count_a << ",\n";
+    json_file << "  \"count_e\": " << count_e << ",\n";
+    json_file << "  \"count_d\": " << count_d << ",\n";
+    json_file << "  \"total_cegis_iterations\": " << total_cegis_iterations << ",\n";
+    json_file << "  \"total_cegis_time\": " << total_cegis_time << ",\n";
+    json_file << "  \"last_checkpoint\": \"" << last_checkpoint << "\",\n";
+    json_file << "  \"execution_status\": \"" << execution_status << "\",\n";
+    json_file << "  \"total_program_time\": " << total_program_time << ",\n";
+	// json_file << "  \"manthan_time\": " << manthan_time << ",\n";
+    
 
-        std::ofstream json_file(output_filename);
-        if (!json_file.is_open()) {
-            std::cerr << "CRITICAL ERROR: Could not write metrics tracking file to " << output_filename << std::endl;
-            return;
-        }
-
-        // Format and flush valid JSON format matching Approach 1 precisely
-        json_file << "{\n"
-                  << "  \"approach_id\": " << approach_id << ",\n"
-                  << "  \"benchmark_name\": \"" << clean_name << "\",\n"
-                  << "  \"count_a\": " << count_a << ",\n"
-                  << "  \"count_e\": " << count_e << ",\n"
-                  << "  \"count_d\": " << count_d << ",\n"
-                  << "  \"total_cegis_iterations\": " << total_cegis_iterations << ",\n"
-                  << "  \"total_cegis_time\": " << total_cegis_time << ",\n"
-                  << "  \"last_checkpoint\": \"" << last_checkpoint << "\",\n"
-                  << "  \"execution_status\": \"" << execution_status << "\",\n"
-                  << "  \"total_program_time\": " << total_program_time << ",\n"
-                  << "  \"manthan_time\": " << manthan_time << ",\n" // Acts as BVE quantification timer
-                  << "  \"d_vars\": " << vector_to_json_array(d_vars) << ",\n"
-                  << "  \"dep_set_sizes\": " << vector_to_json_array(dep_set_sizes) << ",\n"
-                  << "  \"projection_times\": " << vector_to_json_array(projection_times) << ",\n"
-                  << "  \"is_trivial_a\": " << vector_to_json_array(is_trivial_a) << ",\n"
-                  << "  \"is_trivial_b\": " << vector_to_json_array(is_trivial_b) << "\n"
-                  << "}\n";
-
-        json_file.close();
+	json_file << "  \"d_vars\": [";
+    for (size_t i = 0; i < d_vars.size(); ++i) {
+        json_file << d_vars[i] << (i < d_vars.size() - 1 ? "," : "");
     }
+    // json_file << "  \"dep_set_sizes\": [";
+	json_file << "],\n  \"dep_set_sizes\": [";
+    for (size_t i = 0; i < individual_dep_set_sizes.size(); ++i) {
+        json_file << individual_dep_set_sizes[i] << (i < individual_dep_set_sizes.size() - 1 ? "," : "");
+    }
+    json_file << "],\n  \"projection_times\": [";
+    for (size_t i = 0; i < individual_kissat_times.size(); ++i) {
+        json_file << individual_kissat_times[i] << (i < individual_kissat_times.size() - 1 ? "," : "");
+    }
+    json_file << "],\n  \"is_trivial_a\": [";
+    for (size_t i = 0; i < is_trivial_a.size(); ++i) {
+        json_file << (is_trivial_a[i] ? 1 : 0) << (i < is_trivial_a.size() - 1 ? "," : "");
+    }
+    json_file << "],\n  \"is_trivial_b\": [";
+    for (size_t i = 0; i < is_trivial_b.size(); ++i) {
+        json_file << (is_trivial_b[i] ? 1 : 0) << (i < is_trivial_b.size() - 1 ? "," : "");
+    }
+    json_file << "]\n}\n";
+    
+    json_file.close();
+}
 };
 
-// Declare your global wrapper variable
-inline Metrics global_metrics;
+// 1. Instantiated as a global instance to make it universally accessible to handlers
+static ExperimentalMetrics global_metrics;
 
 
 

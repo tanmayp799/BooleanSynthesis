@@ -9,6 +9,7 @@
 #include <format>
 #include <fmt/ranges.h>
 #include <vector>
+#include <filesystem>
 
 enum class LogLevel {
     INFO,

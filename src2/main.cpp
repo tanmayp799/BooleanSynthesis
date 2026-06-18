@@ -6,7 +6,7 @@
 int main(int argc, char* argv[]){
 
     Abc_Start();
-    globalLogger.setOutputFile("./main2_test.log");
+    // globalLogger.setOutputFile("./main2_test.log");
     globalLogger.log(LogLevel::INFO, "Starting the program...");
     Parser* fileParser = new Parser(argc, argv);
 
@@ -15,19 +15,36 @@ int main(int argc, char* argv[]){
 
     Dqbf* origDqbf = fileParser->ParseDqbf();
 
+
+    global_metrics.benchmark_name = argv[1];
+    global_metrics.count_a = origDqbf->GetNumInputs();
+    global_metrics.count_e = origDqbf->GetExistentials().size();
+    global_metrics.count_d = origDqbf->GetDepVars().size(); - global_metrics.count_e;
+
+
     globalLogger.log(LogLevel::INFO,"Generating Local Specs...");
     std::vector<KissatWrapper*> localInitializations = generateLocalSpecs(origDqbf);
 
-
+    global_metrics.last_checkpoint = "BVE_START";
     for(auto kw:localInitializations){
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+        global_metrics.d_vars.push_back(kw->getOutputVar());
         globalLogger.log(LogLevel::INFO, fmt::format("Performing Quantifier Elimination for id: {}", kw->getOutputVar()));
         kw->eliminateExistentialVars();
         kw->eliminateUniversalVars();
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed_time = end_time - start_time;
+        global_metrics.individual_kissat_times.push_back(elapsed_time.count());
+
     }
+
+    global_metrics.last_checkpoint = "BVE_DONE";
 
 
     globalLogger.setOutputFile("./statistics/eliminationStatistics.csv");
-    int numY = origDqbf->GetDepVars().size()+origDqbf->GetExistentials().size();
+    int numY = origDqbf->GetDepVars().size();
     for(auto kw:localInitializations){
         globalLogger.log(LogLevel::STATS, fmt::format("{},{},{},{}", argv[1],kw->getOutputVar(), numY-1, kw->getEliminatedVars().size()));
     }
@@ -51,7 +68,7 @@ int main(int argc, char* argv[]){
     // finalFormula->substituteInputs(origDqbf->GetExistentials(),fileParser->argv[2], fileParser->argv[3]);
     AigWrapper* unsatCoreFormula = new AigWrapper(finalFormula);
     int numNewInputs = origDqbf->GetDepVars().size();
-    numNewInputs+= origDqbf->GetExistentials().size();
+    // numNewInputs+= origDqbf->GetExistentials().size();
     finalFormula->addInputs(numNewInputs);
     unsatCoreFormula->addInputs(numNewInputs);
     finalFormula->negateOutput();
