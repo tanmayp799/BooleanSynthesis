@@ -141,7 +141,7 @@ int main(int argc, char* argv[]){
             std::string a_path = "./experiment/basis_a/app2/"+pure_name+".aig";
             std::string b_path = "./experiment/basis_b/app2/"+pure_name+".aig";
         Io_WriteAiger(varToBasisMap[p.first].first,(char*)a_path.c_str(),0,1,0);
-        Io_WriteAiger(varToBasisMap[p.first].second,(char*)a_path.c_str(),0,1,0);
+        Io_WriteAiger(varToBasisMap[p.first].second,(char*)b_path.c_str(),0,1,0);
         if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst0(tMan) 
             && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
                 // printf("A_i is const 0 for id: %d\n",id);
