@@ -84,6 +84,29 @@ int main(int argc, char* argv[]){
     for(auto p:outputToAig){
         p.second->addInputs(numNewInputs);
         p.second->generateDef(p.first, origDqbf->GetNumInputs() + hCount);
+
+
+        Aig_Man_t* tMan = ABC_NAMESPACE::Abc_NtkToDar(varToBasisMap[p.first].first,0,0);
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst1(tMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a.push_back(true);
+            }
+            else{
+                global_metrics.is_trivial_a.push_back(false);
+            }
+
+        Aig_ManStop(tMan);
+        tMan = ABC_NAMESPACE::Abc_NtkToDar(varToBasisMap[p.first].second,0,0);
+        if(Aig_ObjFanin0(Aig_ManCo(tMan,0)) ==  Aig_ManConst0(tMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(tMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_b.push_back(true);
+            }
+            else{
+                global_metrics.is_trivial_b.push_back(false);
+            }
+            Aig_ManStop(tMan);
         globalLogger.log(LogLevel::INFO, fmt::format("Generating Def for id: {}", p.first));
         // p.second->ShowAig();
         exToHMapping[p.first] = origDqbf->GetNumInputs() + hCount;
@@ -114,13 +137,28 @@ int main(int argc, char* argv[]){
     CadicalWrapper* unsatCoreWrapper = new CadicalWrapper(unsatCoreFormula);
     CadicalWrapper* constraintWrapper = new CadicalWrapper();
 
-    int res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
 
+    global_metrics.last_checkpoint = "CEGIS_START";
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+
+    int res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    global_metrics.total_cegis_time = elapsed_time.count();
+    global_metrics.last_checkpoint = "CEGIS_DONE";
+    // global_metrics.execution_status = (res == 0) ? "SUCCESS" : "UNSAT";
+    // global_metrics.print_json_metrics();
+    
     if(res==1){
         globalLogger.log(LogLevel::INFO, "No Solution Exists.");
+        global_metrics.execution_status = "UNSATISFIABLE";
+        // global_metrics.print_json_metrics();
     }
     else{
         globalLogger.log(LogLevel::INFO, "Solution Exists.");
+        global_metrics.execution_status = "SATISFIABLE";
+        // global_metrics.print_json_metrics();
     }
 
     Abc_Stop();
