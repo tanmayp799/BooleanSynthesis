@@ -3,7 +3,42 @@
 
 #include "helper.h"
 
+
+void timeout_handler(int signum) {
+
+    global_metrics.execution_status = "TIMEOUT";
+
+    global_metrics.print_json_metrics();
+
+    std::_Exit(signum);
+
+}
+
+
+
+void final_cleanup_hook() {
+
+    
+
+        global_metrics.print_json_metrics();
+
+    
+
+}
+
+
+
 int main(int argc, char* argv[]){
+
+
+
+    signal(SIGTERM, timeout_handler);
+
+    signal(SIGSEGV, timeout_handler);
+
+    signal(SIGABRT, timeout_handler);
+
+    std::atexit(final_cleanup_hook);
 
     Abc_Start();
     // globalLogger.setOutputFile("./main2_test.log");

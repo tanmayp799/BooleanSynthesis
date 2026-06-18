@@ -334,6 +334,8 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
     
 	while(true){
         iter++;
+        global_metrics.total_cegis_iterations++;
+        freq=false;
         //check for sat
         // if(iter>3000) exit(1);
         
@@ -353,7 +355,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
         // solver.write_dimacs("./f1_assumed.dimacs");
 
         int status = solver.solve();
-        if(iter%500==0){
+        if(iter%1000==0){
             freq=true;
         }
 
@@ -391,7 +393,7 @@ int cegis(Dqbf* origDqbf, CadicalWrapper* solverWrapper, CadicalWrapper* unsatCo
 
 
 
-            for(int asgNo=0;asgNo<3;asgNo++){
+            for(int asgNo=0;asgNo<1;asgNo++){
                 int constrStatus = constraintSolver.solve();
 
                 if(constrStatus == CaDiCaL::UNSATISFIABLE){
