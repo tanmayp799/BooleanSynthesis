@@ -4,12 +4,39 @@
 #include <cstdlib>
 #include <algorithm>
 #include "helper.h"
+#include <csignal>
 // #include "ScopedTimer.h"
 
 std::string g_argv2;
 bool didManthan=false;
 
 int numOrigInputs=0;
+
+void timeout_handler(int signum) {
+
+    global_metrics.execution_status = "TIMEOUT";
+
+    global_metrics.print_json_metrics();
+
+    std::_Exit(signum);
+
+}
+
+
+
+void final_cleanup_hook() {
+
+    
+
+        global_metrics.print_json_metrics();
+
+    
+
+}
+
+
+
+
 
 
 
@@ -21,6 +48,17 @@ int main(int argc, char* argv[]){
 
     
     MEASURE_TIME("main", -1, LogLevel::ERROR);
+
+
+        signal(SIGTERM, timeout_handler);
+
+    signal(SIGSEGV, timeout_handler);
+
+    signal(SIGABRT, timeout_handler);
+
+    std::atexit(final_cleanup_hook);
+    global_metrics.start_timestamp = std::chrono::high_resolution_clock::now();
+
     // statisticsLogger.setOutputFile(argv[2]);
     Abc_Start();
     // globalLogger.setOutputFile("./main2_test.log");
