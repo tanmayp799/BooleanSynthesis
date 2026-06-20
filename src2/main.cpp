@@ -48,7 +48,18 @@ int main(int argc, char* argv[]){
 
     
     MEASURE_TIME("main", -1, LogLevel::ERROR);
-    statisticsLogger.setOutputFile(argv[2]);
+    // statisticsLogger.setOutputFile(argv[2]);
+
+        signal(SIGTERM, timeout_handler);
+
+    signal(SIGSEGV, timeout_handler);
+
+    signal(SIGABRT, timeout_handler);
+
+    std::atexit(final_cleanup_hook);
+    global_metrics.start_timestamp = std::chrono::high_resolution_clock::now();
+
+
     Abc_Start();
     // globalLogger.setOutputFile("./main2_test.log");
     globalLogger.log(LogLevel::INFO, "Starting the program...");
