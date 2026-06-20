@@ -11,6 +11,33 @@ bool didManthan=false;
 
 int numOrigInputs=0;
 
+std::map<int,int> dep_to_id;
+// ExperimentalMetrics global_metrics;
+
+
+void timeout_handler(int signum) {
+
+    global_metrics.execution_status = "TIMEOUT";
+
+    global_metrics.print_json_metrics();
+
+    std::_Exit(signum);
+
+}
+
+
+
+void final_cleanup_hook() {
+
+    
+
+        global_metrics.print_json_metrics();
+
+    
+
+}
+
+
 
 
 int main(int argc, char* argv[]){
