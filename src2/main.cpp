@@ -92,6 +92,17 @@ int main(int argc, char* argv[]){
     global_metrics.is_trivial_b = std::vector<bool>(global_metrics.count_d,true);
 
 
+
+    auto tmpdvars = origDqbf->GetDepVars();
+    int tmpidvar=0;
+    for(auto e:tmpdvars){
+        dep_to_id[e]=tmpidvar;
+        global_metrics.d_vars[tmpidvar] = e;
+        auto tmpdepset = origDqbf->GetDependencySet(e);
+        global_metrics.individual_dep_set_sizes[tmpidvar] = tmpdepset.size();
+        tmpidvar++;
+    }
+
     std::map<int, AigWrapper*> outputToAig;
     
 
