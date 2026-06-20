@@ -47,6 +47,7 @@ extern "C" {
 
 extern std::map<int, std::pair<Abc_Ntk_t*, Abc_Ntk_t*>> varToBasisMap;
 extern int numOrigInputs;
+extern std::map<int,int> dep_to_id;
 
 class AigWrapper {
     public:

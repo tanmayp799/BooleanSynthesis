@@ -12,6 +12,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 // #include "ScopedTimer.h"
+#include<filesystem>
 enum class LogLevel {
     INFO,
     WARNING,
@@ -46,7 +47,7 @@ extern Logger statisticsLogger;
 
 
 struct ExperimentalMetrics {
-    int approach_id = 3;          //d        // Approach 4: BDD Dynamic Reordering
+    int approach_id = 4;          //d        // Approach 4: BDD Dynamic Reordering
     std::string benchmark_name = ""; //d
     
     // Global formula metadata

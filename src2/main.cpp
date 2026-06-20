@@ -135,8 +135,24 @@ int main(int argc, char* argv[]){
         DdNode* FddNode;
         Abc_Ntk_t* pNtk;
         
+
+        global_metrics.last_checkpoint = "getBDD_START";
+
+        auto getbdd_start = std::chrono::high_resolution_clock::now();
+
         getBDD(finalFormula, ddMan, FddNode, pNtk);
+
+        auto getbdd_end = std::chrono::high_resolution_clock::now();
+        global_metrics.last_checkpoint = "getBDD_END";
         
+        std::chrono::duration<double> getbdd_elapsed = getbdd_end - getbdd_start;
+        global_metrics.getBDD_time = getbdd_elapsed.count();
+        
+
+
+        global_metrics.last_checkpoint = "TSEITIN_ELIM_START";
+        auto tseitin_start = std::chrono::high_resolution_clock::now();
+
         globalLogger.log(LogLevel::INFO, "Generated BDD");
         Nnf_Man nnfNew;
         nnfNew.init(ddMan, FddNode);
@@ -153,7 +169,10 @@ int main(int argc, char* argv[]){
         quantify2(SAig, exisVarsToEliminate);
         globalLogger.log(LogLevel::INFO, "Quantified Existentials");
 
-
+        auto tseitin_end = std::chrono::high_resolution_clock::now();
+        global_metrics.last_checkpoint = "TSEITIN_ELIM_END";
+        std::chrono::duration<double> tseitin_elapsed = tseitin_end - tseitin_start;
+        global_metrics.tseitin_elimination_time = tseitin_elapsed.count();
 
         SAig = getMonoAig(SAig);
         finalFormula->SetManager(SAig);
@@ -370,16 +389,25 @@ int main(int argc, char* argv[]){
     int res;
     globalLogger.log(LogLevel::INFO, fmt::format("Starting CEGIS..."));
 
-
+    global_metrics.last_checkpoint= "CEGIS_START";
+    auto cegis_start = std::chrono::high_resolution_clock::now();
     if(!depVars.empty()) res = cegis(origDqbf, solverWrapper, unsatCoreWrapper, constraintWrapper, exToHMapping);
     else res = 0;
+
+    auto cegis_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> cegis_elapsed = cegis_end - cegis_start;
+    global_metrics.total_cegis_time = cegis_elapsed.count();
+
     if(res==1){
         globalLogger.log(LogLevel::INFO, "No Solution Exists.");
+        global_metrics.execution_status = "UNSATISFIABLE";
         exit(20);
 
     }
     else{
         globalLogger.log(LogLevel::INFO, "Solution Exists.");
+
+        global_metrics.execution_status = "SATISFIABLE";
     }
 
     exit(1);

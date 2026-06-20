@@ -1104,6 +1104,21 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     tMan = compressAig(tMan);
     Aig_Man_t* AMan = tMan;
 
+        if(Aig_ObjFanin0(Aig_ManCo(AMan,0)) ==  Aig_ManConst0(AMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(AMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = true;
+            }
+            else{
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = false;
+            }
+
+
+            std::filesystem::path dump_path(global_metrics.benchmark_name);
+            std::string pure_name = dump_path.stem().string();
+            std::string a_path = "./experiment/basis_a/"+pure_name+".aig";
+            std::string b_path = "./experiment/basis_b/"+pure_name+".aig";
+
 
     // Aig_ManShow(AMan,0,NULL);
     // int xx;
@@ -1144,6 +1159,16 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     tMan = compressAig(tMan);
 
     Aig_Man_t* BMan = tMan;
+
+    if(Aig_ObjFanin0(Aig_ManCo(BMan,0)) ==  Aig_ManConst1(BMan) 
+            && Aig_ObjFaninC0(Aig_ManCo(AMan,0))){
+                // printf("A_i is const 0 for id: %d\n",id);
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = true;
+            }
+            else{
+                global_metrics.is_trivial_a[dep_to_id[outputVar]] = false;
+            }
+
     // Aig_ManShow(BMan,0,NULL);
     // std::cin>>xx;
 
@@ -1152,6 +1177,8 @@ void AigWrapper::generateDef(int outputVar, int hVar){
 
 
     varToBasisMap[outputVar] = std::make_pair(ANtk, BNtk);
+    Io_WriteAiger(ANtk, (char*)a_path.c_str(),0,1,0);
+    Io_WriteAiger(BNtk, (char*)b_path.c_str(),0,1,0);
 
 
     Abc_Ntk_t* ANtk2 = ABC_NAMESPACE::Abc_NtkFromAigPhase(AMan);
@@ -1200,6 +1227,8 @@ void AigWrapper::generateDef(int outputVar, int hVar){
     // Aig_ManStop(tMan);
     Aig_ManStop(AMan);
     Aig_ManStop(BMan);
+    Abc_NtkDelete(ANtk2);
+    Abc_NtkDelete(BNtk2);
 
     return;
 
@@ -1733,10 +1762,20 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
     
     Abc_NtkShortNames(pNtk);
 
+    global_metrics.last_checkpoint = "genBDD_START_"+std::to_string(target_d);
+
+    auto gen_bdd_start = std::chrono::high_resolution_clock::now();
 
     dd = (DdManager *)Abc_NtkBuildGlobalBdds(pNtk,10000000,1,0,0,1);
+
+    global_metrics.last_checkpoint = "genBDD_END_"+std::to_string(target_d);
+    auto gen_bdd_end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> gen_bdd_elapsed = gen_bdd_end - gen_bdd_start;
+    global_metrics.individual_bdd_gen_times[dep_to_id[target_d]] = gen_bdd_elapsed.count();
     if(dd==NULL){
         globalLogger.log(LogLevel::ERROR, "getLocalSpec: Abc_NtkBuildGlobalBdds failed.");
+        global_metrics.execution_status = "BDD_FAILED_"+std::to_string(target_d);
         exit(1);
     }
 
@@ -1750,27 +1789,40 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
     // dumpBddToDot(dd, bFunc, inverse_ordering, "./bdd_initial");
     // int yy;
     // std::cin>>yy;
-
+    global_metrics.last_checkpoint = "EXIS_QUANT_START_"+std::to_string(target_d);
+    auto exis_start = std::chrono::high_resolution_clock::now();
     bExistRes = Cudd_bddExistAbstractBoundary(dd, bFunc, boundary3);
     Cudd_Ref(bExistRes);
 
     Cudd_RecursiveDeref(dd, bFunc);
+    auto exis_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> exis_elapsed = exis_end-exis_start;
+    global_metrics.individual_exis_quant_times[dep_to_id[target_d]] = exis_elapsed.count();
+    global_metrics.last_checkpoint = "EXIS_QUANT_END_"+std::to_string(target_d);
 
     int boundary2 = group1.size();
 
     // dumpBddToDot(dd, bExistRes, inverse_ordering, "./bdd_exis");
     // // int yy;
     // std::cin>>yy;
-
+    global_metrics.last_checkpoint = "UNIV_QUANT_START_"+std::to_string(target_d);
+    auto univ_start = std::chrono::high_resolution_clock::now();
     bUnivRes = Cudd_bddUnivAbstractBoundary(dd, bExistRes, boundary2);
     Cudd_Ref(bUnivRes);
 
     Cudd_RecursiveDeref(dd, bExistRes);
+    auto univ_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> univ_elapsed = univ_end - univ_start;
+    global_metrics.individual_univ_quant_times[dep_to_id[target_d]] = univ_elapsed.count();
+    global_metrics.last_checkpoint = "UNIV_QUANT_END_"+std::to_string(target_d);
 
     globalLogger.log(LogLevel::INFO, fmt::format("Final Spec BDD size: {} nodes", Cudd_DagSize(bUnivRes)));
     // dumpBddToDot(dd, bUnivRes, inverse_ordering, "./bdd_univ");
     // // int yy;
     // std::cin>>yy;
+
+    long long bdd_size_metric = Cudd_DagSize(bUnivRes);
+    global_metrics.individual_bdd_sizes[dep_to_id[target_d]] = bdd_size_metric;
 
     Vec_Ptr_t* vPiNames = Vec_PtrAlloc(Abc_NtkPiNum(pNtk));
     Abc_NtkForEachPi(pNtk, pPi, i) {
@@ -1805,6 +1857,8 @@ AigWrapper* AigWrapper::getLocalSpec_beta(int target_d, std::vector<int>& group1
     retAig->SetManager(pNewAig);
 
     retAig->compress();
+    long long aig_size_metric = Aig_ManObjNum(retAig->getManager());
+    global_metrics.individual_aig_sizes[dep_to_id[target_d]] = aig_size_metric;
     // retAig->ShowAig();
     return retAig;
 }
